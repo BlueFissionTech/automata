@@ -7,7 +7,7 @@ use BlueFission\Exceptions\NotImplementedException;
 use BlueFission\Behavioral\Behaviors\Behavior;
 
 class OrganizedHandlerCollection extends OrganizedCollection {
-	public function add(&$handler, $priority = null)
+	public function add($handler, $priority = null)
 	{
 		$handler->priority($priority);
 		// $this->_value->append($handler);
