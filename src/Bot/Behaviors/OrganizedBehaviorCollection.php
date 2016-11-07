@@ -1,7 +1,7 @@
 <?php
-namespace BlueFission\Intelligence\Behaviors;
+namespace BlueFission\Bot\Behaviors;
 
-use BlueFission\Intelligence\Collections\OrganizedCollection;
+use BlueFission\Bot\Collections\OrganizedCollection;
 
 class OrganizedBehaviorCollection extends OrganizedCollection {
 	public function add( &$behavior, $label = null ) {

@@ -1,8 +1,8 @@
 <?php
 
-namespace BlueFission\Intelligence\Behaviors;
+namespace BlueFission\Bot\Behaviors;
 
-use BlueFission\Intelligence\Collections\OrganizedCollection;
+use BlueFission\Bot\Collections\OrganizedCollection;
 use BlueFission\Exceptions\NotImplementedException;
 use BlueFission\Behavioral\Behaviors\Behavior;
 
