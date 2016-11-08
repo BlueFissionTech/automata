@@ -175,7 +175,8 @@ class Sense extends Programmable {
 		if ( $data['variance1'] < 1 ) {
 
 			$this->tweak();
-			$this->invoke($this->_input);
+			// $this->invoke($this->_input);
+			$this->dispatch('DoEnhance', array('config'=>$this->_config,'input'=>$this->_input));
 		} else {
 			echo $data['variance1'];
 			// var_dump($this->_map->first());
