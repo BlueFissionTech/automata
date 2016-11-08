@@ -176,7 +176,10 @@ class Sense extends Programmable {
 
 			$this->tweak();
 			// $this->invoke($this->_input);
-			$this->dispatch('DoEnhance', array('config'=>$this->_config,'input'=>$this->_input));
+			$event = new Action('DoEnhance');
+			$event->_context = array('config'=>$this->_config,'input'=>$this->_input);
+			$this->dispatch($event);
+			// $this->dispatch('DoEnhance', array('config'=>$this->_config,'input'=>$this->_input));
 		} else {
 			echo $data['variance1'];
 			// var_dump($this->_map->first());
