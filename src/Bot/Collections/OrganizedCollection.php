@@ -207,9 +207,10 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		}
 
 		$std1 = sqrt($variance1);
-		$std2 = sqrt($variance2);
-		$std3 = sqrt($variance3);
-
+		if (isset($variance2)) {
+			$std2 = sqrt($variance2);
+			$std3 = sqrt($variance3);
+		}
 		$popstd1 = sqrt($popvariance1);
 		$popstd2 = sqrt($popvariance2);
 		$popstd3 = sqrt($popvariance3);
