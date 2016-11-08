@@ -195,6 +195,8 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 
 		if ($count > 1) {
 			$variance1 = $variancediff1/($count-1);
+			$variance2 = 0;
+			$variance3 = 0;
 
 			if ( $counter1 > 1 && $counter2 > 1) {
 				$variance2 = $counter1 >= 1 ? $variancediff2/($counter1-1) : 0;
@@ -207,10 +209,8 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		}
 
 		$std1 = sqrt($variance1);
-		if (isset($variance2)) {
-			$std2 = sqrt($variance2);
-			$std3 = sqrt($variance3);
-		}
+		$std2 = sqrt($variance2);
+		$std3 = sqrt($variance3);
 		$popstd1 = sqrt($popvariance1);
 		$popstd2 = sqrt($popvariance2);
 		$popstd3 = sqrt($popvariance3);
