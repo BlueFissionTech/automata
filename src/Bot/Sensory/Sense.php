@@ -5,6 +5,7 @@ namespace BlueFission\Bot\Sensory;
 use BlueFission\Bot\Collections\OrganizedCollection;
 use BlueFission\Behavioral\Programmable;
 use BlueFission\Behavioral\Behaviors\Event;
+use BlueFission\Behavioral\Behaviors\Action;
 /**
  * Possible senses: visual, textual, auditory
  */
