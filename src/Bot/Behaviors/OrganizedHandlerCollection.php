@@ -24,7 +24,7 @@ class OrganizedHandlerCollection extends OrganizedCollection {
 		{
 			if ($handler['value']->name() == $behaviorName) {
 				// $handlers[] = $c;
-				$handlers[] = $this->get($name);
+				$handlers[] = $handler['value'];
 			}
 		}
 		return $handlers;
@@ -54,5 +54,4 @@ class OrganizedHandlerCollection extends OrganizedCollection {
 	protected function create($value) {
 		return array('weight'=>$value->priority(), 'value'=>$value, 'decay'=>$this->_decay, 'timestamp'=>time());
 	}
-
 }
