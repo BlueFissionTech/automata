@@ -41,7 +41,7 @@ class Sense extends Programmable {
 
 		$this->_parent = $parent;
 		$this->_map = new OrganizedCollection();
-		$this->config('chunksize', $this->_config['dimensions'][0]);
+		// $this->config('chunksize', $this->_config['dimensions'][0]);
 
 		$this->_preparation = function ( $input ) {
 			// Do something
@@ -142,7 +142,7 @@ class Sense extends Programmable {
 
 			$this->_map->add($chunk, $translation);
 
-			if ( $translation == $this->flags[$j] ) {
+			if ( $translation == $this->_config['flags'][$j] ) {
 				$this->_config['attention'] += $this->_config['attention'] < self::MAX_ATTENTION ? $this->_config['dimensions'][$j]*$this->_config['quality'] : 0; // increase attention from activity
 				$this->_config['sensitivity'] += $this->_config['sensitivity'] <= self::MAX_SENSITIVITY ? 1 : 0;
 
@@ -159,7 +159,7 @@ class Sense extends Programmable {
 
 		$data = $this->_map->data();
 
-		$this->dispatch(Event::COMPLETE, array($data));
+		$this->dispatch(Event::COMPLETE, $data);
 	}
 
 	public function setParent( $obj ) {
@@ -170,7 +170,8 @@ class Sense extends Programmable {
 		// var_dump($obj);
 	}
 
-	public function focus( $data ) {
+	public function focus( $behavior, $data ) {
+		$data = $data[0];
 		$this->dispatch('OnSweep', $data);
 		
 		if ( $data['variance1'] < 1 ) {
@@ -182,10 +183,10 @@ class Sense extends Programmable {
 			$this->dispatch($event);
 			// $this->dispatch('DoEnhance', array('config'=>$this->_config,'input'=>$this->_input));
 		} else {
-			echo $data['variance1'];
+			// echo $data['variance1'];
 			// var_dump($this->_map->first());
-			$data['values'] = null;
-			var_dump($data);
+			// $data['values'] = null;
+			die(var_dump($data['values']));
 		}
 		// if ( $this->_config['attention'] ) {
 		// 	$this->_config['quality'] =
@@ -197,8 +198,44 @@ class Sense extends Programmable {
 		if ( $this->_map->has($chunk) ) {
 			return $chunk;
 		}
+		return $chunk;
 		
 		$this->dispatch('OnCapture', $chunk);
+	}
+
+	// https://stackoverflow.com/questions/336605/how-can-i-find-the-largest-common-substring-between-two-strings-in-php
+	private function longest_common_substring($words) {
+	    // $words = array_map('strtolower', array_map('trim', $words));
+	    $sort_by_strlen = create_function('$a, $b', 'if (strlen($a) == strlen($b)) { return strcmp($a, $b); } return (strlen($a) < strlen($b)) ? -1 : 1;');
+	    usort($words, $sort_by_strlen);
+	    // We have to assume that each string has something in common with the first
+	    // string (post sort), we just need to figure out what the longest common
+	    // string is. If any string DOES NOT have something in common with the first
+	    // string, return false.
+	    $longest_common_substring = array();
+	    $shortest_string = str_split(array_shift($words));
+
+	    while (sizeof($shortest_string)) {
+	        array_unshift($longest_common_substring, '');
+	        foreach ($shortest_string as $ci => $char) {
+	            foreach ($words as $wi => $word) {
+	                if (!strstr($word, $longest_common_substring[0] . $char)) {
+	                    // No match
+	                    break 2;
+	                } // if
+	            } // foreach
+	            // we found the current char in each word, so add it to the first longest_common_substring element,
+	            // then start checking again using the next char as well
+	            $longest_common_substring[0].= $char;
+	        } // foreach
+	        // We've finished looping through the entire shortest_string.
+	        // Remove the first char and start all over. Do this until there are no more
+	        // chars to search on.
+	        array_shift($shortest_string);
+	    }
+	    // If we made it here then we've run through everything
+	    usort($longest_common_substring, $sort_by_strlen);
+	    return array_pop($longest_common_substring);
 	}
 
 	private function tweak( ) {

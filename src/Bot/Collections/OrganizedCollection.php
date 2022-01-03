@@ -109,7 +109,7 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		// Percentiles
 		$index = .25 * $count;
 		$modulus = $index%2;
-		if ($modulus) {
+		if ($modulus || $count <= 2) { // balancing arrays smaller than 2. TODO: Check is this math still works!!!
 			$q1 = $values[round($index)]['weight'];
 		} else {
 			$q1 = ($values[round($index)]['weight'] + $values[round($index+1)]['weight']) / 2;
@@ -117,8 +117,9 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 
 		$index = .75 * $count;
 		$modulus = $index%2;
-		if ($modulus) {
-			$q3 = $values[round($index)]['weight'];
+		if ($modulus || $count <= 3) { // balancing arrays smaller than 3. TODO: Check is this math still works!!!
+			$i = ($count <= 3) ? 0 : round($index);
+			$q3 = $values[$i]['weight'];
 		} else {
 			$q3 = ($values[round($index)]['weight'] + $values[round($index+1)]['weight']) / 2;
 		}
@@ -174,9 +175,10 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		$middle = $count/2;
 		$modulus = $count%2;
 		
-		if ($modulus) {
+		if ($modulus && $count != 1) {
 			$median = ($values[round($middle, 0, PHP_ROUND_HALF_UP)]['weight'] + $values[round($middle, 0, PHP_ROUND_HALF_DOWN)]['weight']) / 2;
 		} else {
+			$middle = ($count == 1) ? 0 : $middle;
 			$median = $values[round($middle)]['weight'];
 		}
 
@@ -192,6 +194,14 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 				$variancediff3 += pow( ( $value['weight'] - $mean3 ), 2);
 			}
 		}
+
+		$variance1 = 0;
+		$variance2 = 0;
+		$variance3 = 0;
+
+		$popvariance1 = 0;
+		$popvariance2 = 0;
+		$popvariance3 = 0;
 
 		if ($count > 1) {
 			$variance1 = $variancediff1/($count-1);
