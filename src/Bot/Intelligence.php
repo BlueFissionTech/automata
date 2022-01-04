@@ -58,7 +58,7 @@ class Intelligence extends Service {
 
 				$time = $this->time();
 				$result = $strategy['value']->guess();
-				var_dump($strategy['value']->score());
+				// var_dump($strategy['value']->score());
 				if ($result) {
 					break;
 				}
@@ -70,8 +70,9 @@ class Intelligence extends Service {
 
 	public function read( $data )
 	{
-		foreach ($this->_inputs as $input) {
-			$classify = $input->test($data);
+		foreach ($this->_inputs as $input=>$data) {
+			var_dump($data);
+			$classify = $this->classify($data['value'], $input);
 			if ( $classify ) {
 				$input->scan($data);
 			}
