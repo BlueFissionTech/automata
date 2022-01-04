@@ -10,6 +10,7 @@ use BlueFission\Bot\Behaviors\OrganizedHandlerCollection as HandlerCollection;
 use BlueFission\Bot\Sensory\Input;
 use BlueFission\Bot\Sensory\Sense;
 use BlueFission\Services\Service;
+use BlueFission\Behavioral\Behaviors\Event;
 
 class Intelligence extends Service {
 
