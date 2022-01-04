@@ -13,26 +13,31 @@ use BlueFission\Behavioral\Behaviors\Action;
 class Sense extends Programmable {
 	const MAX_ATTENTION = 1048576;
 	const MAX_SENSITIVITY = 10;
+	const MAX_DEPTH = 11;
 	protected $_config = array(
 		'attention' => 1024, // TL,DR
 		'sensitivity' => 10, // How deep are we willing to consider this?
 		'quality' => 1, // Sample rate of the input
 		'tolerance' => 100, // How much are we discerning the difference between chunks?
-		'dimensions' => array(100), // Adding a dimension to how we consider the experience
+		'dimensions' => array(80,24,1024), // Adding a dimension to how we consider the experience
 		'features' => array('/\s/'),
 		'flags' => array('OnNewInput'), // What are our foremost concerns?
 		'blacklist' => array(), // What data do we learn to ignore??
-		'chunksize' => 1, // how large is the smallest usable "chunk" of input data?
+		'chunksize' => 8, // how large is the smallest usable "chunk" of input data?
 	);
 
 	private $_candidates = array();
 	private $_consistency = 0;
 	private $_accuracy = 0;
 	private $_score = 0;
+	private $_depth = -1;
 	private $_parent = null;
 
 	private $_map;
 	private $_input;
+	private $_matrix = array();
+	private $_buffer = array();
+	private $_buffer_size = 32;
 
 	protected $_preparation;
 
@@ -45,33 +50,85 @@ class Sense extends Programmable {
 
 		$this->_preparation = function ( $input ) {
 			// Do something
-	        // return preg_split($this->boundaries[0], strtolower($input), -1, PREG_SPLIT_NO_EMPTY);
-	        return str_split ( (string)$input, $this->config('chunksize') );
+	        if ($input) {
+	        	if ($this->_depth == 0) {
+	        		// die(var_dump($this->_depth));
+	        		$input = str_replace(['?', '!', '.', ','], '', $input);
+	        		return preg_split($this->_config['features'][0], strtolower($input), -1, PREG_SPLIT_NO_EMPTY);
+				} else {
+	        		return str_split ( (string)$input, $this->config('chunksize') );
+	        	}
+	        }
+	        return array();
 		};
+	}
+
+	protected function build( $input )
+	{
+		$data = [];
+		foreach ($input as $piece) {
+			if ( $this->_depth > 0) {
+				$data = array_merge($data, str_split((string)$piece, 1));
+			} else {
+				$data[] = $piece;
+			}
+		}
+
+		$i = 0;
+		$j = 0;
+		// $remainder = $this->config('dimensions')[0];
+		foreach ($this->_matrix as $row) {
+			if ( count($this->_matrix[$i]) < $this->config('dimensions')[0] ) {
+				// $remainer -= count($this->_matrix[$i]);
+				break;
+			}
+		}
+
+		foreach ($data as $datum) {
+			if ( $j >= $this->config('dimensions')[0] ) {
+				$i++;
+				$j = 0;
+			}
+
+			$this->_matrix[$i][$j] = $datum;
+			$j++;
+		}
 	}
 
 	protected function prepare( $input ) {
 		return call_user_func_array($this->_preparation, array($input));
 	}
 
-	private function setPreparation( $function ) {
+	public function setPreparation( $function ) {
 		$this->_preparation = $function;
 	}
 
+	protected function buffer( $data ) {
+		$this->_buffer[] = $data;
+		$translation = $this->translate($data);
+		return $translation;
+	}
+
 	public function invoke( $input ) {
+		$this->_depth++;
+
 		$parent = $this->_parent;
 
-		$this->_input = $input; 
+		$this->_input = $input;
 
-		$input = $this->prepare($input);
+		$this->_input = $this->prepare($this->_input);
 		
-		$size = count($input)*$this->config('quality');
+		$this->build($this->_input);
+
+		// die(var_dump($this->_input));
+		
+		$size = count($this->_input)*$this->config('quality');
 
 		$increment = floor( 1 / $this->config('quality') );
 		$multiplier = .001;
 
-		$i = $j = 0;
-		$k = 1;
+		$col = $row = $i = $j = 0;
+		// $k = 1;
 
 		$this->_map->clear();
 
@@ -100,17 +157,18 @@ class Sense extends Programmable {
 			}
 
 			// Dimesions map more vectors from the data based on signal properties
-			if ( $k == $this->_config['dimensions'][$j]*$this->config('quality')) {
-				$k = 1;
-			}
+			// if ( $k == $this->_config['dimensions'][$j]*$this->config('quality')) {
+			// 	$k = 1;
+			// }
 
-			if ( in_array($input, $this->_config['blacklist']) ) {
+			// $chunk = trim($_this->_matrix[$row]);
+			$chunk = $this->_matrix[$row][$col];
+
+			// var_dump($chunk);
+
+			if ( in_array($chunk, $this->_config['blacklist']) ) {
 				continue;
 			}
-
-			// $chunk = trim($input[$i]);
-			$chunk = $input[$i];
-
 			/* 
 				What we want to do here is this:
 				Translate the $chunk using a classification / association index
@@ -121,7 +179,8 @@ class Sense extends Programmable {
 				create a 'holoscene' by association correlated points (consideration)
 			*/
 
-			$translation = $this->translate($chunk);
+			$translation = $this->buffer($chunk);
+			// $translation = $this->translate($chunk);
 			// echo "$chunk\n";
 			
 			if ( !$this->_map->has($chunk) ) {
@@ -150,8 +209,17 @@ class Sense extends Programmable {
 				// $this->dispatch($translation, $chunk);
 			}
 
-			$k++;
-			$i+=$increment;
+			$i++;
+			$this->_config['attention']--;
+			// $k++;
+			$col+=$increment;
+			if ( $col >= $this->config('dimensions')[0]) {
+				$col = 0;
+				$row+=$increment;
+				if ( $row >= $this->config('dimensions')[1]) {
+					break; // Add more dimensions here or break into next "frame" of experience
+				}
+			}
 		}
 
 		$this->_map->sort();
@@ -159,7 +227,7 @@ class Sense extends Programmable {
 
 		$data = $this->_map->data();
 
-		$this->dispatch(Event::COMPLETE, $data);
+		$this->dispatch(Event::SUCCESS, $data);
 	}
 
 	public function setParent( $obj ) {
@@ -177,30 +245,42 @@ class Sense extends Programmable {
 		if ( $data['variance1'] < 1 ) {
 
 			$this->tweak();
-			// $this->invoke($this->_input);
+			// $this->invoke($this->_matrix);
 			$event = new Action('DoEnhance');
 			$event->_context = array('config'=>$this->_config,'input'=>$this->_input);
 			$this->dispatch($event);
-			// $this->dispatch('DoEnhance', array('config'=>$this->_config,'input'=>$this->_input));
+			// die('recursing');
+			// var_dump($this->config('attention'));
+			if ($this->_depth < self::MAX_DEPTH) {
+				$this->invoke($this->_input); // Recurse until it gets bored
+			}
+			// $this->dispatch('DoEnhance', array('config'=>$this->_config,'input'=>$this->_matrix));
 		} else {
 			// echo $data['variance1'];
 			// var_dump($this->_map->first());
 			// $data['values'] = null;
-			die(var_dump($data['values']));
+			// die(var_dump($data['values']));
+			$this->_map->optimize();
+			$data = $this->_map->data();
+			$this->dispatch(Event::COMPLETE, $data);
 		}
 		// if ( $this->_config['attention'] ) {
 		// 	$this->_config['quality'] =
 		// }
+		// die();
 	}
 
 	private function translate( $chunk ) {
 		// If can't classify, classify input as itself.
-		if ( $this->_map->has($chunk) ) {
-			return $chunk;
-		}
-		return $chunk;
-		
+		// die(var_dump($chunk));
+		// if ( $this->_map->has($chunk) ) {
+		// 	return $chunk;
+		// }
 		$this->dispatch('OnCapture', $chunk);
+		
+		return crc32 ($chunk);
+		
+		// return $chunk;
 	}
 
 	// https://stackoverflow.com/questions/336605/how-can-i-find-the-largest-common-substring-between-two-strings-in-php
@@ -248,7 +328,7 @@ class Sense extends Programmable {
 		);
 
 		foreach ( $order as $attr=>$limits ) {
-			if ($this->_config[$attr] >= $limits[1] && $this->_config[$attr] <= $limits[2]) {
+			if ($this->_config[$attr] >= $limits[2] && $this->_config[$attr] <= $limits[2]) {
 				$this->_config[$attr] += $limits[0] == 'up' ? 1 : -1;
 				
 				return;
@@ -259,8 +339,8 @@ class Sense extends Programmable {
 	protected function init() {
 		parent::init();
 
-		// $this->behavior( new Event( Event::UPDATE ) );
-		$this->behavior( new Event( Event::COMPLETE ), array($this, 'focus'));
+		$this->behavior( new Event( Event::SUCCESS ), array($this, 'focus') );
+		$this->behavior( new Event( Event::COMPLETE ) );
 		$this->behavior( new Event( 'OnCapture' ) );
 	}
 }

@@ -292,6 +292,10 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 			$this->_value[$key]['weight']++;
 			$this->_value[$key]['timestamp'] = time();
 			$this->_value[$key]['value'] = $object;
+
+			$percentage = $this->findPercentage($this->_value[$key]['weight']);
+
+			$this->_value[$key]['percentage'] = $percentage;
 		} else {
 			$this->_increment++;
 			$total = count($this->_value);
@@ -308,12 +312,26 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 	}
 
 	protected function create($value) {
-		return array('weight'=>1, 'value'=>$value, 'decay'=>$this->_decay, 'timestamp'=>time(), 'ordinance'=>$this->_increment);
+		$percentage = $this->findPercentage(1);
+		return array('weight'=>1, 'percentage'=>$percentage, 'value'=>$value, 'decay'=>$this->_decay, 'timestamp'=>time(), 'ordinance'=>$this->_increment);
+	}
+
+	protected function findPercentage( $amount ) {
+		$total = 0;
+		foreach ($this->_value as $value) {
+			$total += $value['weight'];
+		}
+
+		return ($amount) / $total;
 	}
 
 	public function clear() {
 		parent::clear();
 		$this->_increment = 0;
+	}
+
+	public function optimize( $tolerance = 10, $noise = [] ) {
+
 	}
 
 	public function __toString() {
