@@ -32,7 +32,7 @@ class Strategy {
 		}
 		$this->_buffer[] = $val;
 
-		$this->_prediction = $key;
+		$this->_prediction = $val;
 	}
 
 	public function guess() {

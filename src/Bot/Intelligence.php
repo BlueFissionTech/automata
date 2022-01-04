@@ -147,7 +147,7 @@ class Intelligence extends Service {
 	protected function stopclock() {
 		if ( function_exists('getrusage')) {
 			$this->_stoptime = getrusage();
-			$this->_totaltime = ($ru["ru_utime.tv_sec"]*1000 + intval($ru["ru_utime.tv_usec"]/1000)) - ($rus["ru_utime.tv_sec"]*1000 + intval($rus["ru_utime.tv_usec"]/1000));
+			$this->_totaltime = ($this->_stoptime["ru_utime.tv_sec"]*1000 + intval($this->_stoptime["ru_utime.tv_usec"]/1000)) - ($this->_starttime["ru_utime.tv_sec"]*1000 + intval($this->_starttime["ru_utime.tv_usec"]/1000));
 		} else {
 			$this->_stopttime = microtime(true);
 			$this->_totaltime = ($time_end - $time_start);
