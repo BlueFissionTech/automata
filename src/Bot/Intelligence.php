@@ -62,6 +62,7 @@ class Intelligence extends Service {
 				$time = $this->time();
 				$result = $strategy['value']->guess();
 				// var_dump($strategy['value']->score());
+				var_dump($result);
 				if ($result) {
 					break;
 				}
@@ -106,7 +107,8 @@ class Intelligence extends Service {
 
 	public function enqueue( $behavior )
 	{
-		Queue::enqueue( $behavior->_target->name(), $behavior->_context );
+		// Queue::enqueue( $behavior->_target->name(), $behavior->_context );
+		Queue::enqueue( uniqid(), $behavior->_context );
 	}
 
 	public function capture( $behavior, $data )
