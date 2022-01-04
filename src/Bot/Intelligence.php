@@ -52,6 +52,7 @@ class Intelligence extends Service {
 		} else {
 			foreach ( $this->_strategies as $strategy ) {
 				$this->startclock();
+				var_dump($strategy);
 				$strategy->process($input);
 				$this->stopclock();
 
