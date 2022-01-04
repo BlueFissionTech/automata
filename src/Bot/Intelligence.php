@@ -40,11 +40,12 @@ class Intelligence extends Service {
 		$this->_services = new Collection();
 		$this->_routes = new Collection();
 		$this->_strategies = new Collection();
+		$this->_scene = new Collection();
 		$this->_behaviors = new BehaviorCollection();
 		$this->_handlers = new HandlerCollection();
 	}
 
-	public function classify( $input ) {
+	public function classify( $input, $source = null ) {
 		$result = $input;
 		if ( $this->_scene->has($source) ) {
 			$this->_scene->add($source);
