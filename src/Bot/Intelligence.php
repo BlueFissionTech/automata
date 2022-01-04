@@ -96,7 +96,7 @@ class Intelligence extends Service {
 		
 		$this->_inputs[$name] = new Input( $processor );
 
-        $app = App::instance();
+        $app = \App::instance();
         $sense = new Sense( $app );
         $sense->behavior(Event::SUCCESS, [$this, 'capture']);
 

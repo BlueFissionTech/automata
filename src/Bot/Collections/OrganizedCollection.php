@@ -322,7 +322,7 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 			$total += $value['weight'];
 		}
 
-		return ($amount) / $total;
+		return ($amount) / $total ?? 1;
 	}
 
 	public function clear() {
