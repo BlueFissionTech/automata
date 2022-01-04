@@ -70,11 +70,11 @@ class Intelligence extends Service {
 
 	public function read( $data )
 	{
-		foreach ($this->_inputs as $input=>$data) {
+		foreach ($this->_inputs as $name=>$input) {
 			var_dump($data);
-			$classify = $this->classify($data['value'], $input);
+			$classify = $this->classify($data, $name);
 			if ( $classify ) {
-				$input->scan($data);
+				$input['value']->scan($data);
 			}
 		}
 	}
