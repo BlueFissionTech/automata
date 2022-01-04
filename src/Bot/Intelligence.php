@@ -93,7 +93,7 @@ class Intelligence extends Service {
         $this->_senses[$name] = $sense;
 
         $this->_inputs[$name]->behavior(Event::SUCCESS, [$this, 'enqueue']);
-        $this->_inputs[$name]->behavior(Event::COMPLETE, function() {
+        $this->_inputs[$name]->behavior(Event::COMPLETE, function( $behavior ) {
         	$this->enqueue($behavior);
 
         	while (!Queue::is_empty) {
