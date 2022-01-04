@@ -52,13 +52,13 @@ class Intelligence extends Service {
 		} else {
 			foreach ( $this->_strategies as $strategy ) {
 				$this->startclock();
-				var_dump($strategy);
-				$strategy->process($input);
+				// var_dump($strategy);
+				$strategy['value']->process($input);
 				$this->stopclock();
 
 				$time = $this->time();
-				$result = $strategy->guess();
-				var_dump($strategy->score());
+				$result = $strategy['value']->guess();
+				var_dump($strategy['value']->score());
 				if ($result) {
 					break;
 				}
