@@ -97,7 +97,7 @@ class Intelligence extends Service {
         $this->_inputs[$name]->behavior(Event::COMPLETE, function( $behavior ) {
         	$this->enqueue($behavior);
 
-        	while (!Queue::is_empty) {
+        	while (!Queue::is_empty()) {
         		$sense->invoke(Queue::dequeue());
         	}
         });
