@@ -107,7 +107,7 @@ class Intelligence extends Service {
 
 	public function enqueue( $behavior )
 	{
-		var_dump($name);
+		// var_dump($name);
 		// Queue::enqueue( $behavior->_target->name(), $behavior->_context );
 		Queue::enqueue( 'textual', $behavior->_context );
 	}
