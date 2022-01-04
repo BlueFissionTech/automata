@@ -16,10 +16,12 @@ class Intelligence extends Service {
 
 	const TRANSACTION_MULTIPLIER = 10;
 	const TRANSACTION_BASE_SIZE = 1;
-	
+
 	private $_score = 0;
 	private $_transaction_size;
 	private $_level;
+
+	protected $_queue;
 
 	protected $_strategies;
 	protected $_memory;
@@ -80,37 +82,31 @@ class Intelligence extends Service {
 		}
 	}
 
-	public function input($name, $processor = null) {
-		// $sense = $name.'_sense';
-		// $input = $name.'_input';
-
-		// $this
-		// 	->delegate($input, '\BlueFission\Intelligence\Input', $processor )
-		// 	->delegate($sense, '\BlueFission\Intelligence\Sense', $this)
-			
-		// 	->register($input, 'url', 'scan' )
-		// 	->register($sense, 'DoProcess', 'invoke')
-		// 	->register($this->name(), 'DoQueueInput', 'queueInput')
-		// 	->register($this->name(), 'DoTraining', 'addFrame')
-
-		// 	->route($input, $sense, 'OnComplete', 'DoProcess')
-		// 	->route($sense, $this->name(), 'OnSweep', 'DoTraining')
-		// 	->route($sense, $this->name(), 'OnCapture', 'DoQueueInput')
-		// ;
-
-		// return $this;
-		
+	public function input($name, $sense = null, $processor = null) {
+				
 		$this->_inputs[$name] = new Input( $processor );
 
         $app = \App::instance();
-        $sense = new Sense( $app );
+        $sense = $sense ? new $sense : new Sense( $app );
         $sense->behavior(Event::SUCCESS, [$this, 'capture']);
 
         $this->_senses[$name] = $sense;
 
-        $this->_inputs[$name]->behavior(Event::COMPLETE, function( $behavior ) use ($sense) {
-            $sense->invoke($behavior->_context);
+        $this->_inputs[$name]->behavior(Event::SUCCESS, [$this, 'enqueue']);
+        $this->_inputs[$name]->behavior(Event::COMPLETE, function() {
+        	$this->enqueue($behavior);
+
+        	while (!Queue::is_empty) {
+        		$sense->invoke(Queue::dequeue());
+        	}
         });
+
+        return $this;
+	}
+
+	public function enqueue( $behavior )
+	{
+		Queue::enqueue( $behavior->_target->name(), $behavior->_context );
 	}
 
 	public function capture( $behavior, $data )
