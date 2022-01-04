@@ -39,6 +39,7 @@ class Intelligence extends Service {
 		parent::__construct();
 		$this->_services = new Collection();
 		$this->_routes = new Collection();
+		$this->_strategies = new Collection();
 		$this->_behaviors = new BehaviorCollection();
 		$this->_handlers = new HandlerCollection();
 	}
