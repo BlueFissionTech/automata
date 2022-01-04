@@ -7,6 +7,8 @@ use BlueFission\Data\Queues\Queue as Queue;
 use BlueFission\Bot\Collections\OrganizedCollection as Collection;
 use BlueFission\Bot\Behaviors\OrganizedBehaviorCollection as BehaviorCollection;
 use BlueFission\Bot\Behaviors\OrganizedHandlerCollection as HandlerCollection;
+use BlueFission\Bot\Sensory\Input;
+use BlueFission\Bot\Sensory\Sense;
 use BlueFission\Services\Service;
 
 class Intelligence extends Service {
