@@ -47,7 +47,7 @@ class Intelligence extends Service {
 
 	public function classify( $input, $source = null ) {
 		$result = $input;
-		if ( $this->_scene->has($source) ) {
+		if ( $source && $this->_scene->has($source) ) {
 			$this->_scene->add($source);
 		} else {
 			foreach ( $this->_strategies as $strategy ) {
