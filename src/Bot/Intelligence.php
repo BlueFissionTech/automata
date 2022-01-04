@@ -103,7 +103,7 @@ class Intelligence extends Service {
 
         $this->_senses[$name] = $sense;
 
-        $this->_inputs->behavior(Event::COMPLETE, function( $behavior ) use ($sense) {
+        $this->_inputs[$name]->behavior(Event::COMPLETE, function( $behavior ) use ($sense) {
             $sense->invoke($behavior->_context);
         });
 	}
