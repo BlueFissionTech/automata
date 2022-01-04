@@ -93,22 +93,23 @@ class Intelligence extends Service {
 
         $this->_senses[$name] = $sense;
 
-        $this->_inputs[$name]->behavior(Event::SUCCESS, [$this, 'enqueue']);
-        $this->_inputs[$name]->behavior(Event::COMPLETE, function( $behavior ) {
+        $this->_inputs[$name]->behavior(Event::SUCCESS, [$this, 'enqueue'], $name);
+        $this->_inputs[$name]->behavior(Event::COMPLETE, function( $behavior ) use ( $name ) {
         	$this->enqueue($behavior);
 
         	while (!Queue::is_empty('experience')) {
-        		$sense->invoke(Queue::dequeue('experience'));
+        		$this->_senses[$name]->invoke(Queue::dequeue($name));
         	}
         });
 
         return $this;
 	}
 
-	public function enqueue( $behavior )
+	public function enqueue( $behavior, $name )
 	{
+		var_dump($name);
 		// Queue::enqueue( $behavior->_target->name(), $behavior->_context );
-		Queue::enqueue( 'experience', $behavior->_context );
+		Queue::enqueue( $name, $behavior->_context );
 	}
 
 	public function capture( $behavior, $data )
