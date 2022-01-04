@@ -41,6 +41,7 @@ class Intelligence extends Service {
 		$this->_routes = new Collection();
 		$this->_strategies = new Collection();
 		$this->_scene = new Collection();
+		$this->_inputs = new Collection();
 		$this->_behaviors = new BehaviorCollection();
 		$this->_handlers = new HandlerCollection();
 	}
