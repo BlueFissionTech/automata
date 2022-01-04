@@ -124,7 +124,7 @@ class Intelligence extends Service {
 		$strategy = $name.'_strategy';
 		// $this->delegate($strategy, $class);
 
-		$this->_strategies->add($strategy, new $class);
+		$this->_strategies->add(new $class, $strategy);
 
 		return $this;
 	}
