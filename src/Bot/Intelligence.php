@@ -116,7 +116,7 @@ class Intelligence extends Service {
 	public function capture( $behavior, $data )
 	{
 		// die(var_dump($data));
-		$this->_scene[ crc32($data) ] = $data[0];
+		$this->_scene[ crc32((string)$data) ] = $data[0];
 	}
 
 	// public function addFrame( $frame ) {
