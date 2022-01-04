@@ -21,16 +21,16 @@ class Input extends Dispatcher {
 		}
 
 		$this->_processors = new OrganizedCollection();
-		$this->_processors->add($processor);
+		$this->_processors[] = $processor;
 	}
 
 	public function setProcessor( $processorFunction ) {
-		$this->_processors->add($processorFunction);
+		$this->_processors[] = $processorFunction;
 	}
 
 	public function scan( $data, $processor = null ) {
 		if ( $processor ) {
-			$this->_processors->add($processor);
+			$this->_processors[] = $processor;
 		}
 
 		foreach( $this->_processors as $processor ) {

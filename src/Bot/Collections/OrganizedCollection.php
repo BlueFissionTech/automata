@@ -9,6 +9,7 @@ use BlueFission\Collections\Collection;
 use BlueFission\Collections\ICollection;
 use BlueFission\DevValue;
 use BlueFission\DevArray;
+use BlueFission\Behavioral\Behaviors\Event;
 
 class OrganizedCollection extends Collection implements ICollection, ArrayAccess, IteratorAggregate {
 	protected $_decay = .001;
@@ -322,7 +323,7 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 			$total += $value['weight'];
 		}
 
-		return ($amount) / $total ?? 1;
+		return ($amount) / $total > 0 ? $total : 1;
 	}
 
 	public function clear() {
