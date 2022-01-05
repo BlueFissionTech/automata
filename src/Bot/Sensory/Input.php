@@ -35,7 +35,7 @@ class Input extends Dispatcher {
 
 		foreach( $this->_processors as $processor ) {
 			// $data = call_user_func_array($processor['value'], array($data));
-			// $data = call_user_func_array($processor, array($data));
+			$data = call_user_func_array($processor, array($data));
 		}
 
 		$this->dispatch( Event::COMPLETE, $data );
