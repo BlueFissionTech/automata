@@ -17,7 +17,7 @@ class Frame {
 	public function extract() {
 		$values = [];
 		foreach ( $this->_experiences as $experience ) { 
-			$values[] = $experience['values'];
+			$values[] = $experience['values'] ?? [];
 		}
 		return $values;
 	}
