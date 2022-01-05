@@ -21,11 +21,11 @@ class InputArray extends Dispatcher {
 		$this->_inputs = new OrganizedCollection();
 	}
 
-	public function create( $label, $preprocessors = [] )
+	public function create( $label, $processors = [] )
 	{
 		$input = new Input();
-		foreach ($preprocessors as $preprocessor) {
-			$input->setPreprocessor( $preprocessor );
+		foreach ($processors as $processor) {
+			$input->setProcessor( $processor );
 		}
 		$input->behavior(Event::COMPLETE, [$this, 'onInputComplete']);
 
