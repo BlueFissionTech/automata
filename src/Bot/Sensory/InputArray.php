@@ -39,18 +39,18 @@ class InputArray extends Dispatcher {
 		switch( $type ) {
 			default:
 			case self::TEXTUAL:
-				$this->_inputs->get(self::TEXTUAL)->read()($data);
+				$this->_inputs->get(self::TEXTUAL)->scan($data);
 
 				// $this->createImageFromText($data);
 			break;
 			case self::VISUAL:
-				$this->_inputs->get(self::VISUAL)->read()($data);
+				$this->_inputs->get(self::VISUAL)->scan($data);
 			break;
 			case self::AUDITORY:
-				$this->_inputs->get(self::AUDITORY)->read()($data);
+				$this->_inputs->get(self::AUDITORY)->scan($data);
 			break;
 			case self::CINEMATIC:
-				$this->_inputs->get(self::CINEMATIC)->read()($data);
+				$this->_inputs->get(self::CINEMATIC)->scan($data);
 			break;
 		}
 	}
