@@ -15,7 +15,7 @@ class Frame {
 	}
 
 	public function extract() {
-		$values = $experience['values'];
+		$values = $this->_experiences[0]['values'];
 		return $values;
 	}
 }
