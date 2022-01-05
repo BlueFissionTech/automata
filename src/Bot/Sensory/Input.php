@@ -5,7 +5,7 @@ namespace BlueFission\Bot\Sensory;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\Behavior;
 use BlueFission\Behavioral\Dispatcher;
-use BlueFission\Bot\Collections\OrganizedCollection;
+use BlueFission\Collections\Collection;
 
 class Input extends Dispatcher {
 
@@ -20,17 +20,17 @@ class Input extends Dispatcher {
 			};
 		}
 
-		$this->_processors = new OrganizedCollection();
-		$this->_processors[0] = $processor;
+		$this->_processors = new Collection();
+		$this->_processors[] = $processor;
 	}
 
 	public function setProcessor( $processorFunction ) {
-		$this->_processors[0] = $processorFunction;
+		$this->_processors[] = $processorFunction;
 	}
 
 	public function scan( $data, $processor = null ) {
 		if ( $processor ) {
-			$this->_processors[0] = $processor;
+			$this->_processors[] = $processor;
 		}
 
 		foreach( $this->_processors as $processor ) {
@@ -38,11 +38,6 @@ class Input extends Dispatcher {
 		}
 
 		$this->dispatch( Event::COMPLETE, $data );
-	}
-
-	public function identify( $data )
-	{
-		return true;	
 	}
 
 	public function dispatch( $behavior, $args = null) {

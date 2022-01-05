@@ -19,7 +19,7 @@ class Sense extends Programmable {
 		'sensitivity' => 10, // How deep are we willing to consider this?
 		'quality' => 1, // Sample rate of the input
 		'tolerance' => 100, // How much are we discerning the difference between chunks?
-		'dimensions' => array(80,24,1024), // Adding a dimension to how we consider the experience
+		'dimensions' => array(80,24,1024,8), // Adding a dimension to how we consider the experience
 		'features' => array('/\s/'),
 		'flags' => array('OnNewInput'), // What are our foremost concerns?
 		'blacklist' => array(), // What data do we learn to ignore??
@@ -41,7 +41,7 @@ class Sense extends Programmable {
 
 	protected $_preparation;
 
-	public function __construct( $parent ) {
+	public function __construct( $parent = null ) {
 		parent::__construct();
 
 		$this->_parent = $parent;
@@ -195,7 +195,7 @@ class Sense extends Programmable {
 				$this->_config['quality'] += $muliplier;
 			}
 
-			if ( !$parent->can($translation) ) {
+			if ( $parent && !$parent->can($translation) ) {
 				$parent->behavior($translation, array($this, 'callback') );
 			}
 

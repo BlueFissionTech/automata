@@ -72,6 +72,18 @@ class Intelligence extends Service {
 		return $result;
 	}
 
+	public function train( $dataset )
+	{
+		foreach ( $this->_strategies as $strategy ) {
+			$this->startclock();
+			// var_dump($strategy);
+			$strategy['value']->train($dataset);
+			$this->stopclock();
+
+			$time = $this->time();
+		}
+	}
+
 	public function read( $data )
 	{
 		foreach ($this->_inputs as $name=>$input) {

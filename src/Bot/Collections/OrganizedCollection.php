@@ -40,8 +40,14 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 	);
 
 	public function sort() {
-		if ($this->_do_sort)
+		if ($this->_do_sort) {
 			$this->_value->uasort( array($this, 'sort_function'));
+		}
+
+		foreach ($this->_value as &$value) {
+			$percent = $this->findPercentage($value['weight']);
+			$value['percentage'] = $percent;
+		}
 	}
 
 	public function setSort( $sorts ) {
@@ -288,7 +294,7 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 			throw new InvalidArgumentException('Label must be scalar');
 		}
 
-		if ( $this->has( $key ) ) {
+		if ( !is_null($key) && $this->has( $key ) ) {
 			$this->_value[$key]['weight']++;
 			$this->_value[$key]['timestamp'] = time();
 			$this->_value[$key]['value'] = $object;
