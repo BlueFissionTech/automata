@@ -127,6 +127,9 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 			$i = ($count <= 3) ? 0 : round($index);
 			$q3 = $values[$i]['weight'];
 		} else {
+			if (count($values) == round($index+1)) { // fix for "Undefined Offset 6" error for values of length 5
+				$index--; // TODO: Make sure this math still works for quartiles!
+			}
 			$q3 = ($values[round($index)]['weight'] + $values[round($index+1)]['weight']) / 2;
 		}
 
