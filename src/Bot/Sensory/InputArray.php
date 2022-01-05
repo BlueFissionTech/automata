@@ -18,7 +18,7 @@ class InputArray extends Dispatcher {
 
 		parent::__construct();
 
-		$_inputs = new OrganizedCollection();
+		$this->_inputs = new OrganizedCollection();
 	}
 
 	public function create( $label, $preprocessors = [] )
