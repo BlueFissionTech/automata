@@ -6,12 +6,14 @@ class Frame {
 
 	public function construct()
 	{
-		$this->_experiences = Collection();
+		$this->_experiences = [];
+		// $this->_experiences = Collection();
 	}
 
 	public function addExperience( $experience, $source = null ) 
 	{
 		$this->_experiences[$source] = $experience;
+		// die(var_dump($this->_experiences));
 	}
 
 	public function extract() {
