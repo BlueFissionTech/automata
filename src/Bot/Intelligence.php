@@ -21,8 +21,6 @@ class Intelligence extends Service {
 	private $_transaction_size;
 	private $_level;
 
-	protected $_queue;
-
 	protected $_strategies;
 	protected $_memory;
 
@@ -119,9 +117,7 @@ class Intelligence extends Service {
 
 	public function enqueue( $behavior )
 	{
-		// var_dump($name);
-		// Queue::enqueue( $behavior->_target->name(), $behavior->_context );
-		Queue::enqueue( 'textual', $behavior->_context );
+		Queue::enqueue( $behavior->_target->name(), $behavior->_context );
 	}
 
 	public function capture( $behavior, $data )
@@ -143,11 +139,6 @@ class Intelligence extends Service {
 		$this->_strategies->add(new $class, $strategy);
 
 		return $this;
-	}
-
-	public function queueInput( $behavior ) {
-		$this->classify($behavior->_context);
-		// Queue::enqueue( $behavior->_target->name(), $behavior->_context );
 	}
 
 	protected function startclock() {

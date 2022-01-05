@@ -10,6 +10,7 @@ use BlueFission\Collections\Collection;
 class Input extends Dispatcher {
 
 	protected $_processors;
+	protected $_name;
 
 	public function __construct( $processor = null ) {
 		parent::__construct();
@@ -22,6 +23,14 @@ class Input extends Dispatcher {
 
 		$this->_processors = new Collection();
 		$this->_processors[] = $processor;
+	}
+
+	public function name($name = '')
+	{
+		if (!$name) {
+			return $this->_name;
+		}
+		$this->_name = $name;
 	}
 
 	public function setProcessor( $processorFunction ) {

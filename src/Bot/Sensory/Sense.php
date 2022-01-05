@@ -56,6 +56,7 @@ class Sense extends Programmable {
 	        		$input = str_replace(['?', '!', '.', ','], '', $input);
 	        		return preg_split($this->_config['features'][0], strtolower($input), -1, PREG_SPLIT_NO_EMPTY);
 				} else {
+					// die(var_dump($input));
 	        		return str_split ( (string)$input, $this->config('chunksize') );
 	        	}
 	        }
@@ -116,13 +117,14 @@ class Sense extends Programmable {
 
 		$this->_input = $input;
 
-		$this->_input = $this->prepare($this->_input);
+		$input = $this->prepare($this->_input);
 		
-		$this->build($this->_input);
+		$this->build($input);
 
 		// die(var_dump($this->_input));
+		// var_dump($input);
 		
-		$size = count($this->_input)*$this->config('quality');
+		$size = count($input)*$this->config('quality');
 
 		$increment = floor( 1 / $this->config('quality') );
 		$multiplier = .001;
@@ -245,9 +247,12 @@ class Sense extends Programmable {
 		if ( $data['variance1'] < 1 ) {
 
 			$this->tweak();
+			$this->_map->optimize();
+			$data = $this->_map->data();
+
 			// $this->invoke($this->_matrix);
 			$event = new Action('DoEnhance');
-			$event->_context = array('config'=>$this->_config,'input'=>$this->_input);
+			$event->_context = array('config'=>$this->_config,'input'=>$this->_input, 'data'=>$data);
 			$this->dispatch($event);
 			// die('recursing');
 			// var_dump($this->config('attention'));

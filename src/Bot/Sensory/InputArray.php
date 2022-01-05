@@ -24,6 +24,8 @@ class InputArray extends Dispatcher {
 	public function create( $label, $processors = [] )
 	{
 		$input = new Input();
+
+		$input->name($label);
 		foreach ($processors as $processor) {
 			$input->setProcessor( $processor );
 		}
