@@ -18,7 +18,7 @@ class InputArray extends Dispatcher {
 
 		parent::__construct();
 
-		$this_inputs = new OrganizedCollection();
+		$_inputs = new OrganizedCollection();
 	}
 
 	public function create( $label, $preprocessors = [] )
@@ -35,7 +35,7 @@ class InputArray extends Dispatcher {
 	public function observe( $data, $type = null )
 	{
 		$type = $type ?? $this->detect($data);
-		
+
 		switch( $type ) {
 			default:
 			case self::TEXTUAL:
