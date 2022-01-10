@@ -5,7 +5,7 @@ use BlueFission\Bot\Collections\OrganizedCollection;
 
 class Predictor extends Strategy {
 
-	private $_rules;
+	// private $_rules;
 	private $_previous_rule_fired = -1;
 
 	private $_random;

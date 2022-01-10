@@ -4,7 +4,7 @@ namespace BlueFission\Bot\Comprehension;
 use BlueFission\Bot\Collections\OrganizedCollection;
 
 class Frame {
-	private $_experiences;
+	private $_experiences = [];
 
 	public function construct()
 	{
@@ -16,6 +16,30 @@ class Frame {
 	{
 		$this->_experiences[$source] = $experience;
 		// die(var_dump($this->_experiences));
+	}
+
+	public function process()
+	{
+		$values = [];
+		// die(var_dump($this->_experiences));
+
+		foreach ( $this->_experiences as $experience ) { 
+			$values[] = $experience['values'] ?? [];
+		}
+
+		$aggregate = new OrganizedCollection();
+		$aggregate->autoSort(false);
+		// $aggregate = [];
+
+		foreach ( $values as $data ) {
+			foreach ($data as $key=>$datum) {
+				$aggregate->add($datum['value'], $key, $datum['weight']);
+				// $aggregate[$key] = $datum;
+			}
+		}
+		$aggregate->sort();
+		$aggregate->stats();
+		return $aggregate->data()['values'];
 	}
 
 	public function extract() 
@@ -49,33 +73,36 @@ class Frame {
 		$values = [];
 
 		foreach ( $this->_experiences as $experience ) { 
+			// var_dump($experience['values']);
 			$values[] = $experience['values'] ?? [];
 		}
 
 		// $aggregate = new OrganizedCollection();
 		$hashes = [];
 
+		$max = 20;
 		foreach ( $values as $data ) {
 			$i = 0;
-			$data;
 			foreach ($data as $key=>$datum) {
 				// var_dump($dat);
 				// die(var_dump( $datum ));
 				// $hashes->add($datum, $key);
-				$hashes[] = $datum;
+				$hashes[] = crc32($datum['value']) * .0000000001;
 				$i++;
-				if ( $i >= 5) {
+				if ( $i >= $max) {
+					$max = 5;
 					break;
 				}
 			}
 
-			for ( $i; $i < 5; $i++ ) {
+			for ( $i; $i < $max; $i++ ) {
 				$hashes[] = 0;
 			}
+			$max = 5;
 		}
 
-		if ( count($hashes) < 30 ) {
-			for ( $i = count($hashes)-1; $i < 30; $i++ ) {
+		if ( count($hashes) > 0 && count($hashes) < 54 ) {
+			for ( $i = count($hashes)-1; $i < 54; $i++ ) {
 				$hashes[] = 0;
 			}
 		}

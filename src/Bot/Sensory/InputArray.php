@@ -23,8 +23,8 @@ class InputArray extends Dispatcher {
 		parent::__construct();
 
 		$this->_name = $name;
-		$this->_inputs = new Collection();
-		$this->_senses = new Collection();
+		$this->_inputs = [];
+		$this->_senses = [];
 	}
 
 	public function create( $label, $processors = [] )
@@ -85,6 +85,26 @@ class InputArray extends Dispatcher {
 		$type = $type ?? $this->detect($data);
 
 		$this->_senses[$type]->invoke($data);
+	}
+
+	public function process()
+	{
+		$count = 0;
+		$max = 10000;
+		while (!Queue::is_empty($this->_name)) {
+			$data = Queue::dequeue($this->_name);
+			
+			if (!is_array($data)) {
+				continue;
+			}
+			$this->reset();
+
+			$this->parse($data[1], $data[0]);
+			$count++;
+			if ($count >= $max) {
+				break;
+			}
+		}
 	}
 
 	public function reset()
