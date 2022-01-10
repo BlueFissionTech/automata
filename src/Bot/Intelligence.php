@@ -2,7 +2,7 @@
 
 namespace BlueFission\Bot;
 
-use BlueFission\Data\Queues\MemQueue as Queue;
+use BlueFission\Data\Queues\Queue as Queue;
 
 use BlueFission\Bot\Collections\OrganizedCollection as Collection;
 use BlueFission\Bot\Behaviors\OrganizedBehaviorCollection as BehaviorCollection;

@@ -11,15 +11,20 @@ class Strategy {
 	public function __construct() {
 		$this->_buffer = array();
 		$this->_rules = array();
-		$this->_success = 0;
+		$this->_success = -1;
 		$this->_prediction = 0;
 		$this->_totaltime = 0;
 	}
 
 	public function train() {
-		$pattern = func_get_args();
+		$pattern = func_get_arg(0);
+		$label = func_get_arg(1);
 
-		$this->_rules[] = $pattern;
+		$array = [];
+		$array[] = $pattern;
+		$array[] = $label;
+		
+		$this->_rules[] = $array;
 	}
 
 	public function process( $val ) {

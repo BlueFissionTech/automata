@@ -7,11 +7,11 @@ use BlueFission\Exceptions\NotImplementedException;
 use BlueFission\Behavioral\Behaviors\Behavior;
 
 class OrganizedHandlerCollection extends OrganizedCollection {
-	public function add($handler, $priority = null)
+	public function add($handler, $label = null, int $priority = null )
 	{
 		$handler->priority($priority);
 		// $this->_value->append($handler);
-		parent::add( $handler, uniqid('handler_', true) );
+		parent::add( $handler, $label ?? uniqid('handler_', true), $weight );
 		$this->prioritize();
 	}
 
@@ -51,7 +51,7 @@ class OrganizedHandlerCollection extends OrganizedCollection {
 		$this->sort();
 	}
 
-	protected function create($value) {
-		return array('weight'=>$value->priority(), 'value'=>$value, 'decay'=>$this->_decay, 'timestamp'=>time());
+	protected function create($value, int $priority = 1) {
+		return array('weight'=>$priority ?? $value->priority(), 'value'=>$value, 'decay'=>$this->_decay, 'timestamp'=>time());
 	}
 }

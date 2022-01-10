@@ -12,8 +12,9 @@ use BlueFission\DevArray;
 
 class OrganizedCollection extends Collection implements ICollection, ArrayAccess, IteratorAggregate {
 	protected $_decay = .001;
-	private $_max = 1024;
+	private $_max = 1048576;
 	private $_increment = 0;
+	private $_autosort = true;
 
 	private $_do_sort = true;
 	private $_do_decay = false;
@@ -50,6 +51,11 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		}
 	}
 
+	public function autoSort ($value = true) 
+	{
+		$this->_autosort = $value;
+	}
+	
 	public function setSort( $sorts ) {
 		$this->_do_sort = $sorts;
 	}
@@ -83,7 +89,9 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		if ($this->has( $key )) {
 			$this->_value[$key]['weight']++;
 			$this->_value[$key]['timestamp'] = time();
-			$this->sort();
+			if ( $this->_autosort) {
+				$this->sort();
+			}
 			return $this->_value[$key]['value'];
 		}
 		else 
@@ -292,13 +300,13 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 			return $this->_value[$key]['weight'];
 	}
 
-	public function add( $object, $key = null ) {
+	public function add( $object, $key = null, int $weight = 1 ) {
 		if (!is_scalar($key) && !is_null($key)) {
 			throw new InvalidArgumentException('Label must be scalar');
 		}
 
 		if ( !is_null($key) && $this->has( $key ) ) {
-			$this->_value[$key]['weight']++;
+			$this->_value[$key]['weight'] += $weight;
 			$this->_value[$key]['timestamp'] = time();
 			$this->_value[$key]['value'] = $object;
 
@@ -311,18 +319,20 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 			if ($total >= $this->_max) {
 				$copy = $this->_value->getArrayCopy();
 				end($copy);         // move the internal pointer to the end of the array
-				$key = key($copy);
-				$copy = $this->_value->offsetUnset($key);
+				$index = key($copy);
+				$copy = $this->_value->offsetUnset($index);
 			}
-			$this->_value[$key] = $this->create($object);
+			$this->_value[$key] = $this->create($object, $weight);
 		}
 
-		$this->sort();
+		if ( $this->_autosort) {
+			$this->sort();
+		}
 	}
 
-	protected function create($value) {
-		$percentage = $this->findPercentage(1);
-		return array('weight'=>1, 'percentage'=>$percentage, 'value'=>$value, 'decay'=>$this->_decay, 'timestamp'=>time(), 'ordinance'=>$this->_increment);
+	protected function create($value, int $weight = 1) {
+		$percentage = $this->findPercentage($weight);
+		return array('weight'=>$weight, 'percentage'=>$percentage, 'value'=>$value, 'decay'=>$this->_decay, 'timestamp'=>time(), 'ordinance'=>$this->_increment);
 	}
 
 	protected function findPercentage( $amount ) {

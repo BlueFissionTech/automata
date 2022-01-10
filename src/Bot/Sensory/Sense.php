@@ -13,7 +13,7 @@ use BlueFission\Behavioral\Behaviors\Action;
 class Sense extends Programmable {
 	const MAX_ATTENTION = 1048576;
 	const MAX_SENSITIVITY = 10;
-	const MAX_DEPTH = 11;
+	const MAX_DEPTH = 7;
 	protected $_config = array(
 		'attention' => 1024, // TL,DR
 		'sensitivity' => 10, // How deep are we willing to consider this?
@@ -22,11 +22,12 @@ class Sense extends Programmable {
 		'dimensions' => array(80,24,1024,8), // Adding a dimension to how we consider the experience
 		'features' => array('/\s/'),
 		'flags' => array('OnNewInput'), // What are our foremost concerns?
-		'blacklist' => array(), // What data do we learn to ignore??
+		'blacklist' => array('that', 'the', 'we', 'here', 'to', 'we', 'and', 'it', 'is', 'of', 'a', 'not', 'for', 'have', 'in', 'on', 'with', 'be', 'will', 'are', 'they', 'why', 'what', 'who', 'where', 'when', 'i', 'which', 'there', 'was', 'have', 'you', 'your', 'why', 'do', 'or', 'my', 'not', 'can', 'this', 'no', 'as', 'all', 'was', 'so', 'its', 'our', 'by', 'did', 'an', 'i\'m', 'it\'s'), // What data do we learn to ignore??
 		'chunksize' => 8, // how large is the smallest usable "chunk" of input data?
 	);
 
-	private $_candidates = array();
+	private $_settings = [];
+	private $_candidates = [];
 	private $_consistency = 0;
 	private $_accuracy = 0;
 	private $_score = 0;
@@ -35,8 +36,8 @@ class Sense extends Programmable {
 
 	private $_map;
 	private $_input;
-	private $_matrix = array();
-	private $_buffer = array();
+	private $_matrix = [];
+	private $_buffer = [];
 	private $_buffer_size = 32;
 
 	protected $_preparation;
@@ -46,6 +47,8 @@ class Sense extends Programmable {
 
 		$this->_parent = $parent;
 		$this->_map = new OrganizedCollection();
+		$this->_map->autoSort(false);
+		$this->reset();
 		// $this->config('chunksize', $this->_config['dimensions'][0]);
 
 		$this->_preparation = function ( $input ) {
@@ -53,40 +56,96 @@ class Sense extends Programmable {
 	        if ($input) {
 	        	if ($this->_depth == 0) {
 	        		// die(var_dump($this->_depth));
+	        		$input = stripslashes($input);
+	        		$input = strip_tags($input);
+					$input = trim($input, '\'"');	        		
 	        		$input = str_replace(['?', '!', '.', ','], '', $input);
-	        		return preg_split($this->_config['features'][0], strtolower($input), -1, PREG_SPLIT_NO_EMPTY);
+	        		$chr_map = array(
+					   // Windows codepage 1252
+					   "\xC2\x82" => "'", // U+0082⇒U+201A single low-9 quotation mark
+					   "\xC2\x84" => '"', // U+0084⇒U+201E double low-9 quotation mark
+					   "\xC2\x8B" => "'", // U+008B⇒U+2039 single left-pointing angle quotation mark
+					   "\xC2\x91" => "'", // U+0091⇒U+2018 left single quotation mark
+					   "\xC2\x92" => "'", // U+0092⇒U+2019 right single quotation mark
+					   "\xC2\x93" => '"', // U+0093⇒U+201C left double quotation mark
+					   "\xC2\x94" => '"', // U+0094⇒U+201D right double quotation mark
+					   "\xC2\x9B" => "'", // U+009B⇒U+203A single right-pointing angle quotation mark
+
+					   // Regular Unicode     // U+0022 quotation mark (")
+					                          // U+0027 apostrophe     (')
+					   "\xC2\xAB"     => '"', // U+00AB left-pointing double angle quotation mark
+					   "\xC2\xBB"     => '"', // U+00BB right-pointing double angle quotation mark
+					   "\xE2\x80\x98" => "'", // U+2018 left single quotation mark
+					   "\xE2\x80\x99" => "'", // U+2019 right single quotation mark
+					   "\xE2\x80\x9A" => "'", // U+201A single low-9 quotation mark
+					   "\xE2\x80\x9B" => "'", // U+201B single high-reversed-9 quotation mark
+					   "\xE2\x80\x9C" => '"', // U+201C left double quotation mark
+					   "\xE2\x80\x9D" => '"', // U+201D right double quotation mark
+					   "\xE2\x80\x9E" => '"', // U+201E double low-9 quotation mark
+					   "\xE2\x80\x9F" => '"', // U+201F double high-reversed-9 quotation mark
+					   "\xE2\x80\xB9" => "'", // U+2039 single left-pointing angle quotation mark
+					   "\xE2\x80\xBA" => "'", // U+203A single right-pointing angle quotation mark
+					);
+					$chr = array_keys  ($chr_map); // but: for efficiency you should
+					$rpl = array_values($chr_map); // pre-calculate these two arrays
+					$input = str_replace($chr, $rpl, html_entity_decode($input, ENT_QUOTES, "UTF-8"));
+
+	        		$array = preg_split($this->config('features')[0], strtolower($input), -1, PREG_SPLIT_NO_EMPTY);
+	        		return $array;
 				} else {
 					// die(var_dump($input));
-	        		return str_split ( (string)$input, $this->config('chunksize') );
+	        		// return str_split ( (string)$input, $this->_settings['chunksize'] );
+					$array = [];
+					$length = strlen((string)$input);
+					$chunksize =  $length <= $this->_settings['chunksize'] ? $length : $this->_settings['chunksize'];
+					if ( $this->_settings['chunksize'] != $chunksize ) {
+						$this->_settings['chunksize'] = $chunksize;
+					}
+
+					for ($i = 0; $i < ($length-$chunksize)+1; $i++) {
+						$array[] = substr((string)$input, $i, $chunksize );
+					}
+
+
+	        		return $array;
 	        	}
 	        }
 	        return array();
 		};
 	}
 
+	public function reset()
+	{
+		$this->_settings = $this->_config;
+		$this->_map->clear();
+		$this->_depth = -1;
+	}
+
 	protected function build( $input )
 	{
 		$data = [];
 		foreach ($input as $piece) {
-			if ( $this->_depth > 0) {
-				$data = array_merge($data, str_split((string)$piece, 1));
-			} else {
-				$data[] = $piece;
-			}
+			// if ( $this->_depth > 0) {
+			// 	$data = array_merge($data, str_split((string)$piece, 1));
+			// } else {
+			// 	$data[] = $piece;
+			// }
+			$data[] = $piece;
 		}
 
 		$i = 0;
 		$j = 0;
-		// $remainder = $this->config('dimensions')[0];
+		// $remainder = $this->_settings['dimensions'][0];
 		foreach ($this->_matrix as $row) {
-			if ( count($this->_matrix[$i]) < $this->config('dimensions')[0] ) {
+			if ( count($this->_matrix[$i]) < $this->_settings['dimensions'][0] ) {
 				// $remainer -= count($this->_matrix[$i]);
 				break;
 			}
 		}
 
+
 		foreach ($data as $datum) {
-			if ( $j >= $this->config('dimensions')[0] ) {
+			if ( $j >= $this->_settings['dimensions'][0] ) {
 				$i++;
 				$j = 0;
 			}
@@ -115,18 +174,20 @@ class Sense extends Programmable {
 
 		$parent = $this->_parent;
 
+		$this->_buffer = [];
+
 		$this->_input = $input;
 
 		$input = $this->prepare($this->_input);
-		
+
 		$this->build($input);
 
 		// die(var_dump($this->_input));
 		// var_dump($input);
 		
-		$size = count($input)*$this->config('quality');
+		$size = count($input)*$this->_settings['quality'];
 
-		$increment = floor( 1 / $this->config('quality') );
+		$increment = floor( 1 / $this->_settings['quality'] );
 		$multiplier = .001;
 
 		$col = $row = $i = $j = 0;
@@ -135,7 +196,8 @@ class Sense extends Programmable {
 		$this->_map->clear();
 
 		// sensitivity loops over the data multiple times to find different types of properties
-		while ( $i <= $this->config('attention') && $j <= $this->config('sensitivity') && $i < $size ) {
+		while ( $i <= $this->_settings['attention'] && $j <= $this->_settings['sensitivity'] && $i < $size ) {
+		// while ( $i <= 20 ) {
 			if ( $i > $size ) {
 
 				$i = 0;
@@ -153,7 +215,7 @@ class Sense extends Programmable {
 					$j--;
 				}
 
-				if (!isset($this->_config['dimensions'][$j])) {
+				if (!isset($this->_settings['dimensions'][$j])) {
 					break;
 				}
 			}
@@ -166,11 +228,6 @@ class Sense extends Programmable {
 			// $chunk = trim($_this->_matrix[$row]);
 			$chunk = $this->_matrix[$row][$col];
 
-			// var_dump($chunk);
-
-			if ( in_array($chunk, $this->_config['blacklist']) ) {
-				continue;
-			}
 			/* 
 				What we want to do here is this:
 				Translate the $chunk using a classification / association index
@@ -180,45 +237,46 @@ class Sense extends Programmable {
 				create a map then do regression/classification with euclidean distance testing on in a scene 
 				create a 'holoscene' by association correlated points (consideration)
 			*/
+		
+			if (!in_array($chunk, $this->config('blacklist') ) || $this->_depth > 0 ) {
+				$translation = $this->buffer($chunk);
+				// $translation = $this->translate($chunk);
+				// echo "$chunk\n";
+				if ( !$this->_map->has($chunk) ) {
+					$this->_settings['attention'] += $this->_settings['attention'] < self::MAX_ATTENTION ? $this->_settings['dimensions'][$j]*$this->_settings['quality'] : 0; // increase attention from novelty
+					$multiplier = .001;
+				} else {
+					// Or prepare to get bored.
+					$multiplier = -.001;
+				}
 
-			$translation = $this->buffer($chunk);
-			// $translation = $this->translate($chunk);
-			// echo "$chunk\n";
-			
-			if ( !$this->_map->has($chunk) ) {
-				$this->_config['attention'] += $this->_config['attention'] < self::MAX_ATTENTION ? $this->_config['dimensions'][$j]*$this->_config['quality'] : 0; // increase attention from novelty
-				$muliplier = .001;
-			} else {
-				// Or prepare to get bored.
-				$muliplier = -.001;
-			}
+				if ( $this->_settings['quality'] > 0 && $this->_settings['quality'] < 1 ) {
+					$this->_settings['quality'] += $multiplier;
+				}
 
-			if ( $this->_config['quality'] > 0 && $this->_config['quality'] < 1 ) {
-				$this->_config['quality'] += $muliplier;
-			}
+				if ( $parent && !$parent->can($translation) ) {
+					$parent->behavior($translation, array($this, 'callback') );
+				}
 
-			if ( $parent && !$parent->can($translation) ) {
-				$parent->behavior($translation, array($this, 'callback') );
-			}
+				$this->_map->add($chunk, $translation);
 
-			$this->_map->add($chunk, $translation);
+				if ( $translation == $this->_settings['flags'][$j] ) {
+					$this->_settings['attention'] += $this->_settings['attention'] < self::MAX_ATTENTION ? $this->_settings['dimensions'][$j]*$this->_settings['quality'] : 0; // increase attention from activity
+					$this->_settings['sensitivity'] += $this->_settings['sensitivity'] <= self::MAX_SENSITIVITY ? 1 : 0;
 
-			if ( $translation == $this->_config['flags'][$j] ) {
-				$this->_config['attention'] += $this->_config['attention'] < self::MAX_ATTENTION ? $this->_config['dimensions'][$j]*$this->_config['quality'] : 0; // increase attention from activity
-				$this->_config['sensitivity'] += $this->_config['sensitivity'] <= self::MAX_SENSITIVITY ? 1 : 0;
-
-				// $parent->perform($translation, $chunk);
-				// $this->dispatch($translation, $chunk);
+					// $parent->perform($translation, $chunk);
+					// $this->dispatch($translation, $chunk);
+				}
 			}
 
 			$i++;
-			$this->_config['attention']--;
+			$this->_settings['attention']--;
 			// $k++;
 			$col+=$increment;
-			if ( $col >= $this->config('dimensions')[0]) {
+			if ( $col >= $this->_settings['dimensions'][0]) {
 				$col = 0;
 				$row+=$increment;
-				if ( $row >= $this->config('dimensions')[1]) {
+				if ( $row >= $this->_settings['dimensions'][1]) {
 					break; // Add more dimensions here or break into next "frame" of experience
 				}
 			}
@@ -230,6 +288,7 @@ class Sense extends Programmable {
 		$data = $this->_map->data();
 
 		$this->dispatch(Event::SUCCESS, $data);
+		$this->focus($data);
 	}
 
 	public function setParent( $obj ) {
@@ -240,8 +299,9 @@ class Sense extends Programmable {
 		// var_dump($obj);
 	}
 
-	public function focus( $behavior, $data ) {
-		$data = $data[0];
+	// public function focus( $behavior, $data ) {
+	protected function focus( $data ) {
+		// $data = $data[0];
 		$this->dispatch('OnSweep', $data);
 		
 		if ( $data['variance1'] < 1 ) {
@@ -252,23 +312,21 @@ class Sense extends Programmable {
 
 			// $this->invoke($this->_matrix);
 			$event = new Action('DoEnhance');
-			$event->_context = array('config'=>$this->_config,'input'=>$this->_input, 'data'=>$data);
+			$event->_context = array('config'=>$this->_settings,'input'=>$this->_input, 'data'=>$data);
 			$this->dispatch($event);
-			// die('recursing');
-			// var_dump($this->config('attention'));
+
 			if ($this->_depth < self::MAX_DEPTH) {
 				$this->invoke($this->_input); // Recurse until it gets bored
 			}
 			// $this->dispatch('DoEnhance', array('config'=>$this->_config,'input'=>$this->_matrix));
-		} else {
-			// echo $data['variance1'];
-			// var_dump($this->_map->first());
-			// $data['values'] = null;
-			// die(var_dump($data['values']));
-			$this->_map->optimize();
-			$data = $this->_map->data();
-			$this->dispatch(Event::COMPLETE, $data);
 		}
+		// echo $data['variance1'];
+		// var_dump($this->_map->first());
+		// $data['values'] = null;
+		// die(var_dump($data['values']));
+		$this->_map->optimize();
+		$data = $this->_map->data();
+		$this->dispatch(Event::COMPLETE, $data);
 		// if ( $this->_config['attention'] ) {
 		// 	$this->_config['quality'] =
 		// }
@@ -333,8 +391,8 @@ class Sense extends Programmable {
 		);
 
 		foreach ( $order as $attr=>$limits ) {
-			if ($this->_config[$attr] >= $limits[2] && $this->_config[$attr] <= $limits[2]) {
-				$this->_config[$attr] += $limits[0] == 'up' ? 1 : -1;
+			if ($this->_settings[$attr] >= $limits[1] && $this->_settings[$attr] <= $limits[2]) {
+				$this->_settings[$attr] += $limits[0] == 'up' ? 1 : -1;
 				
 				return;
 			}
@@ -344,7 +402,8 @@ class Sense extends Programmable {
 	protected function init() {
 		parent::init();
 
-		$this->behavior( new Event( Event::SUCCESS ), array($this, 'focus') );
+		// $this->behavior( new Event( Event::SUCCESS ), array($this, 'focus') );
+		$this->behavior( new Event( Event::SUCCESS ) );
 		$this->behavior( new Event( Event::COMPLETE ) );
 		$this->behavior( new Event( 'OnCapture' ) );
 	}
