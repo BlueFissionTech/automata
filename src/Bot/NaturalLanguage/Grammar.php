@@ -87,5 +87,41 @@ class Grammar {// extends DevObject {
 		static::$_dictionary->add($definition, $term);
 	}
 
-	// public function 
+	public static function tokenize( $line ) 
+	{
+		$candidates = [];
+		$buffer = '';
+		$output = [];
+
+		$tokens = mb_str_split($line);
+		$inputLength = count($tokens);
+
+		for ($i = 0; $i < $inputLength; $i++) {
+			$current = $tokens[$i];
+
+			/*
+			if ( !$statement ) {
+				$statement = new Statement();
+			}
+
+			if ( !$entity ) {
+				$entity = new Entity();
+			}
+			*/
+			
+			foreach( static::$_dictionary as $term=>$definition ) {
+				if ( in_array($current, $definition) ) {
+					// $buffer .= $currentSegment;
+
+
+					// $candidates[] = $term;
+     //    			$currentSegment = '';
+				}
+			}
+ 
+    		$currentSegment .= $current;
+		}
+
+		return $output;
+	}
 }

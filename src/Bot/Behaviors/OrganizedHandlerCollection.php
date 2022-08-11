@@ -9,6 +9,7 @@ use BlueFission\Behavioral\Behaviors\Behavior;
 class OrganizedHandlerCollection extends OrganizedCollection {
 	public function add($handler, $label = null, int $priority = null )
 	{
+		$weight = $priority ?? 1;
 		$handler->priority($priority);
 		// $this->_value->append($handler);
 		parent::add( $handler, $label ?? uniqid('handler_', true), $weight );

@@ -5,6 +5,12 @@ namespace BlueFission\Bot\NaturalLanguage;
 
 use BlueFission\DevObject;
 
+/*
+The intended meanings for vocalizations were grouped into six main categories: animate entities (child, man, woman, tiger, snake, deer), inanimate entities (knife, fire, rock, water, meat, fruit), actions (gather, cook, hide, cut, pound, hunt, eat, sleep), properties (dull, sharp, big, small, good, bad), quantifiers (one, many) and demonstratives (this, that).
+
+https://www.livescience.com/iconic-vocalizations-lead-to-human-languages.html
+*/
+
 class Statement extends DevObject {
 	protected $_data = array(
 		'type'=>1,
