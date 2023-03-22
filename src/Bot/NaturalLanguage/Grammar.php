@@ -3,125 +3,204 @@ namespace BlueFission\Bot\NaturalLanguage;
 
 use BlueFission\Bot\Collections\OrganizedCollection as Collection;
 
-// http://ogden.basic-english.org/verbs.html
+class Grammar
+{
+    private $rules;
+    private $commands;
+    private $tokens;
+    private $index;
 
-/*
- Sense Routing
- 	By device
- 	By metainfo
- 	By mime
- 	By classification
- */
+    public function __construct()
+    {
+        $this->rules = [];
+        $this->commands = [];
+        $this->tokens = [];
+        $this->index = 0;
+    }
 
- 	// belief
- 	// desire
- 	// temperament
+    public function addRule($nonterminal, $terminal)
+    {
+        if (!isset($this->rules[$nonterminal])) {
+            $this->rules[$nonterminal] = [];
+        }
+        $this->rules[$nonterminal][] = $terminal;
+    }
 
-/* 
- Grammar Expression syntax
-	([ind] ent{2-3}  | alias)
+    public function addCommand($terminal, $name, $values)
+    {
+        if (!isset($this->commands[$terminal])) {
+            $this->commands[$terminal] = [];
+        }
+        $this->commands[$terminal][$name] = $values;
+    }
 
- */
+    public function addTerm($term, $classification)
+    {
+        $this->tokens[$term] = $classification;
+    }
 
-class Grammar {// extends DevObject {
+    public function tokenize($input)
+{
+	    // self::prepare();
 
-	protected static $_syntax;
+	    $classifications = [];
+	    $expected = [];
+	    $next = [];
+	    $buffer = '';
+	    $output = [];
+	    $currentSegment = '';
+	    $line = 1;
 
-	protected static $_rules;
+	    $tokens = mb_str_split($input);
+	    $inputLength = count($tokens);
 
-	protected static $_dictionary;
+	    $j = 0;
+	    for ($i = 0; $i < $inputLength; $i++) {
+	        $current = $tokens[$i];
 
-	protected static $_tokens = array(
-		'not'=>'T_NEGATION', // Not, no
-		'pre'=>'T_PREFIX', // Word parts at the start
-		'ind'=>'T_INDICATOR', //Particles like "the"
-		'ent'=>'T_ENTITY', // Objects, properties, nouns
-		'ref'=>'T_ALIAS', // Pronouns and place holders
-		'opr'=>'T_OPERATOR', // Actions, verbs
-		'des'=>'T_DESCRIPTOR', // Adjectives/qualities
-		'det'=>'T_DETERMINER', // Amounts, quantities
-		'dir'=>'T_DIRECTOR', // Prepositions
-		'mod'=>'T_MODIFIER', // Adverbs and words that express the mode of something
-		'suf'=>'T_SUFFIX', // Word parts at the end
-		'spc'=>'T_WHITESPACE', // Word and expression boundaries
-		'con'=>'T_CONJUNCTION', // and, but, then
-		'int'=>'T_INTERJECTION',
-		'pun'=>'T_PUNCTUATION',
-	);
+	        if ($current === "\n") {
+	            $line++;
+	        }
 
-	public function __construct() {
-		static::$_syntax = new Collection();
-		static::$_rules = new Collection();
-		static::$_dictionary = new Collection();
+	        $currentSegment .= $current;
+	        foreach ($this->tokens as $term => $classification) {
+	            $classifications = [];
+
+
+	            if ($currentSegment == $term) {
+	            	if (!is_array($classification)) {
+	            		$classification = [$classification];
+	            	}
+	                foreach ($classification as $class) {
+	                    if (count($next) < 1 || in_array($class, $next)) {
+	                        $classifications[] = $class;
+	                    }
+	                }
+
+	                if (count($classifications) < 1) {
+	                    // throw new \Exception("Undefined input '{$currentSegment}' on line, {$line}.", 1);
+	                }
+
+	                $new = true;
+	                foreach ($classifications as $classification) {
+	                    $expectation = $this->commands[$classification];
+	                    $guess = $expectation ? $expectation : [];
+	                    if ($guess && isset($guess['expects'])) {
+	                        if ($guess['expects'][0] != 'C_PREVIOUS') {
+	                            if ($new) {
+	                                $next = [];
+	                                $expected = [];
+	                                $new = false;
+	                            }
+
+	                            $expected[$classification] = $guess['expects'];
+	                            $next = array_merge($next, $expected[$classification]);
+	                        } else {
+	                            for ($k = 0; $k < count($next); $k++) {
+	                                $or = strpos($next[$k], '|');
+	                                if ($or) {
+	                                    $expects = explode('|', $next[$k]);
+	                                    for ($l = 0; $l < count($expects); $l++) {
+	                                        if ($expects[$l] == $classification) {
+	                                            unset($expects[$l]);
+
+	                                            $next[$k] = implode('|', $expects);
+	                                        }
+	                                    }
+	                                }
+	                            }
+	                        }
+	                    }
+	                }
+
+	                if (count($classifications)) {
+	                    $output[$j] = ['classifications' => $classifications, 'token' => '', 'expects' => $expected, 'match' => $currentSegment, 'line' => $line];
+	                    $currentSegment = '';
+	                    $j++;
+	                }
+	            }
+	        }
+	    }
+
+	    return $output;
 	}
 
-	public static function addPattern($expression) {
-		// expressions: ENTITY.last = (DETERMINER > 1 && ENTITY.last is 'y' ? 'ie' : 'y')
-		// expressions: ENTITY + (DETERMINER > 1 ? 's' : '')
-		// $this->_rules[] = array(
-		// 	'expresson'=>'',
-		// 	'conditions'=>$conditions
-		// );
 
-		static::$_syntax->add($expression, $expression);
-	}
+    public function parse($tokens)
+    {
+        $this->index = 0;
+        return $this->parseNonterminal('T_DOCUMENT', $tokens);
+    }
 
-	public static function addRule($nonterminal, $terminal) {
-		if ( static::$_rules->has($nonterminal) ) {
-			$operation = static::$_rules->get($nonterminal);
-		} else {
-			$operation = new Collection();
-		}
-		$operation->add($terminal, $terminal);
-		static::$_rules->add($operation, $nonterminal);
-	}
-
-	public static function addTerm($term, $classification)
+    private function parseNonterminal($nonterminal, $tokens)
 	{
-		if ( static::$_dictionary->has($term) ) {
-			$definition = static::$_dictionary->get($term);
-		} else {
-			$definition = new Collection();
-		}
-		$definition->add($classification, $classification);
-		static::$_dictionary->add($definition, $term);
+	    if (!isset($this->rules[$nonterminal])) {
+	        throw new \Exception("Unknown nonterminal: $nonterminal");
+	    }
+
+	    $originalIndex = $this->index;
+	    $node = ['type' => $nonterminal, 'children' => []];
+
+	    echo "Rules\n";
+	    var_dump($this->rules[$nonterminal]);
+
+	    foreach ($this->rules[$nonterminal] as $rule) {
+	        $node['children'] = [];
+	        $this->index = $originalIndex;
+	        $matched = true;
+
+	        foreach ($rule as $element) {
+	            $optional = false;
+
+	            if (is_array($element)) {
+	                $optional = in_array('optional', $element);
+	                $element = array_filter($element, function ($e) {
+	                    return $e !== 'optional';
+	                });
+	                $element = array_values($element);
+	            }
+
+	            if (is_array($element)) {
+	                $element = $element[0];
+	            }
+	            if (strpos($element, '|') !== false) {
+	                $element = explode('|', $element)[0];
+	            }
+
+	            var_dump($tokens[$this->index]['classifications']);
+	            var_dump($element);
+	            if (isset($tokens[$this->index]) && in_array($element, $tokens[$this->index]['classifications'])) {
+	            	die(var_dump('test'));
+	                $node['children'][] = [
+	                    'type' => $element,
+	                    'value' => $tokens[$this->index]['term']
+	                ];
+	                $this->index++;
+	            } elseif (isset($this->rules[$element])) {
+	            	die(var_dump('test2'));
+
+	                $child = $this->parseNonterminal($element, $tokens);
+
+	                if ($child) {
+	                    $node['children'][] = $child;
+	                } elseif (!$optional) {
+	                    $matched = false;
+	                    break;
+	                }
+	            } elseif (!$optional) {
+	            	die(var_dump('test3'));
+
+	                $matched = false;
+	                break;
+	            }
+	        }
+
+	        if ($matched) {
+	            return $node;
+	        }
+	    }
+
+	    return null;
 	}
 
-	public static function tokenize( $line ) 
-	{
-		$candidates = [];
-		$buffer = '';
-		$output = [];
-
-		$tokens = mb_str_split($line);
-		$inputLength = count($tokens);
-
-		for ($i = 0; $i < $inputLength; $i++) {
-			$current = $tokens[$i];
-
-			/*
-			if ( !$statement ) {
-				$statement = new Statement();
-			}
-
-			if ( !$entity ) {
-				$entity = new Entity();
-			}
-			*/
-			
-			foreach( static::$_dictionary as $term=>$definition ) {
-				if ( in_array($current, $definition) ) {
-					// $buffer .= $currentSegment;
-
-
-					// $candidates[] = $term;
-     //    			$currentSegment = '';
-				}
-			}
- 
-    		$currentSegment .= $current;
-		}
-
-		return $output;
-	}
 }
