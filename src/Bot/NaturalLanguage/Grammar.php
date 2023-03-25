@@ -1,6 +1,7 @@
 <?php
 namespace BlueFission\Bot\NaturalLanguage;
 
+use BlueFission\Bot\NaturalLanguage\StemmerLemmatizer;
 use BlueFission\Bot\Collections\OrganizedCollection as Collection;
 
 class Grammar
@@ -9,13 +10,61 @@ class Grammar
     private $commands;
     private $tokens;
     private $index;
+    private $depth;
+    private $previous;
+    private $stemmer;
 
-    public function __construct()
-    {
+    protected static $pos = [
+		'not'=>'T_NEGATION', // Not, no
+		'pre'=>'T_PREFIX', // Word parts at the start
+		'ind'=>'T_INDICATOR', //Particles like "the"
+		'sym'=>'T_SYMBOL', // Names, words, meaning packages
+		'ent'=>'T_ENTITY', // Objects, properties, nouns
+		'ref'=>'T_ALIAS', // Pronouns and place holders
+		'opr'=>'T_OPERATOR', // Actions, verbs
+		'des'=>'T_DESCRIPTOR', // Adjectives/qualities
+		'det'=>'T_DETERMINER', // Amounts, quantities
+		'dir'=>'T_DIRECTOR', // Prepositions
+		'mod'=>'T_MODIFIER', // Adverbs and words that express the mode of something
+		'suf'=>'T_SUFFIX', // Word parts at the end
+		'spc'=>'T_WHITESPACE', // Word and expression boundaries
+		'con'=>'T_CONJUNCTION', // and, but, then
+		'int'=>'T_INTERJECTION',
+		'pun'=>'T_PUNCTUATION',
+	];
+
+    public function __construct( StemmerLemmatizer $stemmer, $rules = null, $commands = null, $tokens = null )
+	{
+
         $this->rules = [];
         $this->commands = [];
         $this->tokens = [];
         $this->index = 0;
+        $this->depth = 0;
+        $this->previous = "";
+        $this->stemmer = $stemmer;
+
+		if ($rules) {
+			foreach ( $rules as $terminal=>$rule ) {
+				foreach ( $rule as $elements) {
+					$grammar->addRule($terminal, $elements);
+				}
+			}
+		}
+		if ($commands) {
+			foreach ( $commands as $terminal=>$command ) {
+				foreach ( $command as $name=>$values) {
+					$grammar->addCommand($terminal, $name, $values);
+				}
+			}
+		}
+		if ($tokens) {
+			foreach ( $tokens as $term=>$classification ) {
+				foreach ($classification as $class) {
+					$grammar->addTerm($term, $class);
+				}
+			}
+		}
     }
 
     public function addRule($nonterminal, $terminal)
@@ -36,13 +85,11 @@ class Grammar
 
     public function addTerm($term, $classification)
     {
-        $this->tokens[$term] = $classification;
+        $this->tokens[$term][] = $classification;
     }
 
     public function tokenize($input)
-{
-	    // self::prepare();
-
+	{
 	    $classifications = [];
 	    $expected = [];
 	    $next = [];
@@ -65,9 +112,10 @@ class Grammar
 	        $currentSegment .= $current;
 	        foreach ($this->tokens as $term => $classification) {
 	            $classifications = [];
-
+	            $term = $this->stemmer->lemmatize($term);
 
 	            if ($currentSegment == $term) {
+	            // if (substr($currentSegment, -strlen($term)) === $term) {
 	            	if (!is_array($classification)) {
 	            		$classification = [$classification];
 	            	}
@@ -78,7 +126,7 @@ class Grammar
 	                }
 
 	                if (count($classifications) < 1) {
-	                    // throw new \Exception("Undefined input '{$currentSegment}' on line, {$line}.", 1);
+	                    throw new \Exception("Undefined input '{$currentSegment}' on line, {$line}.", 1);
 	                }
 
 	                $new = true;
@@ -132,75 +180,185 @@ class Grammar
         return $this->parseNonterminal('T_DOCUMENT', $tokens);
     }
 
-    private function parseNonterminal($nonterminal, $tokens)
+	private function parseNonterminal($nonterminal, $tokens)
 	{
+		if ($this->depth == 0)
+			// var_dump($tokens);
 	    if (!isset($this->rules[$nonterminal])) {
 	        throw new \Exception("Unknown nonterminal: $nonterminal");
 	    }
 
+	    if ($this->depth > 10) return;
+
 	    $originalIndex = $this->index;
 	    $node = ['type' => $nonterminal, 'children' => []];
-
-	    echo "Rules\n";
-	    var_dump($this->rules[$nonterminal]);
+	    // echo "depth: {$this->depth}\n";
+    	// echo "Iteration {$this->index} of " . count($tokens) . "\n";
 
 	    foreach ($this->rules[$nonterminal] as $rule) {
+	    	// echo "Trying rule: $nonterminal\n";
+
 	        $node['children'] = [];
 	        $this->index = $originalIndex;
-	        $matched = true;
-
-	        foreach ($rule as $element) {
-	            $optional = false;
-
-	            if (is_array($element)) {
-	                $optional = in_array('optional', $element);
-	                $element = array_filter($element, function ($e) {
-	                    return $e !== 'optional';
-	                });
-	                $element = array_values($element);
-	            }
-
-	            if (is_array($element)) {
-	                $element = $element[0];
-	            }
-	            if (strpos($element, '|') !== false) {
-	                $element = explode('|', $element)[0];
-	            }
-
-	            var_dump($tokens[$this->index]['classifications']);
-	            var_dump($element);
-	            if (isset($tokens[$this->index]) && in_array($element, $tokens[$this->index]['classifications'])) {
-	            	die(var_dump('test'));
-	                $node['children'][] = [
-	                    'type' => $element,
-	                    'value' => $tokens[$this->index]['term']
-	                ];
-	                $this->index++;
-	            } elseif (isset($this->rules[$element])) {
-	            	die(var_dump('test2'));
-
-	                $child = $this->parseNonterminal($element, $tokens);
-
-	                if ($child) {
-	                    $node['children'][] = $child;
-	                } elseif (!$optional) {
-	                    $matched = false;
-	                    break;
-	                }
-	            } elseif (!$optional) {
-	            	die(var_dump('test3'));
-
-	                $matched = false;
-	                break;
-	            }
-	        }
+	        $matched = $this->processRule($rule, $tokens, $node);
 
 	        if ($matched) {
 	            return $node;
 	        }
 	    }
+	    $node = $this->pruneHangingBranches($node);
 
+	    return $node;
+	}
+
+	private function processRule($rule, $tokens, &$node)
+	{
+	    $matched = true;
+
+	    foreach ($rule as $elements) {
+	        $optional = false;
+	        $isCluster = false;
+
+	        if (!is_array($elements)) {
+	            $elements = [$elements];
+	        } else {
+	        	// TODO: Add logic for element clusters
+	        	$isCluster = true;
+	        }
+
+	        $matched = $this->processElements($elements, $tokens, $node, $optional, $isCluster);
+	        if (!$matched) {
+	        	break;
+	        }
+	    }
+
+	    return $matched;
+	}
+
+	private function processElements($elements, $tokens, &$node, &$optional, $isCluster)
+	{
+	    foreach ($elements as $element) {
+	    	// echo "Trying element: $element\n";
+
+	        if (!isset($tokens[$this->index])) return false;
+	        
+	        foreach ($tokens[$this->index]['classifications'] as $classification) {
+	            if (!$this->processElement($element, $classification, $tokens, $node, $optional)) {
+	                return false;
+	            }
+	        }
+	    }
+
+	    return true;
+	}
+
+	private function processElement($element, $classification, $tokens, &$node, &$optional)
+	{
+	    if (strpos($element, '|') !== false) {
+	        $element = explode('|', $element)[0];
+	        $optional = true;
+	    }
+
+	    // echo "Classification: $classification\n";
+	    $previous = $this->previousSibling($node['children'], count($node['children']));
+	    $previous = $previous ? $previous['type'] : null;
+
+	    if (!$this->isStructureAllowed($previous, $element)) {
+	    	// echo "Not allowed: $previous -> $element\n";
+
+	        return false;
+	    }
+
+	    return $this->processClassification($classification, $element, $tokens, $node, $optional);
+	}
+
+	private function processClassification($classification, $element, $tokens, &$node, $optional)
+	{
+		// echo "Token: '" . $tokens[$this->index]['match'] . "'\n";
+	    if ($classification == 'T_WHITESPACE') {
+	        $this->index++;
+			// echo "Token switched to: '" . $tokens[$this->index]['match'] . "'\n";
+
+	        // return true;
+	    }
+
+	    if (isset($tokens[$this->index]) && $element == $classification) {
+	    	// echo "Matched: $classification -> $element\n";
+
+	        if ($this->isExpected($this->previous, $element)) {
+	            $node['children'][] = [
+	                'type' => $element,
+	                'value' => $tokens[$this->index]['match']
+	            ];
+	            $this->index++;
+	            $this->previous = $element;
+	            return true;
+			}
+		} elseif (isset($this->rules[$element])) {
+			$this->depth++;
+			$child = $this->parseNonterminal($element, $tokens);
+			$this->depth--;
+		    $node['children'][] = $child;
+		} elseif (!$optional) {
+		    return false;
+		}
+
+		return true;
+	}
+
+	private function previousSibling($children, $index)
+	{
+	    if ($index > 0 && isset($children[$index - 1])) {
+	        return $children[$index - 1];
+	    }
 	    return null;
+	}
+
+	private function isExpected($classification, $element)
+	{
+	    if (isset($this->commands[$classification]) && isset($this->commands[$classification]['expects'])) {
+	        return in_array($element, $this->commands[$classification]['expects']);
+	    }
+	    return true;
+	}
+
+	// Add the method to check for illegal structures
+    private function isStructureAllowed($previous, $current)
+    {
+        $disallowedStructures = [
+            ['T_ENTITY', 'T_NOUN_PHRASE'],
+            ['T_ENTITY', 'T_PUNCTUATION'],
+            ['T_OPERATOR', 'T_OPERATOR'],
+            ['T_STATEMENT', 'T_STATEMENT'],
+        ];
+
+        foreach ($disallowedStructures as $structure) {
+            if ($previous === $structure[0] && $current === $structure[1]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+	private function pruneHangingBranches($node)
+	{
+	    $prunedChildren = [];
+
+	    foreach ($node['children'] as $child) {
+	        if (isset($this->rules[$child['type']])) {
+	            $child = $this->pruneHangingBranches($child);
+	        }
+
+	        if (isset($child['children']) && count($child['children']) > 0) {
+	            $prunedChildren[] = $child;
+	        } elseif (!isset($this->rules[$child['type']])) {
+	            $prunedChildren[] = $child;
+	        }
+	    }
+
+	    $node['children'] = $prunedChildren;
+	    return $node;
 	}
 
 }
