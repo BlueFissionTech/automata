@@ -47,21 +47,21 @@ class Grammar
 		if ($rules) {
 			foreach ( $rules as $terminal=>$rule ) {
 				foreach ( $rule as $elements) {
-					$grammar->addRule($terminal, $elements);
+					$this->addRule($terminal, $elements);
 				}
 			}
 		}
 		if ($commands) {
 			foreach ( $commands as $terminal=>$command ) {
 				foreach ( $command as $name=>$values) {
-					$grammar->addCommand($terminal, $name, $values);
+					$this->addCommand($terminal, $name, $values);
 				}
 			}
 		}
 		if ($tokens) {
 			foreach ( $tokens as $term=>$classification ) {
 				foreach ($classification as $class) {
-					$grammar->addTerm($term, $class);
+					$this->addTerm($term, $class);
 				}
 			}
 		}
@@ -112,7 +112,6 @@ class Grammar
 	        $currentSegment .= $current;
 	        foreach ($this->tokens as $term => $classification) {
 	            $classifications = [];
-	            $term = $this->stemmer->lemmatize($term);
 
 	            if ($currentSegment == $term) {
 	            // if (substr($currentSegment, -strlen($term)) === $term) {
@@ -128,6 +127,8 @@ class Grammar
 	                if (count($classifications) < 1) {
 	                    throw new \Exception("Undefined input '{$currentSegment}' on line, {$line}.", 1);
 	                }
+
+			        $term = $this->stemmer->lemmatize($term);
 
 	                $new = true;
 	                foreach ($classifications as $classification) {
@@ -162,7 +163,7 @@ class Grammar
 	                }
 
 	                if (count($classifications)) {
-	                    $output[$j] = ['classifications' => $classifications, 'token' => '', 'expects' => $expected, 'match' => $currentSegment, 'line' => $line];
+	                    $output[$j] = ['classifications' => $classifications, 'token' => $currentSegment, 'expects' => $expected, 'match' => $term, 'line' => $line];
 	                    $currentSegment = '';
 	                    $j++;
 	                }
@@ -346,13 +347,13 @@ class Grammar
 	    $prunedChildren = [];
 
 	    foreach ($node['children'] as $child) {
-	        if (isset($this->rules[$child['type']])) {
+	        if (!empty($child) && isset($this->rules[$child['type']])) {
 	            $child = $this->pruneHangingBranches($child);
 	        }
 
-	        if (isset($child['children']) && count($child['children']) > 0) {
+	        if (!empty($child) && isset($child['children']) && count($child['children']) > 0) {
 	            $prunedChildren[] = $child;
-	        } elseif (!isset($this->rules[$child['type']])) {
+	        } elseif (empty($child) || !isset($this->rules[$child['type']])) {
 	            $prunedChildren[] = $child;
 	        }
 	    }

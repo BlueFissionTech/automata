@@ -1,14 +1,14 @@
 <?php
 namespace BlueFission\Bot\Strategies;
 
-class Pattern extends Strategy {
+class Pattern extends Basic {
 
 	public function __construct() {
 		parent::__construct();
 	}
 
-	public function process( $val ) {
-		parent::process($val);
+	public function predict( $val ) {
+		parent::predict($val);
 
 		foreach ($this->_rules as $rule) {
 			$position = true;
@@ -25,6 +25,8 @@ class Pattern extends Strategy {
 					break;
 				}
 			}
+
+			return $this->_prediction;
 		}
 
 		if ( $this->_prediction == null ) {

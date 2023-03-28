@@ -3,7 +3,7 @@ namespace BlueFission\Bot\Strategies;
 
 use BlueFission\Bot\Collections\OrganizedCollection;
 
-class Predictor extends Strategy {
+class Prediction extends Basic {
 
 	// private $_rules;
 	private $_previous_rule_fired = -1;
@@ -17,17 +17,19 @@ class Predictor extends Strategy {
 		$this->_rules = new OrganizedCollection();
 	}
 
-	public function train( ) {
+	public function train( $dataset, float $testSize = 0.2 ) {
+		/*
 		$pattern = func_get_args();
 		$rule = array(
 			'matched'=>false,
 			'pattern'=>$pattern
 		);
+		*/
 
 		$this->_rules->add($rule);
 	}
 
-	public function process( $val ) {
+	public function predict( $input ) {
 		$i = 0;
 		$rule_to_fire = -1;
 
@@ -77,5 +79,7 @@ class Predictor extends Strategy {
 		}
 
 		$this->_prediction = $this->_rules[$rule_to_fire]['pattern'][$index];
+
+		return $this->_prediction;
 	}
 }

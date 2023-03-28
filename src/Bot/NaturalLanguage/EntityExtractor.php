@@ -63,6 +63,33 @@ class EntityExtractor
         return $this->extract('/\b(?:[a-zA-Z]:\\|\/|\\\\)[^<>:"|?*\n]*[^<>:"\\/|?*\n\s]\b/', $input);
     }
 
+    public function literals($input)
+    {
+        return $this->extract('/(?<![\\\\])["\']((?:.(?!(?<![\\\\])["\']))*.)["\']/', $input);
+    }
+
+    public function mentions($input)
+    {
+        return $this->extract('/@[a-zA-Z]\w*/', $input);
+    }
+
+    public function tags($input)
+    {
+        return $this->extract('/#[a-zA-Z]\w*/', $input);
+    }
+
+    public function values($input)
+    {
+        return $this->extract('/\$[a-zA-Z]\w*/', $input);
+    }
+
+    public function operation($input)
+    {
+        $operators = '\+|-|\*|\/|==?|&&|\|\||<<|>>|>|<|<>|!=';
+        return $this->extract('/(\w+)\s*(' . $operators . ')\s*(\w+)/', $input);
+    }
+
+
     private function extract($pattern, $input)
     {
         if (is_string($input)) {

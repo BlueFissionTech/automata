@@ -19,11 +19,11 @@ class SyntaxTreeWalker {
     }
 
     protected function traverse($node, &$results) {
-        if ($node['type'] === 'T_ALIAS' && $node['value'] === 'me') {
+        if (isset($node['type']) && $node['type'] === 'T_ALIAS' && $node['value'] === 'me') {
             $results['subject'] = 'app';
-        } elseif ($node['type'] === 'T_OPERATOR') {
+        } elseif (isset($node['type']) && $node['type'] === 'T_OPERATOR') {
             $results['operator'] = $node['value'];
-        } elseif ($node['type'] === 'T_ENTITY') {
+        } elseif (isset($node['type']) && $node['type'] === 'T_ENTITY') {
             $results['objects'][] = $node['value'];
         }
 
