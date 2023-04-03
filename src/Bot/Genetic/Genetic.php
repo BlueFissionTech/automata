@@ -4,7 +4,7 @@ namespace BlueFission\Bot\Genetic;
 
 use BlueFission\Behavioral\Configurable;
 
-class Genetic extends Configurable
+trait Genetic
 {
     protected $_mutationRate;
 

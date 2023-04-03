@@ -2,164 +2,156 @@
 
 namespace BlueFission\Bot;
 
-use BlueFission\Data\Queues\Queue as Queue;
-
-use BlueFission\Bot\Collections\OrganizedCollection as Collection;
-use BlueFission\Bot\Behaviors\OrganizedBehaviorCollection as BehaviorCollection;
-use BlueFission\Bot\Behaviors\OrganizedHandlerCollection as HandlerCollection;
+use BlueFission\Bot\Collections\OrganizedCollection;
 use BlueFission\Bot\Sensory\Input;
+use BlueFission\Bot\Strategies\IStrategy;
 use BlueFission\Bot\Sensory\Sense;
-use BlueFission\Services\Service;
+use BlueFission\Behavioral\Dispatcher;
 use BlueFission\Behavioral\Behaviors\Event;
+use BlueFission\Behavioral\Behaviors\Behavior;
+use BlueFission\Behavioral\Behaviors\Handler;
 
-class Intelligence extends Service {
+class Intelligence extends Dispatcher
+{
+    protected OrganizedCollection $_strategies;
+    protected float $_minThreshold;
+    protected $_starttime;
+    protected $_stoptime;
+    protected $_totaltime;
+    protected IStrategy $_lastStrategyUsed;
 
-	const TRANSACTION_MULTIPLIER = 10;
-	const TRANSACTION_BASE_SIZE = 1;
+    private array $_strategyGroups;
 
-	private $_score = 0;
-	private $_transaction_size;
-	private $_level;
+    const PREDICTION_EVENT = 'prediction_event';
 
-	protected $_strategies;
-	protected $_memory;
-
-	protected $_biases;
-	protected $_scene;
-
-	protected $_inputs;
-	protected $_senses;
-
-	protected $_starttime;
-	protected $_stoptime;
-	protected $_totaltime;
-
-	public function __construct() 
-	{
+    public function __construct($minThreshold = 0.8)
+    {
+        $this->_strategies = new OrganizedCollection();
+        $this->_minThreshold = $minThreshold;
+        $this->_strategyGroups = [];
 		parent::__construct();
-		$this->_services = new Collection();
-		$this->_routes = new Collection();
-		$this->_strategies = new Collection();
-		$this->_scene = new Collection();
-		$this->_inputs = new Collection();
-		$this->_behaviors = new BehaviorCollection();
-		$this->_handlers = new HandlerCollection();
-	}
+    }
 
-	public function classify( $input, $source = null ) {
-		$result = $input;
-		if ( $source && $this->_scene->has($source) ) {
-			$this->_scene->add($source);
-		} else {
-			foreach ( $this->_strategies as $strategy ) {
-				$this->startclock();
-				// var_dump($strategy);
-				$strategy['value']->process($input);
-				$this->stopclock();
+    public function registerStrategy(IStrategy $strategy, string $name)
+    {
+        $this->_strategies->add($strategy, $name);
+    }
 
-				$time = $this->time();
-				$result = $strategy['value']->guess();
-				// var_dump($strategy['value']->score());
-				var_dump($result);
-				if ($result) {
-					break;
-				}
-			}
-		}
+    public function registerStrategyGroup(DataGroup $group)
+    {
+        $this->_strategyGroups[$group->getName()] = $group;
+    }
 
-		return $result;
-	}
-
-	public function train( $dataset )
-	{
-		foreach ( $this->_strategies as $strategy ) {
-			$this->startclock();
-			// var_dump($strategy);
-			$strategy['value']->train($dataset);
-			$this->stopclock();
-
-			$time = $this->time();
-		}
-	}
-
-	public function read( $data )
-	{
-		foreach ($this->_inputs as $name=>$input) {
-			var_dump($data);
-			$classify = $this->classify($data, $name);
-			if ( $classify ) {
-				$input['value']->scan($data);
-			}
-		}
-	}
-
-	public function input($name, $sense = null, $processor = null) {
-				
-		$this->_inputs[$name] = new Input( $processor );
-
-        $app = \App::instance();
-        $sense = $sense ? new $sense( $app ) : new Sense( $app );
-        $sense->behavior(Event::SUCCESS, [$this, 'capture']);
-
-        $this->_senses[$name] = $sense;
-
-        $this->_inputs[$name]->behavior(Event::SUCCESS, [$this, 'enqueue']);
-        $this->_inputs[$name]->behavior(Event::COMPLETE, function( $behavior ) use ( $name ) {
-        	$this->enqueue($behavior);
-
-        	while (!Queue::is_empty('experience')) {
-        		$this->_senses[$name]->invoke(Queue::dequeue($name));
-        	}
+    public function registerInput(Input $input)
+    {
+        $input->on(Event::COMPLETE, function (Behavior $event) {
+            $data = $event->_context;
+            foreach ($this->_strategies as $strategy) {
+                return $strategy->predict($data);
+            }
+            // $this->_strategies->sort();
         });
+    }
 
-        return $this;
-	}
-
-	public function enqueue( $behavior )
+    public function scan($input)
 	{
-		Queue::enqueue( $behavior->_target->name(), $behavior->_context );
+	    $dataType = $this->getType($input);
+	    if ($dataType && isset($this->_strategyGroups[$dataType])) {
+	        $group = $this->_strategyGroups[$dataType];
+	        $strategies = $group->getStrategies();
+
+	        // Iterate through strategies and use them
+	        foreach ($strategies as $strategy) {
+	            $output = $strategy->predict($input);
+	            $this->dispatch(self::PREDICTION_EVENT, [
+	                'strategy' => get_class($strategy),
+	                'output' => $output,
+	                'type' => $dataType,
+	            ]);
+	        }
+	    }
 	}
 
-	public function capture( $behavior, $data )
-	{
-		// die(var_dump($data));
-		// $this->_scene[ crc32($data) ] = $data[0];
-	}
 
-	// public function addFrame( $frame ) {
-	// 	foreach ( $this->_strategies as $strategy ) {
-	// 		$this->service($strategy, 'train', $frame );
-	// 	}
-	// }
+    public function train(array $dataset, array $labels)
+    {
+        foreach ($this->_strategies as $strategy) {
+            $this->startclock();
+            $strategy->train($dataset, $labels);
+            $accuracy = $strategy->accuracy();
+            $this->stopclock();
+            $executionTime = $this->_totaltime;
 
-	public function strategy($name, $class) {
-		$strategy = $name.'_strategy';
-		// $this->delegate($strategy, $class);
+            $score = $this->calculateScore($accuracy, $executionTime);
+            $this->_strategies->weight($strategy, $score);
 
-		$this->_strategies->add(new $class, $strategy);
+            if ($accuracy >= $this->_minThreshold) {
+                break;
+            }
+        }
 
-		return $this;
-	}
+        $this->_strategies->sort();
+    }
 
-	protected function startclock() {
-		if ( function_exists('getrusage')) {
-			$this->_starttime = getrusage();
-		} else {
-			$this->_starttime = microtime(true);
-		}
-	}
+    public function predict($input)
+    {
+        $bestStrategy = $this->_strategies->first();
+        $this->_lastStrategyUsed = $bestStrategy;
+        return $bestStrategy->predict($input);
+    }
 
-	protected function stopclock() {
-		if ( function_exists('getrusage')) {
-			$this->_stoptime = getrusage();
-			$this->_totaltime = ($this->_stoptime["ru_utime.tv_sec"]*1000 + intval($this->_stoptime["ru_utime.tv_usec"]/1000)) - ($this->_starttime["ru_utime.tv_sec"]*1000 + intval($this->_starttime["ru_utime.tv_usec"]/1000));
-		} else {
-			$this->_stopttime = microtime(true);
-			$this->_totaltime = ($time_end - $time_start);
-		}
-	}
+    public function approvePrediction()
+    {
+        if (isset($this->_lastStrategyUsed)) {
+            $score = $this->_strategies->weight($this->_lastStrategyUsed);
+            $newScore = $score * 1.1;
+            $this->_strategies->weight($this->_lastStrategyUsed, $newScore);
+            $this->_strategies->sort();
+        }
+    }
 
-	public function time() {
-		return $this->_totaltime;
-	}
+    public function rejectPrediction()
+    {
+        if (isset($this->_lastStrategyUsed)) {
+            $score = $this->_strategies->weight($this->_lastStrategyUsed);
+            $newScore = $score * 0.9;
+            $this->_strategies->weight($this->_lastStrategyUsed, $newScore);
+            $this->_strategies->sort();
+        }
+    }
+
+    public function onPrediction(callable $listener)
+    {
+        $this->behavior(self::PREDICTION_EVENT, $listener);
+    }
+
+    private function getType($input): ?string
+    {
+        return InputTypeDetector::detect($input);
+    }
+
+    protected function calculateScore(float $accuracy, float $executionTime): float
+    {
+        return $accuracy / (1 + $executionTime);
+    }
+
+    protected function startclock()
+    {
+        if (function_exists('getrusage')) {
+            $this->_starttime = getrusage();
+        } else {
+            $this->_starttime = microtime(true);
+        }
+    }
+
+    protected function stopclock()
+    {
+        if (function_exists('getrusage')) {
+            $this->_stoptime = getrusage();
+            $this->_totaltime = ($this->_stoptime["ru_utime.tv_sec"] * 1000 + intval($this->_stoptime["ru_utime.tv_usec"] / 1000)) - ($this->_starttime["ru_utime.tv_sec"] * 1000 + intval($this->_starttime["ru_utime.tv_usec"] / 1000));
+        } else {
+            $this->_stopttime = microtime(true);
+            $this->_totaltime = ($this->_stopttime - $this->_starttime);
+        }
+    }
 }

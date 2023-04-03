@@ -7,68 +7,56 @@ use Phpml\FeatureExtraction\TokenCountVectorizer;
 use Phpml\Tokenization\WhitespaceTokenizer;
 use Phpml\FeatureExtraction\TfIdfTransformer;
 use Phpml\Metric\Accuracy;
-use Phpml\Dataset\RandomSplit;
+use Phpml\Dataset\ArrayDataset;
+use Phpml\CrossValidation\RandomSplit;
+use Phpml\Pipeline;
 
 class NaiveBayesTextClassification extends Strategy
 {
     private $classifier;
     private $vectorizer;
     private $transformer;
-    private $testSamples;
-    private $testTargets;
 
     public function __construct()
     {
         $this->classifier = new NaiveBayes();
         $this->vectorizer = new TokenCountVectorizer(new WhitespaceTokenizer());
         $this->transformer = new TfIdfTransformer();
+        $this->pipeline = new Pipeline( [
+            $this->vectorizer,
+            $this->transformer,
+        ], $this->classifier );
     }
 
-    public function setClassifier(NaiveBayes $classifier)
+    public function setPipeline(Pipeline $pipeline)
     {
-        $this->classifier = $classifier;
+        $this->pipeline = $pipeline;
     }
 
-    public function setVectorizer(TokenCountVectorizer $vectorizer)
+    public function getPipeline()
     {
-        $this->vectorizer = $vectorizer;
+        return $this->pipeline;
     }
 
-    public function setTransformer(TfIdfTransformer $transformer)
+    public function train(array $samples, array $labels, float $testSize = 0.2)
     {
-        $this->transformer = $transformer;
-    }
-
-    public function getClassifier()
-    {
-        return $this->classifier;
-    }
-
-        public function train(array $samples, array $labels, float $testSize = 0.2)
-    {
-        $splitDataset = new RandomSplit($samples, $labels, $testSize);
+        $splitDataset = new RandomSplit(new ArrayDataset($samples, $labels), $testSize);
         $trainSamples = $splitDataset->getTrainSamples();
         $trainLabels = $splitDataset->getTrainLabels();
 
         $this->testSamples = $splitDataset->getTestSamples();
         $this->testTargets = $splitDataset->getTestLabels();
 
-        $this->vectorizer->fit($trainSamples);
-        $this->vectorizer->transform($trainSamples);
-
-        $this->transformer->fit($trainSamples);
-        $this->transformer->transform($trainSamples);
-
-        $this->classifier->train($trainSamples, $trainLabels);
+        $this->pipeline->train($trainSamples, $trainLabels);
     }
 
-    public function predict(string $input): string
+    public function predict($input): string
     {
         $samples = [$input];
-        $this->vectorizer->transform($samples);
-        $this->transformer->transform($samples);
 
-        return $this->classifier->predict($samples[0]);
+        $prediction = $this->pipeline->predict($samples);
+
+        return $prediction[0];
     }
 
     public function accuracy(): float
