@@ -38,7 +38,7 @@ class NaiveBayesTextClassification extends Strategy
         return $this->pipeline;
     }
 
-    public function train(array $samples, array $labels, float $testSize = 0.2)
+    public function train($samples, $labels, float $testSize = 0.2)
     {
         $splitDataset = new RandomSplit(new ArrayDataset($samples, $labels), $testSize);
         $trainSamples = $splitDataset->getTrainSamples();

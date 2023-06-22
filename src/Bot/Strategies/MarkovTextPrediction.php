@@ -18,8 +18,8 @@ class MarkovTextPrediction extends Strategy {
         $this->tokenizer = new WhitespaceTokenizer();
     }
 
-    public function train(string $chatMessages, int $n = 1, float $testSize = 0.2) {
-        $words = $this->tokenizer->tokenize($chatMessages);
+    public function train(string $text, int $n = 1, float $testSize = 0.2) {
+        $words = $this->tokenizer->tokenize($text);
         $this->nGramTokenizer = new NGramTokenizer($n + 1);
         $nGrams = $this->nGramTokenizer->tokenize($words);
 

@@ -1,4 +1,5 @@
 <?php
+namespace BlueFission\Bot;
 
 class DataType
 {

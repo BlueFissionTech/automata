@@ -95,8 +95,12 @@ class Grammar
 	    $next = [];
 	    $buffer = '';
 	    $output = [];
+	    $segment = '';
 	    $currentSegment = '';
 	    $line = 1;
+	    $matching = false;
+	    $index = 0;
+	    $count = 0;
 
 	    $tokens = mb_str_split($input);
 	    $inputLength = count($tokens);
@@ -109,26 +113,69 @@ class Grammar
 	            $line++;
 	        }
 
-	        $currentSegment .= $current;
+	        $segment .= $current;
+	        // echo "current: $current\n";
+	        $count = 0;
+	        $matches = [];
+	        $matching = false;
 	        foreach ($this->tokens as $term => $classification) {
-	            $classifications = [];
+	            if ( strpos($term, $segment) === 0 ) {
+	            	// echo "term: $term\n";
+            		// var_dump($segment);
 
-	            if ($currentSegment == $term) {
-	            // if (substr($currentSegment, -strlen($term)) === $term) {
-	            	if (!is_array($classification)) {
-	            		$classification = [$classification];
+            		if (isset($tokens[$i+1]) && (preg_match('/^\S+$/', $tokens[$i+1]) && $tokens[$i+1] != '.')) {
+		            	$count++;
+		            	$matches[] = $term;
+		            }
+
+	            	if ($segment == $term) {
+	            		$classifications = [];
+	            		$matching = true;
+	            		$currentSegment = $segment;
+
+	            		if (!is_array($classification)) {
+		            		$classification = [$classification];
+		            	}
+		                foreach ($classification as $class) {
+		                	$options = [];
+		                	foreach ($next as $nextClass) {
+		                		if (strpos($nextClass, '|')) {
+
+		                			$options = array_merge($options, explode('|', $nextClass));
+		                		} else {
+		                			$options[] = $nextClass;
+		                		}
+		                	}
+
+		                    if (count($options) < 1 || in_array($class, $options)) {
+		                		// echo "working here: $class!";
+		                        $classifications[] = $class;
+		                    }
+		                }
 	            	}
-	                foreach ($classification as $class) {
-	                    if (count($next) < 1 || in_array($class, $next)) {
-	                        $classifications[] = $class;
-	                    }
-	                }
+	            }
+	        }
+
+	            if ($count <= 1 && $matching == true) {
+	            	// echo "accepted\n";
+	            	// var_dump($segment);
+	            	// if ($currentSegment != " ") {
+	            	// 	die($currentSegment);
+	            	// }
+
+	            // if (substr($currentSegment, -strlen($term)) === $term) {
+	                // var_dump($classifications);
 
 	                if (count($classifications) < 1) {
-	                    throw new \Exception("Undefined input '{$currentSegment}' on line, {$line}.", 1);
+	                	$suggestion = $this->findSimilarWord($currentSegment, $next);
+			        	if ( $suggestion ) {
+			        		throw new \Exception("Unexpected input '{$currentSegment}'. Did you mean '{$suggestion}'?", 1);
+						} else {
+	                    	throw new \Exception("Undefined input '{$currentSegment}' on line, {$line}.", 1);
+						}
 	                }
 
-			        $term = $this->stemmer->lemmatize($term);
+			        $term = $this->stemmer->lemmatize($currentSegment);
 
 	                $new = true;
 	                foreach ($classifications as $classification) {
@@ -167,8 +214,10 @@ class Grammar
 	                    $currentSegment = '';
 	                    $j++;
 	                }
+	                $currentSegment = '';
+	                $segment = '';
 	            }
-	        }
+	        // }
 	    }
 
 	    return $output;
@@ -189,7 +238,7 @@ class Grammar
 	        throw new \Exception("Unknown nonterminal: $nonterminal");
 	    }
 
-	    if ($this->depth > 10) return;
+	    if ($this->depth > 5) return;
 
 	    $originalIndex = $this->index;
 	    $node = ['type' => $nonterminal, 'children' => []];
@@ -276,7 +325,7 @@ class Grammar
 	private function processClassification($classification, $element, $tokens, &$node, $optional)
 	{
 		// echo "Token: '" . $tokens[$this->index]['match'] . "'\n";
-	    if ($classification == 'T_WHITESPACE') {
+	    if ($classification == 'T_WHITESPACE' || $classification == 'T_SUFFIX') {
 	        $this->index++;
 			// echo "Token switched to: '" . $tokens[$this->index]['match'] . "'\n";
 
@@ -362,4 +411,21 @@ class Grammar
 	    return $node;
 	}
 
+	private function findSimilarWord($input, $expectedPos)
+    {
+        $bestMatch = "";
+        $bestSimilarity = 0;
+
+        foreach ($this->tokens as $term => $classification) {
+            if (count(array_intersect($classification, $expectedPos) ) > 0) {
+                similar_text($input, $term, $similarity);
+                if ($similarity > $bestSimilarity) {
+                    $bestSimilarity = $similarity;
+                    $bestMatch = $term;
+                }
+            }
+        }
+
+        return $bestMatch;
+    }
 }

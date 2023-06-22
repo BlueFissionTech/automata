@@ -20,7 +20,8 @@ class EntityExtractor
 
     public function phone($input)
     {
-        return $this->extract('/\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}/', $input);
+        // return $this->extract('/\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}/', $input);
+        return $this->extract('/^\+?\d{1,4}[\s-]?\d{1,4}(?:[\s-]?\d{1,4}){1,4}$/', $input);
     }
 
     public function email($input)
@@ -88,7 +89,6 @@ class EntityExtractor
         $operators = '\+|-|\*|\/|==?|&&|\|\||<<|>>|>|<|<>|!=';
         return $this->extract('/(\w+)\s*(' . $operators . ')\s*(\w+)/', $input);
     }
-
 
     private function extract($pattern, $input)
     {

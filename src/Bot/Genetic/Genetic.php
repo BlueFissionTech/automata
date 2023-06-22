@@ -1,16 +1,19 @@
 <?php
-
 namespace BlueFission\Bot\Genetic;
 
 use BlueFission\Behavioral\Configurable;
 
 trait Genetic
 {
+    use Configurable {
+        Configurable::__construct as private __configConstruct
+    }
+
     protected $_mutationRate;
 
     public function __construct(float $mutationRate = 0.05)
     {
-        parent::__construct();
+        $this->__configConstruct();
         $this->_mutationRate = $mutationRate;
     }
 

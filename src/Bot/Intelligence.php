@@ -2,17 +2,20 @@
 
 namespace BlueFission\Bot;
 
+use BlueFission\DevObject;
 use BlueFission\Bot\Collections\OrganizedCollection;
 use BlueFission\Bot\Sensory\Input;
 use BlueFission\Bot\Strategies\IStrategy;
 use BlueFission\Bot\Sensory\Sense;
-use BlueFission\Behavioral\Dispatcher;
+use BlueFission\Behavioral\Dispatches;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\Behavior;
 use BlueFission\Behavioral\Behaviors\Handler;
 
-class Intelligence extends Dispatcher
+class Intelligence extends DevObject
 {
+	use Dispatches;
+
     protected OrganizedCollection $_strategies;
     protected float $_minThreshold;
     protected $_starttime;
