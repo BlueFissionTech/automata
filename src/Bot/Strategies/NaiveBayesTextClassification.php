@@ -16,6 +16,7 @@ class NaiveBayesTextClassification extends Strategy
     private $classifier;
     private $vectorizer;
     private $transformer;
+    private $pipeline;
 
     public function __construct()
     {
