@@ -1,7 +1,7 @@
 <?php
 namespace BlueFission\Automata\Language;
 
-use BlueFission\Automata\NaturalLanguage\StemmerLemmatizer;
+use BlueFission\Automata\Language\StemmerLemmatizer;
 use BlueFission\Automata\Collections\OrganizedCollection as Collection;
 
 class Grammar
