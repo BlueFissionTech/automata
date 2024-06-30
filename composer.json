@@ -1,8 +1,8 @@
 {
-    "name": "bluefission/bot-ai",
+    "name": "bluefission/automata",
     "description": "Machine learning / communication systems",
     "license": "MIT",
-    "keywords": ["ai"],
+    "keywords": ["automata, ai, nlp, machine learning, chatbot, bot, communication, natural language processing"],
     "authors": [
         {
             "name": "Devon Scott",
@@ -23,7 +23,7 @@
     },
     "require-dev": {
         "phpunit/phpunit": "5.6.*",
-        "php": ">=7.0.0"
+        "php": ">=8.0.0"
     },
     "autoload": {
         "psr-4": {

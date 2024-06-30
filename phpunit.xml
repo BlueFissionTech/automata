@@ -10,7 +10,7 @@
          stopOnFailure="false"
          syntaxCheck="true">
     <testsuites>
-        <testsuite name="BlueFission bot AI Test Suite">
+        <testsuite name="BlueFission Automata Test Suite">
             <directory suffix=".php">./tests/</directory>
         </testsuite>
     </testsuites>
