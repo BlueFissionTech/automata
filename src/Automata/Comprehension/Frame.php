@@ -1,7 +1,7 @@
 <?php
-namespace BlueFission\Bot\Comprehension;
+namespace BlueFission\Automata\Comprehension;
 
-use BlueFission\Bot\Collections\OrganizedCollection;
+use BlueFission\Automata\Collections\OrganizedCollection;
 
 class Frame {
 	private $_experiences = [];

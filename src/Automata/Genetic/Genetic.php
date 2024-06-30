@@ -1,5 +1,5 @@
 <?php
-namespace BlueFission\Bot\Genetic;
+namespace BlueFission\Automata\Genetic;
 
 use BlueFission\Behavioral\Configurable;
 

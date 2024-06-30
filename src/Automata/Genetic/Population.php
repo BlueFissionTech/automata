@@ -1,5 +1,5 @@
 <?php
-namespace BlueFission\Bot\Genetic;
+namespace BlueFission\Automata\Genetic;
 
 class Population {
     private $individuals = [];

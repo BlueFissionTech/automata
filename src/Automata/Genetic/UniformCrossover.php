@@ -1,5 +1,5 @@
 <?php
-namespace BlueFission\Bot\Genetic;
+namespace BlueFission\Automata\Genetic;
 
 class UniformCrossover extends Crossover {
     private $crossoverRate;

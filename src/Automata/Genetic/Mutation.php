@@ -1,6 +1,6 @@
 <?php
 
-namespace BlueFission\Bot\Genetic;
+namespace BlueFission\Automata\Genetic;
 
 abstract class Mutation {
     public abstract function mutate($individual);

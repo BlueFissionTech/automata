@@ -1,9 +1,9 @@
 <?php
-namespace BlueFission\Bot;
+namespace BlueFission\Automata;
 
-use BlueFission\Bot\Intelligence;
+use BlueFission\Automata\Intelligence;
 use BlueFission\Behavioral\Behaviors\Action;
-use BlueFission\Bot\Collections\OrganizedCollection;
+use BlueFission\Automata\Collections\OrganizedCollection;
 
 use BlueFission\Data\Queues\Queue as Queue;
 
@@ -198,8 +198,8 @@ class Engine extends Intelligence implements ISphere {
 		$input = $name.'_input';
 
 		$this
-			->delegate($input, '\BlueFission\Bot\Sensory\Input', $processor )
-			->delegate($sense, '\BlueFission\Bot\Sensory\Sense', $this)
+			->delegate($input, '\BlueFission\Automata\Sensory\Input', $processor )
+			->delegate($sense, '\BlueFission\Automata\Sensory\Sense', $this)
 
 			->register($input, 'input', 'scan' )
 			->register($sense, 'DoProcess', 'invoke')

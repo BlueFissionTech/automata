@@ -1,5 +1,5 @@
 <?php
-namespace BlueFission\Bot\Comprehension;
+namespace BlueFission\Automata\Comprehension;
 
 class Entity {
 

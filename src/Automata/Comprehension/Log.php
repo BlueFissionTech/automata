@@ -1,8 +1,8 @@
 <?php
-namespace BlueFission\Bot\Comprehension;
+namespace BlueFission\Automata\Comprehension;
 
-use BlueFission\Bot\Collections\OrganizedCollection;
-use BlueFission\Bot\Comprehension\Entity;
+use BlueFission\Automata\Collections\OrganizedCollection;
+use BlueFission\Automata\Comprehension\Entity;
 
 class Log {
 
