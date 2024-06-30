@@ -3,7 +3,7 @@
 namespace BlueFission\Automata\Analysis;
 
 use BlueFission\DevString;
-use BlueFission\Automata\Strategies\NaiveBayesTextClassification;
+use BlueFission\Automata\Strategy\NaiveBayesTextClassification;
 use BlueFission\Automata\Analysis\IAnalyzer;
 use BlueFission\Automata\Analysis\Context;
 use Phpml\FeatureExtraction\TokenCountVectorizer;

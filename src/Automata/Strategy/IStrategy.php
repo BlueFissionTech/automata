@@ -1,5 +1,5 @@
 <?php
-namespace BlueFission\Automata\Strategies;
+namespace BlueFission\Automata\Strategy;
 
 interface IStrategy
 {
