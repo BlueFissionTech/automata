@@ -2,10 +2,10 @@
 // KeywordIntentAnalyzer.php
 namespace BlueFission\Automata\Analysis;
 
-use BlueFission\DevString;
+use BlueFission\Str;
 use BlueFission\Automata\Strategy\NaiveBayesTextClassification;
 use BlueFission\Automata\Analysis\IAnalyzer;
-use BlueFission\Automata\Analysis\Context;
+use BlueFission\Automata\Context;
 use Phpml\FeatureExtraction\TokenCountVectorizer;
 use Phpml\Tokenization\WhitespaceTokenizer;
 use Phpml\FeatureExtraction\TfIdfTransformer;
@@ -16,7 +16,7 @@ class KeywordTopicAnalyzer implements IAnalyzer
     private $topicClassifier;
     private $modelDirPath;
 
-    public function __construct(NaiveBayesTextClassification $topicClassifier, String $modelDirPath )
+    public function __construct(NaiveBayesTextClassification $topicClassifier, string $modelDirPath )
     {
         $this->topicClassifier = $topicClassifier;
         $this->modelDirPath = $modelDirPath;
@@ -65,7 +65,7 @@ class KeywordTopicAnalyzer implements IAnalyzer
         }
 
         $class = (new \ReflectionClass($this))->getShortName();
-        $modelName = DevString::snake($class)->value();
+        $modelName = Str::snake($class)->value();
 
         $modelFilePath = $this->$modelDirPath.$modelName.'.phpml';
         $modelManager = new ModelManager();

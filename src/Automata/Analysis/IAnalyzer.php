@@ -2,7 +2,7 @@
 namespace BlueFission\Automata\Analysis;
 
 // IIntentAnalyzer.php
-use BlueFission\Automata\Analysis\Context;
+use BlueFission\Automata\Context;
 
 interface IAnalyzer
 {

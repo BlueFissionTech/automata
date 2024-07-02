@@ -18,7 +18,6 @@ class NaiveBayesTextClassification extends Strategy
     private $_vectorizer;
     private $_transformer;
     private $_pipeline;
-    private $_testSamples;
     private $_testLabels;
     private $_modelManager;
 
