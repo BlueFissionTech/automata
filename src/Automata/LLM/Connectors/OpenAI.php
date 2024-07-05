@@ -97,7 +97,7 @@ class OpenAI
      * @param string $input
      * @return array
      */
-    public function chat($input, $config = [])
+    public function respond($input, $config = [])
     {
         $request_data = [
             'messages' => [['role' => 'user', 'content' => $input]],
