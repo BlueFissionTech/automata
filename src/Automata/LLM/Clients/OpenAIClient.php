@@ -20,7 +20,7 @@ class OpenAIClient extends Service implements IClient
 		$this->_openAI = new OpenAI( $apiKey );
 	}
 
-	public function generate($input, $config = [], callable $callback = null): Reply
+	public function generate($input, $config = [], ?callable $callback = null): Reply
 	{
 		if ( $input instanceof IPrompt ) {
 			$input = $input->prompt();
