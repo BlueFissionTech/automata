@@ -1,6 +1,6 @@
 <?php
 
-namespace BlueFission\Automata\LLM\Client;
+namespace BlueFission\Automata\LLM\Clients;
 
 interface IClient {
 	public function generate();
