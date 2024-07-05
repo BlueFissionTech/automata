@@ -2,8 +2,10 @@
 
 namespace BlueFission\Automata\LLM\Clients;
 
+use BlueFission\Automata\LLM\Reply;
+
 interface IClient {
-	public function generate($input, $config = [], $callback = null);
-	public function complete($input, $config = []);
-	public function respond($input, $config = []);
+	public function generate($input, $config = [], $callback = null): Reply;
+	public function complete($input, $config = []): Reply;
+	public function respond($input, $config = []): Reply;
 }
