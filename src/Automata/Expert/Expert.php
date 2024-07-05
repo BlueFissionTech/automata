@@ -1,5 +1,5 @@
 <?php
-namespace BlueFission\Automata\ExpertSystem;
+namespace BlueFission\Automata\Expert;
 
 use BlueFission\Behavioral\Configurable;
 
@@ -9,49 +9,49 @@ class Expert implements IConfigurable
         Configurable::__construct as private __configConstruct;
     }
 
-    protected array $facts = [];
-    protected array $rules = [];
-    protected ?StrategyInterface $strategy = null;
+    protected array $_facts;
+    protected array $_rules;
+    protected ?IApproach $_approach = null;
 
     public function __construct(array $rules = [], array $facts = [])
     {
         $this->__configConstruct();
-        $this->_rules = $rules;
-        $this->_facts = $facts;
+        $this->_rules = new Arr($rules);
+        $this->_facts = new Arr($facts);
     }
 
-    public function addFact(FactInterface $fact)
+    public function addFact(IFact $fact)
     {
-        $this->facts[$fact->getName()] = $fact;
+        $this->_facts->set($fact->getName(), $fact);
     }
 
-    public function addRule(RuleInterface $rule)
+    public function addRule(IRule $rule)
     {
-        $this->rules[$rule->getName()] = $rule;
+        $this->_rules->set($rule->getName(), $rule);
     }
 
-    public function setStrategy(StrategyInterface $strategy)
+    public function setStrategy(IApproach $approach)
     {
-        $this->strategy = $strategy;
+        $this->_approach = $approach;
     }
 
     public function reason(): bool
     {
-        if (!$this->strategy) {
-            throw new \RuntimeException("No strategy has been set.");
+        if (!$this->_approach) {
+            throw new \RuntimeException("No approach has been set.");
         }
 
-        return $this->strategy->execute($this);
+        return $this->_approach->execute($this);
     }
 
     public function getFacts(): array
     {
-        return $this->facts;
+        return $this->_facts->val();
     }
 
     public function getRules(): array
     {
-        return $this->rules;
+        return $this->_rules->val();
     }
 
     public function infer()
@@ -62,7 +62,7 @@ class Expert implements IConfigurable
             $changes = false;
 
             foreach ($this->_rules as $rule) {
-                if ($rule->isApplicable($this->_facts)) {
+                if ($rule->isApplicable($this->_facts->val())) {
                     $fact = $rule->infer();
                     $this->addFact($fact);
                     $changes = true;
@@ -73,6 +73,6 @@ class Expert implements IConfigurable
 
     public function query(Fact $fact)
     {
-        return in_array($fact, $this->_facts);
+        return $this->_facts->has($fact);
     }
 }

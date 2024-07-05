@@ -2,17 +2,17 @@
 namespace BlueFission\Automata\DecisionTree;
 
 class DecisionTree implements IDecisionTree {
-    private $root;
+    private $_root;
 
     public function getRoot(): INode {
-        return $this->root;
+        return $this->_root;
     }
 
     public function setRoot(INode $node): void {
-        $this->root = $node;
+        $this->_root = $node;
     }
 
     public function decide(IMethod $method): array {
-        return $method->traverse($this->root);
+        return $method->traverse($this->_root);
     }
 }

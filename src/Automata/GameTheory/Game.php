@@ -2,24 +2,27 @@
 namespace BlueFission\Automata\GameTheory;
 
 use BlueFission\Behavioral\StateMachine;
+use BlueFission\Arr;
 
 class Game {
-    private $players = [];
-    private $rounds = 0;
+    use StateMachine;
+
+    private $_players = new Arr([]);
+    private $_rounds = 0;
 
     public function __construct($rounds = 1) {
-        $this->rounds = $rounds;
+        $this->_rounds = $rounds;
     }
 
     public function addPlayer(Player $player) {
-        $this->players[] = $player;
+        $this->_players->push($player);
     }
 
     public function play() {
-        for ($i = 0; $i < $this->rounds; $i++) {
-            foreach ($this->players as $player) {
+        for ($i = 0; $i < $this->_rounds; $i++) {
+            $this->_players->each(function($player) {
                 $player->decide();
-            }
+            });
         }
     }
 }

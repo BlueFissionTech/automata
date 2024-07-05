@@ -1,7 +1,7 @@
 <?php
-namespace BlueFission\Automata\ExpertSystem;
+namespace BlueFission\Automata\Expert;
 
 interface IReasoner
 {
-    public function infer(ExpertSystem $system, Fact $fact): array;
+    public function infer(Expert $system, Fact $fact): array;
 }

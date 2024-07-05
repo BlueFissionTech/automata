@@ -1,6 +1,6 @@
 <?php
 
-namespace BlueFission\Automata\Services;
+namespace BlueFission\Automata\Service;
 
 use BlueFission\Automata\Strategy\IStrategy;
 

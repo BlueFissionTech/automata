@@ -1,8 +1,8 @@
 <?php
 namespace BlueFission\Automata\LLM;
 
-use App\Business\Services\OpenAIService;
-use App\Business\Prompts\StatementClassification;
+use BlueFission\Automata\LLM\Client\IClient;
+use BlueFission\Automata\LLM\Prompts\StatementClassification;
 use Phpml\ModelManager;
 use Phpml\Classification\NaiveBayes;
 use Phpml\Dataset\ArrayDataset;
@@ -15,16 +15,16 @@ use Phpml\Pipeline;
 
 class StatementClassifier
 {
-    protected $openAiService;
+    protected $llmClient;
     protected $modelManager;
     protected $modelFilePath;
     protected $pipeline;
 
-    public function __construct()
+    public function __construct( IClient $llmClient = null, string $modelFilePath = null )
     {
-        $this->openAiService = new OpenAIService();
+        $this->llmClient = $llmClient;
         $this->modelManager = new ModelManager();
-        $this->modelFilePath = OPUS_ROOT . '/storage/models/statement_type_model.phpml';
+        $this->modelFilePath = $modelFilePath;
         
         $naiveBayes = new NaiveBayes();
         $vectorizer = new TokenCountVectorizer(new WhitespaceTokenizer());
@@ -40,7 +40,7 @@ class StatementClassifier
     {
         if (env('OPEN_AI_API_KEY')) {
             $prompt = new StatementClassification($input);
-            $result = $this->openAiService->complete($prompt->prompt(), ['max_tokens'=>2, 'stop'=>' ']);
+            $result = $this->llmClient->complete($prompt->prompt(), ['max_tokens'=>2, 'stop'=>' ']);
             if ($result) {
                 $classification = $this->extractClassification($result);
                 if ($classification) {
@@ -55,7 +55,9 @@ class StatementClassifier
                 $this->pipeline = $loadedModel;
             } else {
                 $this->trainModel();
-                $this->modelManager->saveToFile($this->pipeline, $this->modelFilePath);
+                if ($this->modelFilePath) {
+                    $this->modelManager->saveToFile($this->pipeline, $this->modelFilePath);
+                }
             }
 
             $classification = $this->pipeline->predict([$input]);

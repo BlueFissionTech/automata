@@ -3,10 +3,10 @@
 namespace BlueFission\Automata\Feature\Selection;
 
 class VarianceThresholdSelector {
-    private $threshold;
+    private $_threshold;
 
     public function __construct($threshold = 0.0) {
-        $this->threshold = $threshold;
+        $this->_threshold = $threshold;
     }
 
     public function fitTransform(array $data) {
@@ -44,7 +44,7 @@ class VarianceThresholdSelector {
         foreach ($data as $row) {
             $filteredRow = [];
             foreach ($row as $i => $value) {
-                if ($variances[$i] > $this->threshold) {
+                if ($variances[$i] > $this->_threshold) {
                     $filteredRow[] = $value;
                 }
             }

@@ -2,29 +2,28 @@
 namespace BlueFission\Automata\GraphTheory;
 
 class Graph {
-    protected $graph = [];
-    protected $nodes = [];
+    protected $_graph;
+    protected $_nodes;
 
-    public function __construct($graph) {
-        if ( is_array($graph) ) {
-            $this->graph = $graph;
-        }
+    public function __construct(array $graph = []) {
+        $this->_graph = new Arr($graph);
+        $this->_nodes = new Arr([]);
     }
 
     public function addNode(Node $node) {
         foreach($node->getEdges() as $edge => $val) {
-            if(!isset($this->nodes[$edge])) {
-                $this->nodes[$edge] = true;
+            if(!$this->_nodes->hasKey($edge)) {
+                $this->_nodes->set($edge, true);
             }
         }
-        $this->nodes[$node->getName()] = $node;
-        $this->graph[$node->getName()] = $node->getEdges();
+        $this->_nodes->set($node->getName(), $node);
+        $this->_graph->set($node->getName(), $node->getEdges());
     }
 
     public function shortestPath($start, $end, $fitnessFunction) {
         $distances = [];
         $previous = [];
-        $nodes = $this->nodes;
+        $nodes = $this->_nodes;
 
         foreach($nodes as $node) {
             $distances[$node->getName()] = PHP_INT_MAX;
@@ -54,8 +53,8 @@ class Graph {
                 break;
             }
 
-            foreach($this->graph[$closest] as $neighbor => $value) {
-                if(isset($nodes[$neighbor])) {
+            foreach($this->_graph[$closest] as $neighbor => $value) {
+                if($nodes->hasKey($neighbor)) {
                     $alt = $distances[$closest] + $fitnessFunction($value);
 
                     if($alt < $distances[$neighbor]) {
@@ -65,7 +64,7 @@ class Graph {
                 }
             }
 
-            unset($nodes[$closest]);
+            $nodes->delete($closest)
             asort($distances);
         }
 

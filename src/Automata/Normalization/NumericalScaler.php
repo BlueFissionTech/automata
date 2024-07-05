@@ -1,6 +1,6 @@
 <?php
 
-namespace BlueFission\Automata\Normalization\NumbericalScaler;
+namespace BlueFission\Automata\Normalization;
 
 class NumericalScaler {
     private $mean = 0;

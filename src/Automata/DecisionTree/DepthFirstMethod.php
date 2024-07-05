@@ -1,14 +1,16 @@
 <?php
 namespace BlueFission\Automata\DecisionTree;
 
+use BlueFission\Arr;
+
 class DepthFirstMethod implements IMethod {
     public function traverse(INode $root): array {
-        $stack = [$root];
+        $stack = new Arr([$root]);
         $bestNode = $root;
         $bestScore = $root->evaluate();
 
-        while (!empty($stack)) {
-            $currentNode = array_pop($stack);
+        while ($stack->isNotEmpty()) {
+            $currentNode = $stack->pop();
             $score = $currentNode->evaluate();
             if ($score > $bestScore) {
                 $bestNode = $currentNode;
@@ -16,7 +18,7 @@ class DepthFirstMethod implements IMethod {
             }
 
             foreach ($currentNode->getChildren() as $child) {
-                array_push($stack, $child);
+                $stack->push($child);
             }
         }
 

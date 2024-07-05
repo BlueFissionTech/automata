@@ -19,12 +19,11 @@ class OrganizedHandlerCollection extends OrganizedCollection {
 	public function get( $behaviorName )
 	{
 		// throw new NotImplementedException('Function Not Implemented');
-		$handlers = array();
+		$handlers = [];
 
 		foreach ($this->_value as $name=>$handler)
 		{
 			if ($handler['value']->name() == $behaviorName) {
-				// $handlers[] = $c;
 				$handlers[] = $handler['value'];
 			}
 		}
@@ -53,6 +52,6 @@ class OrganizedHandlerCollection extends OrganizedCollection {
 	}
 
 	protected function create($value, int $priority = 1) {
-		return array('weight'=>$priority ?? $value->priority(), 'value'=>$value, 'decay'=>$this->_decay, 'timestamp'=>time());
+		return ['weight'=>$priority ?? $value->priority(), 'value'=>$value, 'decay'=>$this->_decay, 'timestamp'=>time()];
 	}
 }

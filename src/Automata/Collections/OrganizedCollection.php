@@ -38,15 +38,22 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		'cv3'=>'',
 	];
 
-	public function sort() {
+	public function sort(?callable $callback = null) {
+
+		if ( !$callback ) {
+			$callback = [$this, 'sort_function'];
+		}
+
 		if ($this->_do_sort) {
-			$this->_value->uasort( [$this, 'sort_function'] );
+			$this->_value->uasort( $callback );
 		}
 
 		foreach ($this->_value as &$value) {
 			$percent = $this->findPercentage($value['weight']);
 			$value['percentage'] = $percent;
 		}
+
+		return new Collection( $this->contents() );
 	}
 
 	public function autoSort ($value = true) 
@@ -302,7 +309,8 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		return null;
 	}
 
-	public function add( $object, $key = null, int $weight = 1 ) {
+	public function add( $object, $key = null, int $weight = 1 ) : ICollection
+	{
 		if (!is_scalar($key) && !is_null($key)) {
 			throw new InvalidArgumentException('Label must be scalar');
 		}
@@ -330,6 +338,8 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		if ( $this->_autosort) {
 			$this->sort();
 		}
+
+		return $this;
 	}
 
 	protected function create($value, int $weight = 1) {
@@ -346,9 +356,12 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		return ($amount) / ($total > 0 ? $total : 1);
 	}
 
-	public function clear() {
+	public function clear(): ICollection
+	{
 		parent::clear();
 		$this->_increment = 0;
+
+		return $this;
 	}
 
 	public function optimize($tolerance = 10, $noise = [])

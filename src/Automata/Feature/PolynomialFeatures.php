@@ -5,10 +5,10 @@ namespace BlueFission\Automata\Feature;
 use BlueFission\Vec;
 
 class PolynomialFeatures {
-    private $degree;
+    private $_degree;
 
     public function __construct($degree = 2) {
-        $this->degree = $degree;
+        $this->_degree = $degree;
     }
 
     public function transform($data) {
@@ -21,7 +21,7 @@ class PolynomialFeatures {
             for ($i = 0; $i < $vectorRow->count(); $i++) {
                 for ($j = $i; $j < $vectorRow->count(); $j++) {
                     if ($i == $j) {
-                        for ($d = 1; $d <= $this->degree; $d++) {
+                        for ($d = 1; $d <= $this->_degree; $d++) {
                             $newRow->add(pow($vectorRow->get($i), $d));  // Add polynomial term
                         }
                     } else {

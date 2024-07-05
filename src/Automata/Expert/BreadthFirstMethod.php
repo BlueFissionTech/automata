@@ -1,5 +1,5 @@
 <?php
-namespace BlueFission\Automata\ExpertSystem;
+namespace BlueFission\Automata\Expert;
 
 class BreadthFirstMethod implements IMethod
 {

@@ -5,10 +5,10 @@ namespace BlueFission\Automata\Feature;
 use BlueFission\Vec;
 
 class ExtendedInteractionFeatures {
-    private $maxOrder;
+    private $_maxOrder;
 
     public function __construct($maxOrder = 3) {
-        $this->maxOrder = $maxOrder;
+        $this->_maxOrder = $maxOrder;
     }
 
     public function transform($data) {
@@ -19,7 +19,7 @@ class ExtendedInteractionFeatures {
             $newRow = new Vec($vectorRow);  // Start with original features, using Vec
 
             // Generate combinations for each order level
-            for ($order = 2; $order <= $this->maxOrder; $order++) {
+            for ($order = 2; $order <= $this->_maxOrder; $order++) {
                 $this->addAllCombinations($vectorRow, $newRow, $order);
             }
 

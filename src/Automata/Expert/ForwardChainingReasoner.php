@@ -1,16 +1,16 @@
 <?php
-namespace BlueFission\Automata\ExpertSystem;
+namespace BlueFission\Automata\Expert;
 
 class ForwardChainingReasoner implements IReasoner
 {
-    protected $method;
+    protected $_method;
 
-    public function __construct(MethodInterface $method)
+    public function __construct(IMethod $method)
     {
-        $this->method = $method;
+        $this->_method = $method;
     }
 
-    public function infer(ExpertSystem $system, Fact $fact): array
+    public function infer(Expert $system, Fact $fact): array
     {
         $inferredFacts = [];
         
@@ -18,7 +18,7 @@ class ForwardChainingReasoner implements IReasoner
         $rules = $system->getRules();
 
         // order rules based on method
-        $rules = $this->method->orderRules($rules);
+        $rules = $this->_method->orderRules($rules);
 
         foreach ($rules as $rule) {
             if ($rule->matchesFact($fact)) {
