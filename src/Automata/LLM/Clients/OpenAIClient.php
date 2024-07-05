@@ -15,7 +15,7 @@ class OpenAIClient extends Service implements IClient
 	/**
 	 * OpenAIService constructor.
 	 */
-	public function __construct( $apiKey )
+	public function __construct( string $apiKey )
 	{
 		$this->_openAI = new OpenAI( $apiKey );
 	}

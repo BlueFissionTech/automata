@@ -27,7 +27,7 @@ class OpenAI
         $this->_curl->config('headers', $headers);
     }
 
-    public function generate($input, $config = [],  callable $callback, callable $callback = function(&input) {} )
+    public function generate($input, $config = [], callable $callback = function(&$input) {} )
     {
         $request_data = array_merge([
             'prompt' => $input,
