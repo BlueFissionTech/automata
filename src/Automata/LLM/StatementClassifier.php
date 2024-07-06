@@ -1,7 +1,7 @@
 <?php
 namespace BlueFission\Automata\LLM;
 
-use BlueFission\Automata\LLM\Client\IClient;
+use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Prompts\StatementClassification;
 use Phpml\ModelManager;
 use Phpml\Classification\NaiveBayes;
@@ -15,22 +15,22 @@ use Phpml\Pipeline;
 
 class StatementClassifier
 {
-    protected $llmClient;
-    protected $modelManager;
-    protected $modelFilePath;
-    protected $pipeline;
+    protected $_llmClient;
+    protected $_modelManager;
+    protected $_modelFilePath;
+    protected $_pipeline;
 
     public function __construct( IClient $llmClient = null, string $modelFilePath = null )
     {
-        $this->llmClient = $llmClient;
-        $this->modelManager = new ModelManager();
-        $this->modelFilePath = $modelFilePath;
+        $this->_llmClient = $llmClient;
+        $this->_modelManager = new ModelManager();
+        $this->_modelFilePath = $modelFilePath;
         
         $naiveBayes = new NaiveBayes();
         $vectorizer = new TokenCountVectorizer(new WhitespaceTokenizer());
         $tfIdfTransformer = new TfIdfTransformer();
 
-        $this->pipeline = new Pipeline( [
+        $this->_pipeline = new Pipeline( [
             $vectorizer,
             $tfIdfTransformer,
         ], $naiveBayes );
@@ -40,7 +40,7 @@ class StatementClassifier
     {
         if (env('OPEN_AI_API_KEY')) {
             $prompt = new StatementClassification($input);
-            $result = $this->llmClient->complete($prompt->prompt(), ['max_tokens'=>2, 'stop'=>' ']);
+            $result = $this->_llmClient->complete($prompt->prompt(), ['max_tokens'=>2, 'stop'=>' ']);
             if ($result) {
                 $classification = $this->extractClassification($result);
                 if ($classification) {
@@ -50,17 +50,17 @@ class StatementClassifier
         
         } elseif ( strlen($input) > 120 ) {
 
-            if (file_exists($this->modelFilePath)) {
-                $loadedModel = $this->modelManager->restoreFromFile($this->modelFilePath);
-                $this->pipeline = $loadedModel;
+            if (file_exists($this->_modelFilePath)) {
+                $loadedModel = $this->_modelManager->restoreFromFile($this->_modelFilePath);
+                $this->_pipeline = $loadedModel;
             } else {
                 $this->trainModel();
-                if ($this->modelFilePath) {
-                    $this->modelManager->saveToFile($this->pipeline, $this->modelFilePath);
+                if ($this->_modelFilePath) {
+                    $this->_modelManager->saveToFile($this->_pipeline, $this->_modelFilePath);
                 }
             }
 
-            $classification = $this->pipeline->predict([$input]);
+            $classification = $this->_pipeline->predict([$input]);
             return $classification[0];
         } else {
 
@@ -125,9 +125,9 @@ class StatementClassifier
         $testSamples = $splitDataset->getTestSamples();
         $testTargets = $splitDataset->getTestLabels();
 
-        $this->pipeline->train($trainSamples, $trainLabels);
+        $this->_pipeline->train($trainSamples, $trainLabels);
 
-        $predictedLabels = $this->pipeline->predict($testSamples);
+        $predictedLabels = $this->_pipeline->predict($testSamples);
         $accuracy = Accuracy::score($testTargets, $predictedLabels);
 
         // $this->naiveBayes->train($sampleSet, $targetSet);

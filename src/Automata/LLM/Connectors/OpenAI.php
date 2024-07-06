@@ -27,8 +27,12 @@ class OpenAI
         $this->_curl->config('headers', $headers);
     }
 
-    public function generate($input, $config = [], callable $callback = function(&$input) {} )
+    public function generate($input, $config = [], ?callable $callback = null )
     {
+        if ($callback === null) {
+            $callable = function(&$input) {};
+        }
+
         $request_data = array_merge([
             'prompt' => $input,
             'model' => 'text-davinci-003',
