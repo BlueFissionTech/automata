@@ -1,18 +1,22 @@
 <?php 
 namespace BlueFission\Automata\Language;
 
-class Interpreter {
+class Interpreter implements IInterpreter {
 
 	// private $_tokenizer;
 	private $_grammar;
 	private $_documenter;
 	private $_walker;
 
-	public function __construct() {
-		// $this->_tokenizer = new Tokenizer();
-		$this->_grammar = new Grammar();
-		$this->_documenter = new Documenter();
-		$this->_walker = new Walker();
+	public function __construct( Grammar $grammar, Documenter $documenter, Walker $walker ) {
+		$this->_grammar = $grammar;
+		$this->_documenter = $documenter;
+		$this->_walker = $walker;
+	}
+
+	public function isValid($code): bool
+	{
+		return false;
 	}
 
 	// Load Source
@@ -24,7 +28,7 @@ class Interpreter {
 	// Load Grammer Rules
 	public function grammar() {
 
-		$rules = array();
+		$rules = [];
 
 		foreach ( $rules as $a=>$b ) {
 			$grammar->addRule($a, $b);
@@ -34,7 +38,7 @@ class Interpreter {
 	// Inject Grammer into Tokenizer Parser
 	// Read source code in Tokenizer Parser
 	public function run( $code ) {
-		$tokens = Tokenizer::parse($code, $this->_grammar);
+		$tokens = $this->_grammar->tokenize($code, $this->_grammar);
 
 		// Read and run Tokenized data in Documenter
 		foreach ( $tokens as $token ) {

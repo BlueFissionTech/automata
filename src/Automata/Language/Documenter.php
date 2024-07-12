@@ -6,25 +6,25 @@ use Exception;
 
 class Documenter {
 
-	private $_statements = array();
+	private $_statements = [];
 
-	private $_entities = array();
+	private $_entities = [];
 
-	private $_definitions = array();
+	private $_definitions = [];
 
-	private $_contexts = array();
+	private $_contexts = [];
 
-	private $_stack = array();
+	private $_stack = [];
 
-	private $_tree = array();
+	private $_tree = [];
 
 	private $_nodes = -1;
 
 	private $_entity;
 
-	private $_expected = array('T_TYPE_INDICATOR');
+	private $_expected = ['T_TYPE_INDICATOR';
 
-	private $_closing_stack = array();
+	private $_closing_stack = [];
 
 	private $_command = '';
 
@@ -35,7 +35,7 @@ class Documenter {
 	private $_reaction = null;
 
 
-	private $_buffer = array();
+	private $_buffer = [];
 
 	public function push( $cmd )
 	{
@@ -47,7 +47,7 @@ class Documenter {
 		// echo $cmd['token'].':'.$cmd['match'].PHP_EOL;
 		if ($this->_command == 'ESCAPE') {
 			$this->_command = '';
-			$this->_expected = array();
+			$this->_expected = [];
 
 			return;
 		}
@@ -90,21 +90,21 @@ class Documenter {
 			
 			$this->_tree[$this->_nodes]['type'] = $this->_reaction;//$cmd['match'];
 
-			$this->_expected = array();
+			$this->_expected = [];
 		}
-		if (in_array($cmd['token'], array('T_ID','T_CLASS_OPEN_BRACKET'))) {
+		if (in_array($cmd['token'], ['T_ID','T_CLASS_OPEN_BRACKET'])) {
 			$this->prepare_entity();
-			$this->_expected = array('T_SYMBOL', 'T_CLASS_OPEN_BRACKET');
+			$this->_expected = ['T_SYMBOL', 'T_CLASS_OPEN_BRACKET'];
 		}
-		if (in_array($cmd['token'], array('T_DOUBLE_QUOTE', 'T_SINGLE_QUOTE'))) {
+		if (in_array($cmd['token'], ['T_DOUBLE_QUOTE', 'T_SINGLE_QUOTE'])) {
 
 			if (end($this->_closing_stack) == $cmd['match']) {
 				array_pop($this->_closing_stack);
-				$this->_expected = array();
+				$this->_expected = [];
 				$this->_command = '';
 			} else {
 				array_push($this->_closing_stack, $cmd['match']);
-				$this->_expected = array('T_SYMBOL', 'T_ESCAPE', 'T_DOUBLE_QUOTE', 'T_SINGLE_QUOTE');
+				$this->_expected = ['T_SYMBOL', 'T_ESCAPE', 'T_DOUBLE_QUOTE', 'T_SINGLE_QUOTE'];
 				$this->_command = 'LITERAL';
 			}
 		}
@@ -119,8 +119,8 @@ class Documenter {
 		if ($cmd['token'] == 'T_CLASS_OPEN_BRACKET') {
 			array_push($this->_closing_stack, $cmd['match']);
 
-			$this->_class = array();
-			$this->_expected = array('T_DOUBLE_QUOTE', 'T_SINGLE_QUOTE', 'T_SYMBOL', 'T_CLASS_CLOSE_BRACKET');
+			$this->_class = [];
+			$this->_expected = ['T_DOUBLE_QUOTE', 'T_SINGLE_QUOTE', 'T_SYMBOL', 'T_CLASS_CLOSE_BRACKET'];
 		}
 
 		if ($cmd['token'] == 'T_CLASS_CLOSE_BRACKET') {
@@ -140,35 +140,35 @@ class Documenter {
 				$this->prepare_entity();
 				$this->_tree[$this->_nodes]['entities'][$this->_entity] = $this->_class;
 
-			$this->_expected = array();
-			$this->class = array();
+			$this->_expected = [];
+			$this->class = [];
 		}
 
 		if ($cmd['token'] == 'T_SYMBOL') {
-			$this->_expected = array('T_CLASS_OPEN_BRACKET', 'T_ID', 'T_SYMBOL');
+			$this->_expected = ['T_CLASS_OPEN_BRACKET', 'T_ID', 'T_SYMBOL'];
 
-			if ( in_array($cmd['match'], array('TYPE', 'DEFINE'))) {
+			if ( in_array($cmd['match'], ['TYPE', 'DEFINE'])) {
 				// $this->_tree[$this->_nodes]['command'] = $cmd['match'];
 				$this->_command = $cmd['match'];
-			} elseif ( in_array($cmd['match'], array('LIKE','DOES','WILL','HANDLES','QUERIES','COMMITS','INTENDS'))) {
+			} elseif ( in_array($cmd['match'], ['LIKE','DOES','WILL','HANDLES','QUERIES','COMMITS','INTENDS'])) {
 				$this->_tree[$this->_nodes]['operators'][] = $cmd['match'];
 				// $this->_operate($cmd['match']);
-				// $this->_expected = array('T_CLASS_OPEN_BRACKET', 'T_ID', 'T_SYMBOL');
-			} elseif ( in_array($cmd['match'], array('NEEDS','EXPECTS','MIGHT','COULD','WOULD','SHOULD','MUST'))) {
+				// $this->_expected = ['T_CLASS_OPEN_BRACKET', 'T_ID', 'T_SYMBOL'];
+			} elseif ( in_array($cmd['match'], ['NEEDS','EXPECTS','MIGHT','COULD','WOULD','SHOULD','MUST'])) {
 				if ( !isset($this->_tree[$this->_nodes]['modes'][$this->_entity]) ) {
-					$this->_tree[$this->_nodes]['modes'][$this->_entity] = array();
+					$this->_tree[$this->_nodes]['modes'][$this->_entity] = [];
 				}
 				$this->_tree[$this->_nodes]['modes'][$this->_entity][] = $cmd['match'];
-				// $this->_expected = array('T_CLASS_OPEN_BRACKET', 'T_ID', 'T_SYMBOL');
+				// $this->_expected = ['T_CLASS_OPEN_BRACKET', 'T_ID', 'T_SYMBOL'];
 			} elseif (array_key_exists($cmd['match'], $this->_definitions)) {
 				$this->store($cmd);
 				
-				$this->_expected = array();
+				$this->_expected = [];
 			} elseif (array_key_exists($cmd['match'], $this->_entities)) {
 				$this->prepare_entity();
 				$this->_tree[$this->_nodes]['entities'][$this->_entity] = $cmd['match'];
 				$this->store($this->_entities[$cmd['match']]);
-				$this->_expected = array();
+				$this->_expected = [];
 			} elseif ( $this->_command == 'TYPE') {
 				$this->store($cmd);
 				$this->prepare_entity();
@@ -183,7 +183,7 @@ class Documenter {
 					$this->_last_field = $cmd['match'];
 					$this->_class[$cmd['match']] = true;
 				}
-				$this->_expected = array();
+				$this->_expected = [];
 			} else {
 				throw new Exception("Undefined {$cmd['token']} '{$cmd['match']}' on line, {$cmd['line']}.", 1);
 				
