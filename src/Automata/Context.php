@@ -4,27 +4,27 @@ namespace BlueFission\Automata;
 // Context.php
 class Context
 {
-    protected $data;
+    protected $_data;
 
     public function __construct()
     {
-        $this->data = [];
+        $this->_data = [];
     }
 
     public function set($key, $value): self
     {
-        $this->data[$key] = $value;
+        $this->_data[$key] = $value;
         return $this;
     }
 
     public function get($key, $default = null)
     {
-        return $this->data[$key] ?? $default;
+        return $this->_data[$key] ?? $default;
     }
 
     public function all(): array
     {
-        return $this->data;
+        return $this->_data;
     }
 
     public function __sleep()

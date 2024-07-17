@@ -22,7 +22,7 @@ class Documenter {
 
 	private $_entity;
 
-	private $_expected = ['T_TYPE_INDICATOR';
+	private $_expected = ['T_TYPE_INDICATOR'];
 
 	private $_closing_stack = [];
 
