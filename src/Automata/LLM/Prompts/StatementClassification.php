@@ -1,7 +1,5 @@
 <?php
-namespace App\Business\Prompts;
-
-use BlueFission\Automata\LLM\Prompts\Prompt;
+namespace BlueFission\Automata\LLM\Prompts;
 
 class StatementClassification extends Prompt
 {

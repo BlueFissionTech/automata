@@ -11,6 +11,9 @@ class DepthFirstMethod implements IMethod {
 
         while ($stack->isNotEmpty()) {
             $currentNode = $stack->pop();
+            if (!$currentNode) {
+                continue;
+            }
             $score = $currentNode->evaluate();
             if ($score > $bestScore) {
                 $bestNode = $currentNode;

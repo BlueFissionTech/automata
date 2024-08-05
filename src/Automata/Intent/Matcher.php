@@ -2,6 +2,7 @@
 namespace BlueFission\Automata\Intent;
 
 // Matcher.php
+use BlueFission\Str;
 use BlueFission\Automata\Context;
 use BlueFission\Automata\Analysis\IAnalyzer;
 use BlueFission\Automata\Intent\Skill\ISkill;
@@ -74,17 +75,25 @@ class Matcher
         return self::$skills;
     }
 
-    public function match($input, Context $context): ?array
+    public function match($input, Context $context): ?Arr
     {
-        $intentScores = $this->_intentAnalyzer->analyze($input, $context, self::$intents);
+        $phrases = [];
+        foreach ( self::$intents as $intent ) {
+            // die(var_dump(self::$intents));
+            foreach ($intent->getCriteria()['keywords'] as $keyword) {
+                $phrases[$intent->getLabel()][] = ['weight'=>$keyword['priority'], 'text'=>$keyword['word']];
+            }
+        }
+
+        $intentScores = $this->_intentAnalyzer->analyze($input, $context, $phrases);
 
         return $intentScores;
     }
 
     public function process($intent, Context $context): ?string
     {
-        if ( is_string($intent) ) {
-            $intent = $this->getIntent($intent);
+        if ( Str::is($intent) ) {
+            $intent = $this->getIntent(Str::grab());
         }
         $skillNames = isset(self::$intentSkillMap[$intent->getLabel()]) ? self::$intentSkillMap[$intent->getLabel()] : [];
 
@@ -98,3 +107,4 @@ class Matcher
     }
 
 }
+?>

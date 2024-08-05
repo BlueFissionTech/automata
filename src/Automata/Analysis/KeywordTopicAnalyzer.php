@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\Analysis;
 
 use BlueFission\Str;
+use BlueFission\Arr;
 use BlueFission\Automata\Strategy\NaiveBayesTextClassification;
 use BlueFission\Automata\Analysis\IAnalyzer;
 use BlueFission\Automata\Context;
@@ -22,7 +23,7 @@ class KeywordTopicAnalyzer implements IAnalyzer
         $this->_modelDirPath = $modelDirPath;
     }
 
-    public function analyze(string $input, Context $topic, array $dialogues): array
+    public function analyze(string $input, Context $topic, array $dialogues): Arr
     {
         $scores = [];
 
@@ -65,7 +66,7 @@ class KeywordTopicAnalyzer implements IAnalyzer
         }
 
         $class = (new \ReflectionClass($this))->getShortName();
-        $modelName = Str::snake($class)->value();
+        $modelName = Str::snake($class);
 
         $modelFilePath = $this->_modelDirPath.$modelName.'.phpml';
         $modelManager = new ModelManager();
@@ -96,7 +97,7 @@ class KeywordTopicAnalyzer implements IAnalyzer
             arsort($scores);
         }
 
-        return $scores;
+        return Arr::make($scores);
     }
 
 }

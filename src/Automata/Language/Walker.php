@@ -2,7 +2,9 @@
 
 namespace BlueFission\Automata\Language;
 
-class Walker {	
+class Walker {
+
+	protected $_statements = [];
 
 	public function addStatement( $statement )
 	{
@@ -15,7 +17,7 @@ class Walker {
 	public function assume()
 	{
 		foreach ($this->_statements as $statement) {
-			$query = $statement->satisy();
+			$query = $statement->satisfy();
 		}
 	}
 
@@ -41,11 +43,11 @@ class Walker {
 				  
 			}
 			foreach ($statement->entities() as $entity) {
-				$label = $this->_getLabel($entity, 'entity');
+				$label = $this->getLabel($entity, 'entity');
 				$this->_entities[$label] = $entity;
 			}
 			foreach ($properties as $property) {
-				$label = $this->_getLabel($statement->$property, $property);
+				$label = $this->getLabel($statement->$property, $property);
 				switch ( $property ) {
 					case "type":
 
@@ -74,7 +76,6 @@ class Walker {
 				$statement->$property;
 			}
 			// $this->_stack[] = $statement;
-
 		}
 	}
 
@@ -156,14 +157,15 @@ class Walker {
 		}
 	}
 
-	private function _getLabel($property, $class = null) {
+	private function getLabel($property, $class = null) {
 
 	}
 
 	public function traverse( $tree ) {
 		foreach ( $tree as $node ) {
+			die(var_dump($node));
 			// TODO: Move "runtime" class code to walker class
-			$statement = $runtime = new Runtime( $node );
+			$statement = $node;
 			// $statement = new Statement();
 			$this->addStatement($statement);
 		}
