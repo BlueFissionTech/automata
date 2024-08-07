@@ -2,7 +2,7 @@
 
 namespace BlueFission\Automata\LLM\Clients;
 
-use BlueFission\SimpleClients\Client;
+use BlueFission\Services\Client;
 use Gemini\Gemini;
 use Gemini\Data\{GenerationConfig, SafetySetting};
 use Gemini\Enums\{HarmBlockThreshold, HarmCategory};
@@ -10,7 +10,7 @@ use BlueFission\Automata\LLM\Prompts\IPrompt;
 use BlueFission\Automata\LLM\Reply;
 use BlueFission\Arr;
 
-class GoogleGeminiClient extends Service implements IClient {
+class GoogleGeminiClient extends Client implements IClient {
 
 	public function __construct( $apiKey ) {
 		$this->_apiKey = $apiKey;

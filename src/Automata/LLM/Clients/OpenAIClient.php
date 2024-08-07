@@ -2,7 +2,7 @@
 
 namespace BlueFission\Automata\LLM\Clients;
 
-use BlueFission\SimpleClients\Client;
+use BlueFission\Services\Client;
 use BlueFission\Automata\LLM\Connectors\OpenAI;
 use BlueFission\Automata\LLM\Prompts\IPrompt;
 use BlueFission\Automata\LLM\Reply;
