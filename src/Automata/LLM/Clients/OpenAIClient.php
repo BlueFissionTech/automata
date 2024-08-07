@@ -2,13 +2,13 @@
 
 namespace BlueFission\Automata\LLM\Clients;
 
-use BlueFission\Services\Service;
+use BlueFission\SimpleClients\Client;
 use BlueFission\Automata\LLM\Connectors\OpenAI;
 use BlueFission\Automata\LLM\Prompts\IPrompt;
 use BlueFission\Automata\LLM\Reply;
 
 
-class OpenAIClient extends Service implements IClient
+class OpenAIClient extends Client implements IClient
 {
 	protected $_openAI;
 
@@ -85,11 +85,22 @@ class OpenAIClient extends Service implements IClient
 	}
 
 	/**
+     * Get embeddings from the Ada model based on the input.
+     *
+     * @param string $input
+     * @return array
+     */
+    public function embeddings($input)
+    {
+        return $this->_client->embeddings($input);
+    }
+
+	/**
 	 * Process response from OpenAI.
 	 * @param  $response The response from OpenAI
 	 * @return Reply          The reply object
 	 */
-	private function processResponse($response)
+	private function processResponse($response): Reply
 	{
 		$reply = new Reply();
 

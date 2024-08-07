@@ -9,7 +9,7 @@ class Reply {
 	private bool $_success;
 
 	public function __construct() {
-		$this->_messages = new Arr([]);
+		$this->_messages = new Arr();
 		$this->_success = false;
 	}
 

@@ -15,11 +15,17 @@
         {
             "type": "vcs",
             "url": "https://github.com/bluefission/develation"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/bluefission/simpleclients"
         }
     ],
     "minimum-stability": "dev",
     "require": {
         "bluefission/develation": "^1.0.0-alpha",
+        "bluefission/simpleclients": "dev-master",
+        "google-gemini-php/client": "*",
         "orhanerday/open-ai": "^2.2",
         "php-ai/php-ml": "^0.10.0"
     },

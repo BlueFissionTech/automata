@@ -12,9 +12,9 @@ class OpenAI
     /**
      * OpenAIService constructor.
      */
-    public function __construct( $openAIAPIKey )
+    public function __construct( $apiKey )
     {
-        $this->_api_key = $openAIAPIKey;
+        $this->_api_key = $apiKey;
         $this->_curl = new Curl([
             'method' => 'post',
         ]);
