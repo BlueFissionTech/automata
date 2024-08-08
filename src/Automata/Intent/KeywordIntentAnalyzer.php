@@ -9,6 +9,7 @@ use Phpml\FeatureExtraction\TokenCountVectorizer;
 use Phpml\Tokenization\WhitespaceTokenizer;
 use Phpml\FeatureExtraction\TfIdfTransformer;
 use Phpml\ModelManager;
+use BlueFission\Arr;
 
 class KeywordIntentAnalyzer implements IAnalyzer
 {
@@ -21,7 +22,7 @@ class KeywordIntentAnalyzer implements IAnalyzer
         $this->_modelDirPath = $modelDirPath;
     }
 
-    public function analyze(string $input, Context $context, array $intents): array
+    public function analyze(string $input, Context $context, array $intents): Arr
     {
         $scores = [];
 
@@ -92,7 +93,7 @@ class KeywordIntentAnalyzer implements IAnalyzer
             arsort($scores);
         }
 
-        return $scores;
+        return Arr::make($scores);
     }
 
     private function classificationBonus($current_score, $bonus_percentage) {
