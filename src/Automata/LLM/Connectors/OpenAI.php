@@ -35,7 +35,7 @@ class OpenAI
 
         $request_data = array_merge([
             'prompt' => $input,
-            'model' => 'text-davinci-003',
+            'model' => 'davinci-002',
             'max_tokens' => 1024,
             'temperature' => 0.7,
             'top_p' => 1,
@@ -74,7 +74,7 @@ class OpenAI
     {
         $request_data = [
             'prompt' => $input,
-            'model' => 'text-davinci-003',
+            'model' => 'gpt-3.5-turbo-instruct',
             'max_tokens' => 1024,
             'temperature' => 0.7,
             'top_p' => 1,
@@ -106,6 +106,47 @@ class OpenAI
         $request_data = [
             'messages' => [['role' => 'user', 'content' => $input]],
             'model' => 'gpt-3.5-turbo',
+            'max_tokens' => 500,
+            'temperature' => 0.7,
+            'top_p' => 1,
+            'frequency_penalty' => 0.2,
+            'presence_penalty' => 0.6,
+            'stop' => null
+        ];
+
+        $request_data = array_merge($request_data, $config);
+
+        $this->_curl->clear();
+        $this->_curl->config('target', 'https://api.openai.com/v1/chat/completions');
+        $this->_curl->open();
+        $this->_curl->query($request_data);
+        $response = $this->_curl->result();
+        $this->_curl->close();
+
+        return json_decode($response, true);
+    }
+
+    /**
+     * Get GPT-3.5 chat completion based on the input.
+     *
+     * @param string $input
+     * @return array
+     */
+    public function chat($input, $config = [])
+    {
+        if ( is_string($input)) {
+            $messages = [['role' => 'user', 'content' => $input]];
+        } else if ( is_array($input)) {
+            $messages = $input;
+        } else {
+            throw new \Exception('Invalid input type.');
+        }
+
+
+        $request_data = [
+            'messages' => $messages,
+            // 'model' => 'gpt-3.5-turbo',
+            'model' => 'gpt-4o-mini',
             'max_tokens' => 500,
             'temperature' => 0.7,
             'top_p' => 1,

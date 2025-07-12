@@ -36,4 +36,9 @@ class Intent
     {
         return $this->_relatedIntents;
     }
+
+    public function addCriteria($label, $criteria)
+    {
+        $this->_criteria[$label][] = $criteria;
+    }
 }

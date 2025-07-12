@@ -1,5 +1,5 @@
 <?php
-namespace BlueFission\Framework\Chat;
+namespace BlueFission\Automata\LLM\Tools;
 
 interface ITool {
     public function execute($input): string;

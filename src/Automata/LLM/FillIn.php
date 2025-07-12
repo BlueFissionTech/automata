@@ -1,13 +1,22 @@
 <?php
 namespace BlueFission\Automata\LLM;
 
+use BlueFission\Behavioral\IDispatcher;
+use BlueFission\Behavioral\Dispatches;
+use BlueFission\Behavioral\Behaviors\Event;
+use BlueFission\Behavioral\Behaviors\State;
+use BlueFission\Behavioral\Behaviors\Meta;
 // Inspired by microsoft/guidance
 // https://towardsdatascience.com/the-art-of-prompt-design-use-clear-syntax-4fc846c1ebd5
 // https://towardsdatascience.com/the-art-of-prompt-design-prompt-boundaries-and-token-healing-3b2448b0be38
 
 // TODO: implement token healing
-class FillIn
+class FillIn implements IDispatcher
 {
+    use Dispatches {
+        Dispatches::__construct as private __dispatchesConstruct;
+    }
+
     const OPERATOR_EQUALS = '==';
     const OPERATOR_NOT_EQUALS = '!=';
     const OPERATOR_GREATER_THAN = '>';
@@ -23,6 +32,7 @@ class FillIn
     private $vars = [];
     private $conditions = [];
     private $loops = [];
+    private $tools = [];
     private $loopGlue = "";
     private $iteratedData = [];
     private $iteratedMax = 0;
@@ -31,10 +41,34 @@ class FillIn
 
     public function __construct($llm, $prompt)
     {
+        $this->__dispatchesConstruct();
+
         $this->llm = $llm;
+        $this->setPrompt($prompt);
+    }
+
+    public function setPrompt($prompt)
+    {
         $this->prompt = $prompt;
         $this->originalPrompt = $prompt;
+        $this->placeholders = [];
+        $this->placeholderNames = [];
         $this->extractPlaceholders();
+    }
+
+    public function addTool($name, ITool $tool)
+    {
+        $this->tools[$name] = $tool;
+    }
+
+    private function invokeTool($name, $params)
+    {
+        if (isset($this->tools[$name])) {
+            $tool = $this->tools[$name];
+            return $tool->execute($params);
+        } else {
+            throw new \Exception("Tool '$name' not found.");
+        }
     }
 
     private function extractPlaceholders()
@@ -107,7 +141,9 @@ class FillIn
             if (strpos($value, "'") === false && strpos($value, "\"") === false) {
                 $value = $data[$value] ?? $this->vars[$value] ?? null;
             }
-            $condition = trim($condition, "'\"");
+            if ($condition) {
+                $condition = trim($condition, "'\"");
+            }
             $value = trim($value, "'\"");
             if ( !$this->parseCondition($condition, $value, $operator) ) {
                 // $data[$placeholderName] = "";
@@ -198,7 +234,6 @@ class FillIn
                 $data[$this->iterationAssignment] = [];
             }
 
-            // $chunk = preg_replace("/\{#each\s*((?:\[[^\]]*\]|[^}]+))\}(.*?)$/s", $render, $chunk);
             $chunk = str_replace($this->iteratedContent, $render, $chunk);
             
             $isLooping = true;
@@ -218,14 +253,22 @@ class FillIn
 
         // Group the matches into key-value pairs
         for ($i = 0; $i < count($matches[0]); $i++) {
+
+            $refValue = null;
+            $rawValue = explode(':', $matches[0][$i])[1] ?? '';
+            if ($this->isValidVariableName($rawValue)) {
+                $refValue = $this->getVariableValue($rawValue);
+            }
+
             if(!empty($matches[1][$i])) {
-                $options[$matches[1][$i]] = $matches[3][$i] != "" ? $matches[3][$i] : ($this->vars[$matches[2][$i]] ?? $matches[2][$i]);
+                $options[$matches[1][$i]] = $matches[3][$i] != "" ? $matches[3][$i] : ($refValue ?? $matches[2][$i]);
                 if (preg_match("/\[(.*?)\]/", $options[$matches[1][$i]], $matches2)) {
                     $value = explode(",", trim($matches2[1]));
                     $options[$matches[1][$i]] = array_map(function($v) { return trim($v, " '\""); }, $value);
                 }
             } else {
-                $options['options'] = explode(',', str_replace('\'', '', $matches[4][$i]));
+                $value = $refValue ?? $matches[4][$i];
+                $options['options'] = explode(',', str_replace('\'', '', $value));
             }
         }
         if (isset($options['stop'])) {
@@ -299,6 +342,24 @@ class FillIn
         }
         return $render;
     }
+
+    private function isValidVariableName($term): bool
+    {
+        // Check if term is not quoted, started with a letter or underscore, and contains only alphanumeric characters or underscores
+        return preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $term) && !preg_match('/["\']/', $term);
+    }
+
+    private function getVariableValue($name)
+    {
+        if (isset($this->vars[$name])) {
+            return $this->vars[$name];
+        } elseif (isset($this->data[$name])) {
+            return $this->data[$name];
+        } else {
+            throw new \Exception("Variable '$name' not found.");
+        }
+    }
+
 
     public function run($config = [])
     {
@@ -375,35 +436,72 @@ class FillIn
                 $prompt = $chunk." (select " . implode(", ", $options['options']) . "): ";
             }
 
-            // Perform generation
-            $this->llm->generate($prompt, function($response) use ($placeholder, $placeholderName, &$data, $sanitizedConfig) {
-                $value = trim($response);
-
-                // If a pattern is provided in the config, match the response against the pattern
-                if (isset($config['pattern'])) {
-                    if (preg_match($config['pattern'], $value, $matches)) {
-                        $value = $matches[0];
-                    } else {
-                        $value = '';
-                    }
+            if (isset($options['use']) && isset($this->tools[$options['use']])) {
+                $tool = $this->tools[$options['use']];
+                $param = null;
+                if (isset($options['param'])) {
+                    $param = $options['param'];
                 }
 
-                // Replace the placeholder in the prompt with the generated value
+                $this->dispatch(Event::STARTED, new Meta(when: State::RUNNING, data: [
+                    'placeholder' => $placeholderName,
+                ], src: $this));
+                $value = $this->invokeTool($options['use'], $param);
+                $this->dispatch(Event::COMPLETE, new Meta(when: State::RUNNING, data: [
+                    'placeholder' => $placeholderName,
+                    'value' => $value
+                ], src: $this));
+                // Replace the placeholder in the prompt with the tool value
                 $this->prompt = str_replace("{=$placeholder}", $value, $this->prompt);
                 if (isset($data[$placeholderName]) && is_array($data[$placeholderName])) {
                     $data[$placeholderName][] = $value;
                 } else {
                     $data[$placeholderName] = $value;
                 }
+            } else  {
+                // Perform generation
+                $this->dispatch(Event::SENT, new Meta(when: State::RUNNING, data: [
+                    'placeholder' => $placeholderName
+                ], src: $this));
+                $this->llm->generate($prompt, $sanitizedConfig, function($response) use ($placeholder, $placeholderName, &$data, $sanitizedConfig) {
+                    $value = trim($response);
 
-                // If the generated value doesn't satisfy the pattern, throw an exception
-                if (isset($config['pattern']) && !preg_match($config['pattern'], $value)) {
-                    throw new \Exception("Generated text for placeholder '{$placeholderName}' doesn't match the provided pattern");
-                }
-            }, $sanitizedConfig);
+                    $this->dispatch(Event::RECEIVED, new Meta(when: State::RUNNING, data: [
+                        'placeholder' => $placeholderName,
+                        'value' => $value
+                    ], src: $this));
+
+                    // If a pattern is provided in the config, match the response against the pattern
+                    if (isset($config['pattern'])) {
+                        if (preg_match($config['pattern'], $value, $matches)) {
+                            $value = $matches[0];
+                        } else {
+                            $value = '';
+                        }
+                    }
+
+                    // Replace the placeholder in the prompt with the generated value
+                    $this->prompt = str_replace("{=$placeholder}", $value, $this->prompt);
+                    if (isset($data[$placeholderName]) && is_array($data[$placeholderName])) {
+                        $data[$placeholderName][] = $value;
+                    } else {
+                        $data[$placeholderName] = $value;
+                    }
+
+                    // If the generated value doesn't satisfy the pattern, throw an exception
+                    if (isset($config['pattern']) && !preg_match($config['pattern'], $value)) {
+                        throw new \Exception("Generated text for placeholder '{$placeholderName}' doesn't match the provided pattern");
+                    }
+                });
+            }
             if (!isset($data[$placeholderName])) {
                 throw new \Exception("Failed to generate text for placeholder '{$placeholderName}'");
             }
+
+            $this->dispatch(Event::CHANGE, new Meta(when: State::RUNNING, data: [
+                'placeholder' => $placeholderName,
+                'value' => $data[$placeholderName]
+            ], src: $this));
 
             if ($isLooping) { // only increase placeholder/chunk iterator if not doing internal loops
                 $index++;
@@ -412,8 +510,6 @@ class FillIn
                 $i++;
             }
         }
-
-        echo $chunk;
 
         return $data;
     }

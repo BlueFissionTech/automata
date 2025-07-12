@@ -14,7 +14,7 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "https://github.com/bluefission/develation"
+            "url": "https://github.com/bluefissiontech/develation"
         }
     ],
     "minimum-stability": "dev",

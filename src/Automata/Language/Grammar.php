@@ -86,6 +86,8 @@ class Grammar
 	    $tokens = mb_str_split($input);
 	    $inputLength = count($tokens);
 
+	    $puntuations = ['.', ',', '!', '?', ';', ':', '(', ')', '[', ']', '{', '}', '<', '>'];
+
 	    $j = 0;
 	    for ($i = 0; $i < $inputLength; $i++) {
 	        $current = $tokens[$i];
@@ -104,7 +106,7 @@ class Grammar
 	            	// echo "term: $term\n";
             		// var_dump($segment);
 
-            		if (isset($tokens[$i+1]) && (preg_match('/^\S+$/', $tokens[$i+1]) && $tokens[$i+1] != '.')) {
+            		if (isset($tokens[$i+1]) && (preg_match('/^\S+$/', $tokens[$i+1]) && !in_array($tokens[$i+1], $puntuations))) {
 		            	$count++;
 		            	$matches[] = $term;
 		            }
@@ -137,7 +139,7 @@ class Grammar
 	            }
 	        }
 
-	            if ($count <= 1 && $matching == true) {
+	        if ($count <= 1 && $matching == true) {
 	            	// echo "accepted\n";
 	            	// var_dump($segment);
 	            	// if ($currentSegment != " ") {

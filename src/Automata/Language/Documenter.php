@@ -11,6 +11,8 @@ class Documenter {
 
 	protected $_statements = [];
 
+	protected $_currentStatement;
+
 	protected $_entities = [];
 
 	protected $_definitions = [];
@@ -52,8 +54,8 @@ class Documenter {
 
 	public function push( $cmd )
 	{
-		if ( !isset($statement) ) {
-			$statement = new Statement();
+		if ( !isset($this->_currentStatement) ) {
+			$this->_currentStatement = new Statement();
 		}
 
 		foreach ( $this->_rules as $priority=>$rules ) {
@@ -65,22 +67,23 @@ class Documenter {
 				$types = Arr::make($rule['types'])->val();
 
 				if ( $this->match($cmd, $types) ) {
-					Func::make($rule['function'])->bind($this, $this)($cmd, $statement);
+					Func::make($rule['function'])->bind($this, $this)($cmd, $this->_currentStatement);
 					$this->_expected = $cmd['expects'][$types[0]];
+					break 2;
 				}
 			}
 		}
-		if ( $statement->percentSatisfied() >= .1 ) {
-			$this->_statements[] = $statement;
-			$statement = new Statement();
+		if ( $this->_currentStatement->percentSatisfied() >= .7 ) {
+			$this->_statements[] = $this->_currentStatement;
+			$this->_currentStatement = new Statement();
 		}
 	}
 
 	private function isExpected( $cmd ) {
 		$expected = false;
 
-
 		if ( $this->_expected == ['T_DOCUMENT'] ) return true;
+
 
 		foreach ( $cmd['classifications'] as $type ) {
 			$expected = Arr::has($this->_expected, $type);

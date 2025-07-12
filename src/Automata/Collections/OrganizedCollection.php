@@ -74,7 +74,7 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		$this->_decay = $rate ?? $this->_decay;
 	}
 
-	public function sort_function(&$a, &$b)
+	public function sort_function($a, $b)
 	{
 		if ( $this->_do_decay ) {
 			$a['weight'] -= floor( $a['decay']*(time()-$a['timestamp']) );
