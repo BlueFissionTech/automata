@@ -16,7 +16,7 @@ class OpenAI
     {
         $this->_api_key = $apiKey;
         $this->_curl = new Curl([
-            'method' => 'post',
+            'method' => 'post'
         ]);
 
         $headers = [
@@ -35,27 +35,55 @@ class OpenAI
 
         $request_data = array_merge([
             'prompt' => $input,
-            'model' => 'davinci-002',
+            'model' => 'gpt-3.5-turbo-instruct',
             'max_tokens' => 1024,
             'temperature' => 0.7,
             'top_p' => 1,
             'frequency_penalty' => 0.2,
             'presence_penalty' => 0.6,
-            'stop' => null
+            'stop' => null,
+            'stream' => true
         ], $config);
 
         $this->_curl->clear();
         $this->_curl->config('target', 'https://api.openai.com/v1/completions');
 
-        $this->_curl->option(CURLOPT_WRITEFUNCTION, function($curl, $data) use ($callback) {
-            $decoded = json_decode($data, true);
-            if (isset($decoded['error'])) {
-                throw new \Exception($decoded['error']['message']);
+        $buffer = '';
+
+        $this->_curl->option(CURLOPT_WRITEFUNCTION, function($curl, $data) use ($callback, &$buffer) {
+            $buffer .= $data;
+            // Process multiple JSON objects if present (newline-delimited)
+            while (($newlinePos = strpos($buffer, "\n")) !== false) {
+                $line = trim(substr($buffer, 0, $newlinePos));
+                $buffer = substr($buffer, $newlinePos + 1);
+                // Only lines starting with "data: " are valid stream lines
+                if (str_starts_with($line, 'data: ')) {
+                    $jsonStr = substr($line, 6);
+                    if ($jsonStr === '[DONE]') {
+                        break;
+                    }
+
+                    $decoded = json_decode($jsonStr, true);
+                    if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+                        // Incomplete JSON fragment; re-buffer
+                        $buffer = $line . "\n" . $buffer;
+                        break;
+                    }
+
+                    if (isset($decoded['error'])) {
+                        throw new \Exception($decoded['error']['message']);
+                    }
+
+                    if (isset($decoded['choices'][0]['text'])) {
+                        $complete = call_user_func($callback, $decoded['choices'][0]['text']);
+                        if ($complete === true) {
+                            curl_setopt($this->_curl->connection(), CURLOPT_NOBODY, true);
+                            break;
+                        }
+                    }
+                }
             }
-            if (isset($decoded['choices'][0]['text'])) {
-                call_user_func($callback, $decoded['choices'][0]['text']);
-                return 0; // Stop processing the stream
-            }
+
             return strlen($data);
         });
 
@@ -220,5 +248,4 @@ class OpenAI
 
         return json_decode($response, true);
     }
-
 }
