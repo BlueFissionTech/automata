@@ -57,11 +57,7 @@ class FillIn implements IDispatcher
     public function setVariables(array $vars): void
     {
         $this->vars = $vars;
-        if ($this->template) {
-            foreach ($vars as $k => $v) {
-                $this->template->setScopeVariable($k, $v);
-            }
-        }
+        $this->parser->setVariables($vars);
     }
 
     public function addTool(string $name, $tool): void

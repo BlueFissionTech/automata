@@ -23,9 +23,12 @@ class LLMGenerator implements IGenerator {
 
     public function generate(Element $element): string
     {
-        $config = $element->getAttribute('options');
+        $options = $element->getAttribute('options');
+        $pattern = $element->getAttribute('pattern');
 
-        $pattern = $config['pattern'] ?? (isset($options) && count($options) > 0 ? '/\b(' . implode('|', array_map('preg_quote', $options)) . ')\b/xi' : null);
+        $pattern = $pattern ?? 
+            (isset($options) && count($options) > 0 
+                ? '/\b(' . implode('|', array_map('preg_quote', $options)) . ')\b/xi' : null);
 
         $config = (new Collection($config))->filter(function($value, $key) {
             return in_array($key, ['model', 'prompt', 'max_tokens', 'n', 'presence_penalty', 'seed', 'stop', 'temperature', 'top_p']);
@@ -41,7 +44,7 @@ class LLMGenerator implements IGenerator {
         do {
             $attempt++;
             try {
-                $this->generateFromLLM($config);
+                $this->generateFromLLM($element, $config);
             } catch (Exception $e) {
                 $this->dispatch(Event::ERROR, new Meta(when: State::RUNNING, data: [
                     'placeholder' => $element->getName(),
@@ -99,7 +102,7 @@ class LLMGenerator implements IGenerator {
             'config' => $config
         ], src: $this));
 
-        $pattern = $this->getAttribute('pattern') ?? (isset($options) && count($options) > 0 ? '/\b(' . implode('|', array_map('preg_quote', $options)) . ')\b/xi' : null);
+        $pattern = $element->getAttribute('pattern') ?? (isset($options) && count($options) > 0 ? '/\b(' . implode('|', array_map('preg_quote', $options)) . ')\b/xi' : null);
         
         $this->llm->generate($prompt, $config, function($output) use ($config, $target, $options, $pattern) {
             $this->dispatch(Event::RECEIVED, new Meta(when: State::RUNNING, data: [
@@ -172,7 +175,7 @@ class LLMGenerator implements IGenerator {
             }
 
             // split the text by the first occurence of the element
-            $context = explode($this->match, $context, 2)[0] ?? '';
+            $context = explode($element->getMatch(), $context, 2)[0] ?? '';
         }
 
         return (string)$context;
