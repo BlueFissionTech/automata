@@ -4,6 +4,7 @@ namespace BlueFission\Automata\LLM;
 use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Behavioral\Dispatches;
 use BlueFission\Parsing\Parser;
+use BlueFission\Parsing\Elements\EvalElement;
 use BlueFission\Parsing\Registry\TagRegistry;
 use BlueFission\Parsing\Registry\RendererRegistry;
 use BlueFission\Parsing\Registry\ExecutorRegistry;
@@ -46,7 +47,7 @@ class FillIn implements IDispatcher
         RendererRegistry::registerDefaults();
         ExecutorRegistry::registerDefaults();
         PreparerRegistry::registerDefaults();
-        PreparerRegistry::register(new LLMPreparer($this), [PromptElement::class]);
+        PreparerRegistry::register(new LLMPreparer($this), [EvalElement::class]);
 
         $this->parser = new Parser($prompt);
         $this->parser->setVariables($this->vars);

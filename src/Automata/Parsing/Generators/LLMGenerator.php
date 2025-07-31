@@ -7,12 +7,18 @@ use BlueFission\Parsing\Element;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\State;
 use BlueFission\Behavioral\Behaviors\Meta;
+use BlueFission\Behavioral\Dispatches;
+use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Collections\Collection;
 use BlueFission\Str;
 use Exception;
 
-class LLMGenerator implements IGenerator {
+class LLMGenerator implements IGenerator, IDispatcher {
     
+    use Dispatches {
+        Dispatches::__construct as private __dispatchConstruct;
+    }
+
     protected array $buffer = [];
     protected $llm;
 
@@ -21,10 +27,21 @@ class LLMGenerator implements IGenerator {
         $this->llm = $llm;
     }
 
+    public function __construct() {
+        $this->__dispatchConstruct();
+
+        $this->behavior(Event::SENT);
+        $this->behavior(Event::RECEIVED);
+        $this->behavior(Event::ERROR);
+        $this->behavior(State::RUNNING);
+        $this->behavior(State::IDLE);
+    }
+
     public function generate(Element $element): string
     {
         $options = $element->getAttribute('options');
         $pattern = $element->getAttribute('pattern');
+        $config = $element->getAttributes();
 
         $pattern = $pattern ?? 
             (isset($options) && count($options) > 0 
@@ -47,7 +64,7 @@ class LLMGenerator implements IGenerator {
                 $this->generateFromLLM($element, $config);
             } catch (Exception $e) {
                 $this->dispatch(Event::ERROR, new Meta(when: State::RUNNING, data: [
-                    'placeholder' => $element->getName(),
+                    'placeholder' => $element->getTag(),
                     'error' => $e->getMessage()
                 ], src: $this));
             }
@@ -57,7 +74,7 @@ class LLMGenerator implements IGenerator {
             if ($pattern && !preg_match($pattern, $output)) {
                 // throw new Exception("Generated value '{$output}' does not match required pattern.");
                 $this->dispatch(Event::ERROR, new Meta(when: State::RUNNING, data: [
-                    'placeholder' => $element->getName(),
+                    'placeholder' => $element->getTag(),
                     'error' => "Generated value '{$output}' does not match required pattern {$pattern}."
                 ], src: $this));
                 $this->buffer[$element->getUuid()] = '';
@@ -65,7 +82,7 @@ class LLMGenerator implements IGenerator {
 
             if ($attempt >= $retries) {
                 $this->dispatch(Event::ERROR, new Meta(when: State::RUNNING, data: [
-                    'placeholder' => $element->getName(),
+                    'placeholder' => $element->getTag(),
                     'error' => "Failed to generate value after {$retries} attempts."
                 ], src: $this));
                 unset($this->buffer[$element->getUuid()]);
@@ -80,10 +97,10 @@ class LLMGenerator implements IGenerator {
     protected function generateFromLLM(Element $element, array $config): void
     {
         if (!$this->llm) {
-            throw new Exception("No LLM assigned to PromptElement");
+            throw new Exception("No LLM assigned to Element");
         }
 
-        $prompt = $this->gatherPromptContext();
+        $prompt = $this->gatherPromptContext($element);
 
         $options = $element->getAttribute('options');
 
@@ -98,15 +115,15 @@ class LLMGenerator implements IGenerator {
         $target = $element->getUuid();
 
         $this->dispatch(Event::SENT, new Meta(when: State::RUNNING, data: [
-            'placeholder' => $element->getName(),
+            'placeholder' => $element->getTag(),
             'config' => $config
         ], src: $this));
 
         $pattern = $element->getAttribute('pattern') ?? (isset($options) && count($options) > 0 ? '/\b(' . implode('|', array_map('preg_quote', $options)) . ')\b/xi' : null);
         
-        $this->llm->generate($prompt, $config, function($output) use ($config, $target, $options, $pattern) {
+        $this->llm->generate($prompt, $config, function($output) use ($config, $target, $options, $pattern, $element) {
             $this->dispatch(Event::RECEIVED, new Meta(when: State::RUNNING, data: [
-                'placeholder' => $element->getName(),
+                'placeholder' => $element->getTag(),
                 'value' => $output
             ], src: $this));
 
