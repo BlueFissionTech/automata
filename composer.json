@@ -19,10 +19,11 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "bluefission/develation": "^1.0.0-alpha",
+        "bluefission/develation": "^1.2.0-alpha",
         "google-gemini-php/client": "*",
         "orhanerday/open-ai": "^2.2",
-        "php-ai/php-ml": "^0.10.0"
+        "php-ai/php-ml": "^0.10.0",
+        "symfony/http-client": "7.4.x-dev"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.1@dev",
@@ -39,6 +40,11 @@
     "autoload-dev": {
         "psr-4": { 
             "BlueFission\\Tests\\": "tests/" 
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
         }
     }
 }
