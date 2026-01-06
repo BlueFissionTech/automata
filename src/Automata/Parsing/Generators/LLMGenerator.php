@@ -37,6 +37,19 @@ class LLMGenerator implements IGenerator, IDispatcher {
         $this->behavior(State::IDLE);
     }
 
+    public function registerEchoes(IDispatcher $parent): void
+    {
+        // Whenever this generator sends/receives/errors or flips RUNNING/IDLE,
+        // mirror those events onto the parent dispatcher.
+        $parent->echo($this, [
+          Event::SENT,
+          Event::RECEIVED,
+          Event::ERROR,
+          State::RUNNING,
+          State::IDLE,
+        ]);
+    }
+
     public function generate(Element $element): string
     {
         $options = $element->getAttribute('options');

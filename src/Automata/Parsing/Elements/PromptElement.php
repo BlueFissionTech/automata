@@ -20,4 +20,13 @@ class PromptElement extends EvalElement implements IExecutableElement, IRenderab
     {
         $this->llm = $llm;
     }
+
+    public function getDescription(): string
+    {
+        $descriptionString = sprintf('Evalute the expression "%s" and generate or recieve a result.', $this->name);
+
+        $this->description = $descriptionString;
+
+        return $this->description;
+    }
 }
