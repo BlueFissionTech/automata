@@ -3,121 +3,102 @@ namespace BlueFission\Automata\Strategy;
 
 use Phpml\Tokenization\WhitespaceTokenizer;
 use Phpml\Tokenization\NGramTokenizer;
-use Phpml\Dataset\ArrayDataset;
-use Phpml\Regression\LeastSquares;
 use Phpml\Metric\Accuracy;
-use Phpml\ModelManager;
 
+/**
+ * NGramTextPrediction
+ *
+ * Simple n-gram frequency-based predictor adapted to the
+ * Strategy interface. Treats samples as sentences and
+ * builds (n-1)-gram → next-word distributions.
+ */
 class NGramTextPrediction extends Strategy
 {
-    private $_regression;
-    private $_tokenizer;
-    private $_nGramTokenizer;
-    private $_modelManager;
+    private WhitespaceTokenizer $_tokenizer;
+    private ?NGramTokenizer $_nGramTokenizer = null;
+
+    /** @var array<string,array<string,int>> */
+    private array $_ngramCounts = [];
 
     public function __construct()
     {
-        // Initialize the regression model and tokenizers
-        $this->_regression = new LeastSquares();
         $this->_tokenizer = new WhitespaceTokenizer();
-        $this->_modelManager = new ModelManager();
     }
 
     /**
-     * Train the NGram text prediction model.
+     * Train from sample sentences and labels.
      *
-     * @param string $text The input text to train on.
-     * @param int $n The size of the n-grams.
-     * @param float $testSize The proportion of the dataset to include in the test split.
+     * @param array $samples array<int, string> sentences
+     * @param array $labels  unused
+     * @param float $testSize fraction of n-grams used as test set
      */
-    public function train(string $text, int $n = 10, float $testSize = 0.2)
+    public function train(array $samples, array $labels, float $testSize = 0.2)
     {
-        // Tokenize the text into words
-        $words = $this->_tokenizer->tokenize($text);
+        $n = 2; // default to bigrams for simplicity
         $this->_nGramTokenizer = new NGramTokenizer($n + 1);
-        $nGrams = $this->_nGramTokenizer->tokenize($words);
 
-        $samples = [];
-        $targets = [];
+        $allNGrams = [];
 
-        // Create samples and targets from n-grams
-        foreach ($nGrams as $nGram) {
-            $samples[] = array_slice($nGram, 0, -1);
-            $targets[] = end($nGram);
+        foreach ($samples as $sample) {
+            $words = $this->_tokenizer->tokenize((string)$sample);
+            $nGrams = $this->_nGramTokenizer->tokenize($words);
+            foreach ($nGrams as $nGram) {
+                $context = implode(' ', array_slice($nGram, 0, -1));
+                $target = end($nGram);
+                $allNGrams[] = [$context, $target];
+
+                if (!isset($this->_ngramCounts[$context])) {
+                    $this->_ngramCounts[$context] = [];
+                }
+                if (!isset($this->_ngramCounts[$context][$target])) {
+                    $this->_ngramCounts[$context][$target] = 0;
+                }
+                $this->_ngramCounts[$context][$target]++;
+            }
         }
 
-        // Split data into training and testing sets
-        $dataset = new ArrayDataset($samples, $targets);
-        list($trainSamples, $testSamples, $trainTargets, $testTargets) = $dataset->randomSplit($testSize);
-        
-        $this->_testSamples = $testSamples;
-        $this->_testTargets = $testTargets;
+        $total = count($allNGrams);
+        $testCount = (int)($total * $testSize);
+        $trainCount = $total - $testCount;
 
-        // Train the regression model
-        $this->_regression->train($trainSamples, $trainTargets);
+        $testNGrams = array_slice($allNGrams, $trainCount);
+
+        $this->_testSamples = array_column($testNGrams, 0);
+        $this->_testTargets = array_column($testNGrams, 1);
     }
 
     /**
-     * Predict the next word in the sequence.
+     * Predict the next word from previous words.
      *
-     * @param array $previousWords The previous words in the sequence.
-     * @return string The predicted next word.
+     * @param mixed $input array of previous words
+     * @return string
      */
-    public function predict(array $previousWords): string
+    public function predict($input): string
     {
-        return $this->_regression->predict($previousWords);
+        $context = is_array($input) ? implode(' ', $input) : (string)$input;
+
+        if (!isset($this->_ngramCounts[$context])) {
+            return '';
+        }
+
+        $choices = $this->_ngramCounts[$context];
+        arsort($choices);
+
+        return (string)array_key_first($choices);
     }
 
-    /**
-     * Calculate the accuracy of the model on the test data.
-     *
-     * @return float The accuracy of the model.
-     */
     public function accuracy(): float
     {
+        if (empty($this->_testSamples) || empty($this->_testTargets)) {
+            return 0.0;
+        }
+
         $predicted = [];
-        foreach ($this->_testSamples as $sample) {
-            $predicted[] = $this->_regression->predict($sample);
+        foreach ($this->_testSamples as $context) {
+            $words = explode(' ', $context);
+            $predicted[] = $this->predict($words);
         }
 
         return Accuracy::score($this->_testTargets, $predicted);
-    }
-
-    /**
-     * Save the trained model to a file.
-     *
-     * @param string $path The path to save the model.
-     * @return bool True if the model was saved successfully, false otherwise.
-     */
-    public function saveModel(string $path): bool
-    {
-        try {
-            $this->_modelManager->saveToFile($this->_regression, $path);
-            return true;
-        } catch (\Exception $e) {
-            // Handle the exception
-            return false;
-        }
-    }
-
-    /**
-     * Load the trained model from a file.
-     *
-     * @param string $path The path to load the model from.
-     * @return bool True if the model was loaded successfully, false otherwise.
-     */
-    public function loadModel(string $path): bool
-    {
-        try {
-            if (file_exists($path)) {
-                $this->_regression = $this->_modelManager->restoreFromFile($path);
-                return true;
-            } else {
-                return false;
-            }
-        } catch (\Exception $e) {
-            // Handle the exception
-            return false;
-        }
     }
 }

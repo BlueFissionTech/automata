@@ -10,13 +10,18 @@ class MarkovTextPredictionTest extends TestCase
 
     protected function setUp(): void
     {
+        if (!class_exists(\Phpml\Tokenization\WhitespaceTokenizer::class) ||
+            !class_exists(\Phpml\Classification\MarkovChain::class)) {
+            $this->markTestSkipped('php-ai/php-ml is not available; skipping MarkovTextPrediction tests.');
+        }
+
         $this->_markovPrediction = new MarkovTextPrediction();
     }
 
     public function testTrain()
     {
         $text = "This is a test text for markov prediction. It is used to train the model.";
-        $this->_markovPrediction->train($text, 1, 0.2);
+        $this->_markovPrediction->train([$text], [], 0.2);
 
         $this->assertNotEmpty($this->_markovPrediction->predict('This'));
     }
@@ -24,7 +29,7 @@ class MarkovTextPredictionTest extends TestCase
     public function testPredict()
     {
         $text = "This is a test text for markov prediction. It is used to train the model.";
-        $this->_markovPrediction->train($text, 1, 0.2);
+        $this->_markovPrediction->train([$text], [], 0.2);
 
         $prediction = $this->_markovPrediction->predict('This');
         $this->assertIsString($prediction);
@@ -33,7 +38,7 @@ class MarkovTextPredictionTest extends TestCase
     public function testAccuracy()
     {
         $text = "This is a test text for markov prediction. It is used to train the model.";
-        $this->_markovPrediction->train($text, 1, 0.2);
+        $this->_markovPrediction->train([$text], [], 0.2);
 
         $accuracy = $this->_markovPrediction->accuracy();
         $this->assertGreaterThan(0, $accuracy);
@@ -42,7 +47,7 @@ class MarkovTextPredictionTest extends TestCase
     public function testSaveLoadModel()
     {
         $text = "This is a test text for markov prediction. It is used to train the model.";
-        $this->_markovPrediction->train($text, 1, 0.2);
+        $this->_markovPrediction->train([$text], [], 0.2);
 
         $path = 'markov_model.ser';
         $this->_markovPrediction->saveModel($path);

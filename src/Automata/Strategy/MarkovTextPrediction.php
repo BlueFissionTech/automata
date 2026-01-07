@@ -5,126 +5,92 @@ use Phpml\Tokenization\WhitespaceTokenizer;
 use Phpml\Tokenization\NGramTokenizer;
 use Phpml\Classification\MarkovChain;
 use Phpml\Metric\Accuracy;
-use Phpml\ModelManager;
 
+/**
+ * MarkovTextPrediction
+ *
+ * Adapts php-ai/php-ml MarkovChain to the Strategy interface.
+ * Train is given samples and labels; Markov transitions are
+ * inferred from adjacent pairs in the samples.
+ */
 class MarkovTextPrediction extends Strategy
 {
-    private $_markovChain;
-    private $_tokenizer;
-    private $_nGramTokenizer;
-    private $_modelManager;
+    private MarkovChain $_markovChain;
+    private WhitespaceTokenizer $_tokenizer;
+    private ?NGramTokenizer $_nGramTokenizer = null;
 
     public function __construct()
     {
         $this->_markovChain = new MarkovChain();
         $this->_tokenizer = new WhitespaceTokenizer();
-        $this->_modelManager = new ModelManager();
     }
 
     /**
-     * Train the Markov text prediction model.
+     * Train the Markov model from sample/label pairs.
      *
-     * @param string $text The input text to train on.
-     * @param int $n The size of the n-grams.
-     * @param float $testSize The proportion of the dataset to include in the test split.
+     * Each sample is treated as a sequence (string); adjacent pairs
+     * are converted into Markov transitions.
+     *
+     * @param array $samples array<int, string> sentences or sequences
+     * @param array $labels  unused (kept for interface compatibility)
+     * @param float $testSize fraction of samples used as test set
      */
-    public function train(string $text, int $n = 1, float $testSize = 0.2)
+    public function train(array $samples, array $labels, float $testSize = 0.2)
     {
-        // Tokenize the text into words
-        $words = $this->_tokenizer->tokenize($text);
-        $this->_nGramTokenizer = new NGramTokenizer($n + 1);
-        $nGrams = $this->_nGramTokenizer->tokenize($words);
-
-        // Split data into training and testing sets
-        $datasetSize = count($nGrams);
-        $testCount = (int)($datasetSize * $testSize);
-        $trainCount = $datasetSize - $testCount;
-        $trainNGrams = array_slice($nGrams, 0, $trainCount);
-        $testNGrams = array_slice($nGrams, $trainCount);
-
-        // Prepare training data
         $transitions = [];
-        foreach ($trainNGrams as $nGram) {
-            $prevWord = $nGram[0];
-            $nextWord = $nGram[1];
+        $allPairs = [];
 
-            if (!isset($transitions[$prevWord])) {
-                $transitions[$prevWord] = [];
+        foreach ($samples as $sample) {
+            $words = $this->_tokenizer->tokenize((string)$sample);
+            for ($i = 0; $i < count($words) - 1; $i++) {
+                $prevWord = $words[$i];
+                $nextWord = $words[$i + 1];
+                $allPairs[] = [$prevWord, $nextWord];
+
+                if (!isset($transitions[$prevWord])) {
+                    $transitions[$prevWord] = [];
+                }
+                if (!isset($transitions[$prevWord][$nextWord])) {
+                    $transitions[$prevWord][$nextWord] = 0;
+                }
+                $transitions[$prevWord][$nextWord]++;
             }
-            if (!isset($transitions[$prevWord][$nextWord])) {
-                $transitions[$prevWord][$nextWord] = 0;
-            }
-            $transitions[$prevWord][$nextWord]++;
         }
 
         $this->_markovChain->train($transitions);
 
-        // Prepare test samples and targets
-        $this->_testSamples = array_column($testNGrams, 0);
-        $this->_testTargets = array_column($testNGrams, 1);
+        $totalPairs = count($allPairs);
+        $testCount = (int)($totalPairs * $testSize);
+        $trainCount = $totalPairs - $testCount;
+
+        $testPairs = array_slice($allPairs, $trainCount);
+
+        $this->_testSamples = array_column($testPairs, 0);
+        $this->_testTargets = array_column($testPairs, 1);
     }
 
     /**
      * Predict the next word in the sequence.
      *
-     * @param string $previousWord The previous word in the sequence.
-     * @return string The predicted next word.
+     * @param mixed $input Previous word
+     * @return string
      */
-    public function predict(string $previousWord): string
+    public function predict($input): string
     {
-        return $this->_markovChain->predict($previousWord);
+        return $this->_markovChain->predict((string)$input);
     }
 
-    /**
-     * Calculate the accuracy of the model on the test data.
-     *
-     * @return float The accuracy of the model.
-     */
     public function accuracy(): float
     {
+        if (empty($this->_testSamples) || empty($this->_testTargets)) {
+            return 0.0;
+        }
+
         $predicted = [];
         foreach ($this->_testSamples as $sample) {
             $predicted[] = $this->_markovChain->predict($sample);
         }
 
         return Accuracy::score($this->_testTargets, $predicted);
-    }
-
-    /**
-     * Save the trained model to a file.
-     *
-     * @param string $path The path to save the model.
-     * @return bool True if the model was saved successfully, false otherwise.
-     */
-    public function saveModel(string $path): bool
-    {
-        try {
-            $this->_modelManager->saveToFile($this->_markovChain, $path);
-            return true;
-        } catch (\Exception $e) {
-            // Handle the exception
-            return false;
-        }
-    }
-
-    /**
-     * Load the trained model from a file.
-     *
-     * @param string $path The path to load the model from.
-     * @return bool True if the model was loaded successfully, false otherwise.
-     */
-    public function loadModel(string $path): bool
-    {
-        try {
-            if (file_exists($path)) {
-                $this->_markovChain = $this->_modelManager->restoreFromFile($path);
-                return true;
-            } else {
-                return false;
-            }
-        } catch (\Exception $e) {
-            // Handle the exception
-            return false;
-        }
     }
 }

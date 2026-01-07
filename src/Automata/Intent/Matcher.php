@@ -3,6 +3,7 @@ namespace BlueFission\Automata\Intent;
 
 // Matcher.php
 use BlueFission\Str;
+use BlueFission\Arr;
 use BlueFission\Automata\Context;
 use BlueFission\Automata\Analysis\IAnalyzer;
 use BlueFission\Automata\Intent\Skill\ISkill;
@@ -41,7 +42,7 @@ class Matcher
         $intentLabel = $intent->getLabel();
         $skillName = $skill->name();
 
-        if (!isset($this->intentSkillMap[$intentLabel])) {
+        if (!isset(self::$intentSkillMap[$intentLabel])) {
             self::$intentSkillMap[$intentLabel] = [];
         }
 
@@ -93,7 +94,8 @@ class Matcher
     public function process($intent, Context $context): ?string
     {
         if ( Str::is($intent) ) {
-            $intent = $this->getIntent(Str::grab());
+            // Treat string as an intent label.
+            $intent = $this->getIntent($intent);
         }
         $skillNames = isset(self::$intentSkillMap[$intent->getLabel()]) ? self::$intentSkillMap[$intent->getLabel()] : [];
 

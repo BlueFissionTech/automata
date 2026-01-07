@@ -1,23 +1,23 @@
-<?php 
+<?php
 namespace BlueFission\Tests\Bot\NaturalLanguage;
 
 use BlueFission\Bot\NaturalLanguage\Documenter;
 use BlueFission\Bot\NaturalLanguage\Tokenizer;
+use PHPUnit\Framework\TestCase;
 
-class DocumenterTest extends \PHPUnit_Framework_TestCase {
+class DocumenterTest extends TestCase {
  	static $classname = 'BlueFission\Bot\NaturalLanguage\Documenter';
 
-	public function setup()
+	protected function setUp(): void
 	{
 		$this->object = new static::$classname();
 		$this->commands = array();
 	}
 
-	/** 
- 	 * @expectedException Exception
- 	 */
 	public function testDocumenterExpectsToken()
 	{
+		$this->expectException(\Exception::class);
+
 		$this->commands[] = "TYPE Person EXPECTS {'name'}";
 		$tokens = Tokenizer::parse($this->commands);
 

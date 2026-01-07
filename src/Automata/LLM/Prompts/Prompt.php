@@ -1,5 +1,6 @@
 <?php
-namespace BlueFission\Automata\LLM;
+
+namespace BlueFission\Automata\LLM\Prompts;
 
 class Prompt implements IPrompt
 {

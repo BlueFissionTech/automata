@@ -13,7 +13,7 @@ use BlueFission\Behavioral\Behaviors\Event;
  * @implements IVal
  */
 class Pile extends Val implements IVal {
-    protected $_type = DataTypes::STACK;
+    protected $_type = DataTypes::GENERIC;
 
     protected $_forceType = false;
 

@@ -10,10 +10,20 @@ class Population {
         $this->_individuals = new Arr($individuals);
     }
 
+    /**
+     * Initialize the population with a fixed number of individuals.
+     *
+     * Uses Arr::val() to avoid relying on offsetSet([]) semantics,
+     * which can be problematic with certain internal configurations.
+     */
     public function initialize(int $size, callable $initializer): void {
+        $current = $this->_individuals->val();
+
         for ($i = 0; $i < $size; $i++) {
-            $this->_individuals[] = $initializer();
+            $current[] = $initializer();
         }
+
+        $this->_individuals->val($current);
     }
 
     public function mutate(callable $mutator): void {

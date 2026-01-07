@@ -21,7 +21,7 @@ class ForwardChainingReasoner implements IReasoner
         $rules = $this->_method->orderRules($rules);
 
         foreach ($rules as $rule) {
-            if ($rule->matchesFact($fact)) {
+            if ($rule->isApplicable($system->getFacts())) {
                 $inferredFacts[] = $rule->getConsequent();
             }
         }

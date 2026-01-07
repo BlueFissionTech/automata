@@ -13,7 +13,7 @@ use BlueFission\Behavioral\Behaviors\Event;
  * @implements IVal
  */
 class Pri extends Val implements IVal {
-    protected $_type = DataTypes::PRIORITY_QUEUE;
+    protected $_type = DataTypes::GENERIC;
 
     protected $_forceType = false;
 

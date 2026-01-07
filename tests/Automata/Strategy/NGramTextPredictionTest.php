@@ -10,13 +10,17 @@ class NGramTextPredictionTest extends TestCase
 
     protected function setUp(): void
     {
+        if (!class_exists(\Phpml\Tokenization\WhitespaceTokenizer::class)) {
+            $this->markTestSkipped('php-ai/php-ml is not available; skipping NGramTextPrediction tests.');
+        }
+
         $this->_ngramPrediction = new NGramTextPrediction();
     }
 
     public function testTrain()
     {
         $text = "This is a test text for ngram prediction. It is used to train the model.";
-        $this->_ngramPrediction->train($text, 2, 0.2);
+        $this->_ngramPrediction->train([$text], [], 0.2);
 
         $this->assertNotEmpty($this->_ngramPrediction->predict(['This', 'is']));
     }
@@ -24,7 +28,7 @@ class NGramTextPredictionTest extends TestCase
     public function testPredict()
     {
         $text = "This is a test text for ngram prediction. It is used to train the model.";
-        $this->_ngramPrediction->train($text, 2, 0.2);
+        $this->_ngramPrediction->train([$text], [], 0.2);
 
         $prediction = $this->_ngramPrediction->predict(['This', 'is']);
         $this->assertIsString($prediction);
@@ -33,7 +37,7 @@ class NGramTextPredictionTest extends TestCase
     public function testAccuracy()
     {
         $text = "This is a test text for ngram prediction. It is used to train the model.";
-        $this->_ngramPrediction->train($text, 2, 0.2);
+        $this->_ngramPrediction->train([$text], [], 0.2);
 
         $accuracy = $this->_ngramPrediction->accuracy();
         $this->assertGreaterThan(0, $accuracy);
@@ -42,7 +46,7 @@ class NGramTextPredictionTest extends TestCase
     public function testSaveLoadModel()
     {
         $text = "This is a test text for ngram prediction. It is used to train the model.";
-        $this->_ngramPrediction->train($text, 2, 0.2);
+        $this->_ngramPrediction->train([$text], [], 0.2);
 
         $path = 'ngram_model.ml';
         $this->_ngramPrediction->saveModel($path);

@@ -1,9 +1,10 @@
 <?php
 namespace BlueFission\Automata\Comprehension;
 
+use BlueFission\Automata\Context;
 use BlueFission\Automata\Memory\IWorkingMemory;
-use BlueFission\Automata\Memory\Context;
-use BlueFission\Automata\Memory\MemoryNode;
+use BlueFission\Automata\Memory\IRecallScoringStrategy;
+use BlueFission\Automata\Memory\TemporalEdge;
 
 class Scene
 {
@@ -35,12 +36,6 @@ class Scene
 
 		$entities = $frame->extract();
 		$this->processEntities($entities);
-	}
-
-	private function temporalWeight(float $similarity, int $timestamp, float $decayRate = 0.001): float
-	{
-	    $age = time() - $timestamp;
-	    return $similarity * exp(-$decayRate * $age);
 	}
 
 	protected function processEntities(array $entities): void
@@ -174,7 +169,7 @@ class Scene
 		return 'group_' . md5(implode('_', $labels));
 	}
 
-	public function recallFromGroup(string $groupLabel, float $tolerance = 0.7, ?RecallScoringStrategy $strategy = null): array
+	public function recallFromGroup(string $groupLabel, float $tolerance = 0.7, ?IRecallScoringStrategy $strategy = null): array
 	{
 	    if (!isset($this->_groups[$groupLabel])) {
 	        return [];

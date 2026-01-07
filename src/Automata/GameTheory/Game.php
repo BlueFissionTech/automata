@@ -7,11 +7,12 @@ use BlueFission\Arr;
 class Game {
     use StateMachine;
 
-    private $_players = new Arr([]);
+    private $_players;
     private $_rounds = 0;
 
     public function __construct($rounds = 1) {
         $this->_rounds = $rounds;
+        $this->_players = new Arr([]);
     }
 
     public function addPlayer(Player $player) {

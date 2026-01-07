@@ -1,71 +1,135 @@
 <?php
+
 namespace BlueFission\Automata\GraphTheory;
 
-class Graph {
-    protected $_graph;
-    protected $_nodes;
+use BlueFission\Arr;
 
-    public function __construct(array $graph = []) {
+/**
+ * Graph
+ *
+ * Simple weighted graph with Dijkstra-style shortest path, using
+ * Develation's Arr as the underlying storage.
+ */
+class Graph
+{
+    /** @var Arr<string, array<string, array>> */
+    protected Arr $_graph;
+
+    /** @var Arr<string, Node> */
+    protected Arr $_nodes;
+
+    public function __construct(array $graph = [])
+    {
         $this->_graph = new Arr($graph);
         $this->_nodes = new Arr([]);
     }
 
-    public function addNode(Node $node) {
-        foreach($node->getEdges() as $edge => $val) {
-            if(!$this->_nodes->hasKey($edge)) {
-                $this->_nodes->set($edge, true);
-            }
-        }
-        $this->_nodes->set($node->getName(), $node);
-        $this->_graph->set($node->getName(), $node->getEdges());
+    public function addNode(Node $node): void
+    {
+        $name = $node->getName();
+        $this->_nodes->set($name, $node);
+        $this->_graph->set($name, $node->getEdges());
     }
 
-    public function shortestPath($start, $end, $fitnessFunction) {
+    /**
+     * Get the attributes for an edge between two nodes, if present.
+     *
+     * @param string $from
+     * @param string $to
+     * @return array|null
+     */
+    public function getEdgeAttributes(string $from, string $to): ?array
+    {
+        $edges = $this->_graph[$from] ?? null;
+        if (!is_array($edges)) {
+            return null;
+        }
+
+        return $edges[$to] ?? null;
+    }
+
+    /**
+     * Compute shortest path using a fitness function over edge attributes.
+     *
+     * @param string   $start
+     * @param string   $end
+     * @param callable $fitnessFunction function(array $edgeAttributes): int|float
+     * @return array<string> Node names in order from start to end, or [] if no path.
+     */
+    public function shortestPath(string $start, string $end, callable $fitnessFunction): array
+    {
         $distances = [];
         $previous = [];
-        $nodes = $this->_nodes;
 
-        foreach($nodes as $node) {
-            $distances[$node->getName()] = PHP_INT_MAX;
-            $previous[$node->getName()] = null;
+        $nodesArray = $this->_nodes->val();
+        $unvisited = new Arr([]);
+
+        foreach ($nodesArray as $name => $node) {
+            $distances[$name] = PHP_INT_MAX;
+            $previous[$name] = null;
+            $unvisited->set($name, true);
+        }
+
+        if (!array_key_exists($start, $distances) || !array_key_exists($end, $distances)) {
+            return [];
         }
 
         $distances[$start] = 0;
-        asort($distances);
 
-        while(!empty($nodes)) {
-            $closest = key($distances);
+        while ($unvisited->count() > 0) {
+            $unvisitedArray = $unvisited->val();
 
-            if($closest === $end) {
-                $path = [];
+            $closest = null;
+            $closestDistance = PHP_INT_MAX;
 
-                while($previous[$closest]) {
-                    $path[] = $closest;
-                    $closest = $previous[$closest];
+            foreach ($unvisitedArray as $name => $_) {
+                if ($distances[$name] < $closestDistance) {
+                    $closestDistance = $distances[$name];
+                    $closest = $name;
                 }
+            }
 
-                $path[] = $start;
+            if ($closest === null) {
+                break;
+            }
+
+            if ($closest === $end) {
+                $path = [];
+                $current = $end;
+
+                while ($current !== null) {
+                    $path[] = $current;
+                    $current = $previous[$current] ?? null;
+                }
 
                 return array_reverse($path);
             }
 
-            if($distances[$closest] === PHP_INT_MAX) {
+            if ($distances[$closest] === PHP_INT_MAX) {
                 break;
             }
 
-            foreach($this->_graph[$closest] as $neighbor => $value) {
-                if($nodes->hasKey($neighbor)) {
-                    $alt = $distances[$closest] + $fitnessFunction($value);
+            $edges = $this->_graph[$closest] ?? [];
 
-                    if($alt < $distances[$neighbor]) {
-                        $distances[$neighbor] = $alt;
-                        $previous[$neighbor] = $closest;
-                    }
+            foreach ($edges as $neighbor => $value) {
+                if (!array_key_exists($neighbor, $unvisitedArray)) {
+                    continue;
+                }
+
+                $edgeCost = $fitnessFunction($value);
+                if ($edgeCost < 0) {
+                    continue;
+                }
+
+                $alt = $distances[$closest] + $edgeCost;
+
+                if ($alt < ($distances[$neighbor] ?? PHP_INT_MAX)) {
+                    $distances[$neighbor] = $alt;
+                    $previous[$neighbor] = $closest;
                 }
             }
 
-            $nodes->delete($closest)
-            asort($distances);
+            $unvisited->delete($closest);
         }
 
         return [];

@@ -90,12 +90,20 @@ class NaiveBayesTextClassification extends Strategy
     /**
      * Calculate the accuracy of the Naive Bayes model on the test data.
      *
+     * Note: depending on the php-ml version, labels may be
+     * non-numeric, so we simply attempt to score and fall back
+     * to 0.0 on failure.
+     *
      * @return float The accuracy of the model.
      */
     public function accuracy(): float
     {
-        $predictedLabels = $this->_classifier->predictBatch($this->_testSamples);
-        return Accuracy::score($this->_testLabels, $predictedLabels);
+        try {
+            $predictedLabels = $this->_pipeline->predict($this->_testSamples);
+            return Accuracy::score($this->_testLabels, $predictedLabels);
+        } catch (\Throwable $e) {
+            return 0.0;
+        }
     }
 
     /**

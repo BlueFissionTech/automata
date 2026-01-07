@@ -2,16 +2,20 @@
 
 namespace BlueFission\Automata\Memory;
 
-// Balances semantic similarity (via cosine) with relevance (via reinforcement weight).
+use BlueFission\Automata\Context;
+
+// Balances semantic similarity (via cosine) with relevance (via reinforcement or importance weight).
 class WeightedCosineSimilarityStrategy implements IRecallScoringStrategy
 {
     public function score(array $vecA, array $vecB, Context $contextA, Context $contextB): float
     {
-        $similarity = cosine_similarity($vecA, $vecB);
-        $weightA = $contextA->get('weight', 1);
-        $weightB = $contextB->get('weight', 1);
-        $scale = sqrt($weightA * $weightB);
+        $base = (new CosineSimilarityStrategy())->score($vecA, $vecB, $contextA, $contextB);
 
-        return $similarity * $scale;
+        $weightA = (float)$contextA->get('weight', 1);
+        $weightB = (float)$contextB->get('weight', 1);
+
+        $scale = sqrt(max($weightA, 0.0) * max($weightB, 0.0)) ?: 1.0;
+
+        return $base * $scale;
     }
 }

@@ -13,7 +13,7 @@ use BlueFission\Behavioral\Behaviors\Event;
  * @implements IVal
  */
 class Dict extends Val implements IVal {
-    protected $_type = DataTypes::MAP;
+    protected $_type = DataTypes::GENERIC;
 
     protected $_forceType = false;
 
