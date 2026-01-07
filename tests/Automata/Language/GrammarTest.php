@@ -1,38 +1,58 @@
-<?php 
-// http://www.english-for-students.com/Frequently-Used-Sentences.html
-// http://www.talkenglish.com/speaking/regular/greetings1.aspx
+<?php
 
-namespace BlueFission\Tests\Bot\NaturalLanguage\Grammar;
+namespace BlueFission\Tests\Automata\Language;
 
-use BlueFission\Bot\NaturalLanguage\Grammar;
+use PHPUnit\Framework\TestCase;
+use BlueFission\Automata\Language\Grammar;
+use BlueFission\Automata\Language\StemmerLemmatizer;
 
-class GrammarTest extends \PHPUnit_Framework_TestCase {
- 	static $classname = 'BlueFission\Bot\NaturalLanguage\Grammar';
+class GrammarTest extends TestCase
+{
+    private Grammar $grammar;
 
-	public function setup()
-	{
-		$this->object = new static::$classname();
-	}
+    protected function setUp(): void
+    {
+        // Minimal grammar configuration sufficient to tokenize and parse
+        // a simple "hello." sentence.
+        $rules = [
+            'T_DOCUMENT' => [
+                ['T_ENTITY', 'T_PUNCTUATION'],
+            ],
+        ];
 
-	public function testGrammarLearnsWords()
-	{
-		$question = "What do I have to do today?";
+        $commands = [
+            'T_ENTITY' => [
+                'expects' => ['T_PUNCTUATION'],
+            ],
+            'T_PUNCTUATION' => [
+                'expects' => [],
+            ],
+        ];
 
-		// add to word bank.
-		// add to grammar bank.
-		// add to concept bank.
-		// queue up commands.
-		// begin automatic behaviors
+        $tokens = [
+            'hello' => ['T_ENTITY'],
+            '.'     => ['T_PUNCTUATION'],
+        ];
 
-		$bank = array();
-	}
+        $this->grammar = new Grammar(new StemmerLemmatizer(), $rules, $commands, $tokens);
+    }
 
-	public function testGrammarLearnsRules()
-	{
-		
-	}
-	public function testGrammarLearnsPatterns()
-	{
-	
-	}
+    public function testTokenizeKnownSentenceProducesTokens(): void
+    {
+        $tokens = $this->grammar->tokenize('hello.');
+
+        $this->assertNotEmpty($tokens);
+        $this->assertSame('hello', $tokens[0]['match']);
+        $this->assertContains('T_ENTITY', $tokens[0]['classifications']);
+    }
+
+    public function testParseProducesDocumentRoot(): void
+    {
+        $tokens = $this->grammar->tokenize('hello.');
+        $tree = $this->grammar->parse($tokens);
+
+        $this->assertIsArray($tree);
+        $this->assertSame('T_DOCUMENT', $tree['type']);
+        $this->assertNotEmpty($tree['children']);
+    }
 }

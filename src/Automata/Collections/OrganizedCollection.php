@@ -302,11 +302,22 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		return $this->_stats;
 	}
 
-	public function weight ( $key ) {
-		if (isset($this->_value[$key])) {
+	public function weight ( $key, $weight = null ) {
+		if (!isset($this->_value[$key])) {
+			return null;
+		}
+
+		if ($weight === null) {
 			return $this->_value[$key]['weight'];
 		}
-		return null;
+
+		// Explicitly set the weight and recompute percentage so that
+		// external callers (for example, strategy scoring) can control
+		// ordering without needing to manipulate the internal structure.
+		$this->_value[$key]['weight'] = $weight;
+		$this->_value[$key]['percentage'] = $this->findPercentage($weight);
+
+		return $this->_value[$key]['weight'];
 	}
 
 	public function add( $object, $key = null, int $weight = 1 ) : ICollection

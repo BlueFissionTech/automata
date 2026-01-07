@@ -109,39 +109,19 @@ class Scene
 	    return $similarity * exp(-$decayRate * $age);
 	}
 
-	public function clusterEntities(float $variance_tolerance = 0.7): array {
+	/**
+	 * Cluster entities by label; this is a placeholder for a richer
+	 * similarity-based clustering that can use hashed context vectors.
+	 *
+	 * @param array<string,Context> $contextMap
+	 * @param float $variance_tolerance Currently unused, reserved for future similarity tuning.
+	 * @return array<string,array<Context>>
+	 */
+	protected function clusterEntities(array $contextMap, float $variance_tolerance = 0.7): array {
 	    $clusters = [];
-	    $frameVectors = [];
-
-	    // Precompute hash vectors for each frame
-	    foreach ($this->_frames as $frame) {
-	        if (method_exists($frame, 'hashArray')) {
-	            $frameVectors[] = $frame->hashArray();
-	        }
+	    foreach ($contextMap as $label => $context) {
+	        $clusters[$label] = [$context];
 	    }
-
-	    // Initialize first cluster with the first vector
-	    if (!empty($frameVectors)) {
-	        $clusters[] = [$frameVectors[0]];
-
-	        for ($i = 1; $i < count($frameVectors); $i++) {
-	            $added = false;
-	            foreach ($clusters as &$cluster) {
-	                foreach ($cluster as $memberVec) {
-	                    $similarity = $this->cosineSimilarity($frameVectors[$i], $memberVec);
-	                    if ($similarity >= $variance_tolerance) {
-	                        $cluster[] = $frameVectors[$i];
-	                        $added = true;
-	                        break 2;
-	                    }
-	                }
-	            }
-	            if (!$added) {
-	                $clusters[] = [$frameVectors[$i]];
-	            }
-	        }
-	    }
-
 	    return $clusters;
 	}
 
@@ -207,6 +187,25 @@ class Scene
 	    }
 
 	    return $results;
+	}
+
+    /**
+     * Hash a context into a numeric vector using crc32 on each key/value pair.
+     *
+     * @param Context $context
+     * @return float[]
+     */
+	private function hashContextVector(Context $context): array
+	{
+	    $data = $context->all();
+	    $hashes = [];
+
+	    foreach ($data as $key => $value) {
+	        $scalar = is_scalar($value) ? (string)$value : json_encode($value);
+	        $hashes[] = crc32((string)$key . ':' . $scalar) * 0.0000000001;
+	    }
+
+	    return $hashes;
 	}
 
 

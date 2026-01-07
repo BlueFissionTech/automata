@@ -7,6 +7,10 @@ class Prediction extends Strategy
 {
     protected $_rules;
     protected $_previous_rule_fired = -1;
+    protected $_buffer = [];
+    protected $_prediction = null;
+    protected $_guesses = 0;
+    protected $_success = 0;
     protected $_random;
     protected $_random_success;
 
@@ -96,5 +100,20 @@ class Prediction extends Strategy
         }
 
         return $this->_prediction;
+    }
+
+    /**
+     * Calculate a simple accuracy metric for the prediction strategy,
+     * based on the ratio of successful predictions to total guesses.
+     *
+     * @return float
+     */
+    public function accuracy(): float
+    {
+        if ($this->_guesses === 0) {
+            return 0.0;
+        }
+
+        return $this->_success / $this->_guesses;
     }
 }

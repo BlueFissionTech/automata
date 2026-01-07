@@ -3,6 +3,8 @@
 namespace BlueFission\Automata\Sensory;
 
 use BlueFission\Automata\Collections\OrganizedCollection;
+use BlueFission\Obj;
+use BlueFission\Arr;
 use BlueFission\Behavioral\Programmable;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\Action;
@@ -11,9 +13,17 @@ use BlueFission\Str;
 
 /**
  * Possible senses: visual, textual, auditory
+ *
+ * Sense is a programmable, behavioral object built on top of the core
+ * BlueFission Obj + Programmable traits. Historically this class extended a
+ * concrete Programmable base; now that Programmable is a trait, we compose it
+ * instead so that Sense remains dispatchable and configurable without
+ * depending on vendor internals being a class.
  */
-
-class Sense extends Programmable {
+class Sense extends Obj {
+	use Programmable {
+		Programmable::__construct as private __programmableConstruct;
+	}
 	// Constants to define maximum values for attention, sensitivity, and depth
 	const MAX_ATTENTION = 1048576;
 	const MAX_SENSITIVITY = 10;
@@ -53,7 +63,11 @@ class Sense extends Programmable {
      * @param object|null $parent Optional parent object.
      */
 	public function __construct( $parent = null ) {
+		// Initialize Obj (data + behaviors) and then the Programmable
+		// configuration layer so that Sense can participate fully in the
+		// behavioral/dispatch system.
 		parent::__construct();
+		$this->__programmableConstruct();
 
 		$this->_parent = $parent;
 		$this->_map = new OrganizedCollection();
@@ -380,8 +394,15 @@ class Sense extends Programmable {
 	// https://stackoverflow.com/questions/336605/how-can-i-find-the-largest-common-substring-between-two-strings-in-php
 	private function longest_common_substring($words) {
 	    // $words = array_map('strtolower', array_map('trim', $words));
-	    $sort_by_strlen = create_function('$a, $b', 'if (strlen($a) == strlen($b)) { return strcmp($a, $b); } return (strlen($a) < strlen($b)) ? -1 : 1;');
-	    usort($words, $sort_by_strlen);
+	    $sortByStrlen = static function ($a, $b): int {
+			if (strlen($a) === strlen($b)) {
+				return strcmp($a, $b);
+			}
+
+			return (strlen($a) < strlen($b)) ? -1 : 1;
+		};
+
+	    usort($words, $sortByStrlen);
 	    // We have to assume that each string has something in common with the first
 	    // string (post sort), we just need to figure out what the longest common
 	    // string is. If any string DOES NOT have something in common with the first
@@ -408,7 +429,7 @@ class Sense extends Programmable {
 	        array_shift($shortest_string);
 	    }
 	    // If we made it here then we've run through everything
-	    usort($longest_common_substring, $sort_by_strlen);
+	    usort($longest_common_substring, $sortByStrlen);
 	    return array_pop($longest_common_substring);
 	}
 

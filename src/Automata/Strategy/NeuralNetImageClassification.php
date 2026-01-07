@@ -11,8 +11,8 @@ use Phpml\ModelManager;
 class NeuralNetImageClassification extends Strategy
 {
     private $_classifier;
-    private $_testSamples;
-    private $_testTargets;
+    protected $_testSamples;
+    protected $_testTargets;
     private $_modelManager;
 
     public function __construct()
@@ -45,10 +45,10 @@ class NeuralNetImageClassification extends Strategy
     /**
      * Predict the class for the given sample.
      *
-     * @param array $sample The sample to classify.
-     * @return int The predicted class.
+     * @param mixed $sample The sample to classify.
+     * @return mixed The predicted class.
      */
-    public function predict(array $sample): int
+    public function predict($sample)
     {
         return $this->_classifier->predict($sample);
     }

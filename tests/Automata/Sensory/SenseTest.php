@@ -22,13 +22,15 @@ class SenseTest extends TestCase
         $reflection = new \ReflectionClass($this->sense);
         $settings = $reflection->getProperty('_settings');
         $settings->setAccessible(true);
+        $config = $reflection->getProperty('_config');
+        $config->setAccessible(true);
         $map = $reflection->getProperty('_map');
         $map->setAccessible(true);
         $depth = $reflection->getProperty('_depth');
         $depth->setAccessible(true);
 
-        $this->assertEquals($this->sense->_config, $settings->getValue($this->sense));
-        $this->assertEmpty($map->getValue($this->sense));
+        $this->assertEquals($config->getValue($this->sense), $settings->getValue($this->sense));
+        $this->assertCount(0, $map->getValue($this->sense));
         $this->assertEquals(-1, $depth->getValue($this->sense));
     }
 

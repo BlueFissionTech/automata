@@ -28,12 +28,9 @@ class Statement extends Obj {
 		'position'=>''
 	];
 
-	public function field( string $var, $value = null ) {
-		if ( $value ) {
-			
-		}
-		
-		return parent::field( $var, $value);
+	public function field( string $field, $value = null ): mixed
+	{
+		return parent::field($field, $value);
 	}
 
 	public function percentSatisfied() {
