@@ -1,29 +1,45 @@
-<?php 
-namespace BlueFission\Tests\Bot\NaturalLanguage;
+<?php
 
-use BlueFission\Bot\NaturalLanguage\Documenter;
-use BlueFission\Bot\NaturalLanguage\Tokenizer;
+namespace BlueFission\Tests\Automata\Language;
 
-class DocumenterTest extends \PHPUnit_Framework_TestCase {
- 	static $classname = 'BlueFission\Bot\NaturalLanguage\Documenter';
+use PHPUnit\Framework\TestCase;
+use BlueFission\Automata\Language\Documenter;
 
-	public function setup()
-	{
-		$this->object = new static::$classname();
-		$this->commands = array();
-	}
+class DocumenterTest extends TestCase
+{
+    public function testUnexpectedTokenThrowsException(): void
+    {
+        $documenter = new Documenter();
 
-	/** 
- 	 * @expectedException Exception
- 	 */
-	public function testDocumenterExpectsToken()
-	{
-		$this->commands[] = "TYPE Person EXPECTS {'name'}";
-		$tokens = Tokenizer::parse($this->commands);
+        // Simple rule: handle T_ENTITY tokens and expect punctuation next.
+        $documenter->addRule(['T_ENTITY'], function (array $cmd, $statement): void {
+            $statement->field('subject', $cmd['match']);
+        });
 
-		// die(var_dump($tokens));
-		foreach ( $tokens as $token )
-			$this->object->push($token);
-		return $this->object->getTree();
-	}
+        // First token is accepted and sets expectations to T_PUNCTUATION.
+        $first = [
+            'match' => 'Person',
+            'classifications' => ['T_ENTITY'],
+            'expects' => [
+                'T_ENTITY' => ['T_PUNCTUATION'],
+            ],
+        ];
+
+        $documenter->push($first);
+
+        // Second token violates expectations (classification T_OPERATOR
+        // while the documenter expects T_PUNCTUATION), which should
+        // trigger an exception from isExpected().
+        $this->expectException(\Exception::class);
+
+        $bad = [
+            'match' => 'runs',
+            'classifications' => ['T_OPERATOR'],
+            'expects' => [
+                'T_OPERATOR' => ['T_ENTITY'],
+            ],
+        ];
+
+        $documenter->push($bad);
+    }
 }

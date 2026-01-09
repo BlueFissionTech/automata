@@ -9,9 +9,18 @@ use Phpml\ModelManager;
 
 class KNearestPrediction extends Strategy
 {
+    /**
+     * Underlying KNN classifier from php-ml.
+     */
     private $_knn;
-    private $_testSamples;
-    private $_testLabels;
+
+    /**
+     * Local copies of test samples/labels; protected to be
+     * compatible with the base Strategy visibility.
+     */
+    protected $_testSamples;
+    protected $_testLabels;
+
     private $_modelManager;
 
     public function __construct(int $k = 3)
@@ -32,10 +41,17 @@ class KNearestPrediction extends Strategy
     public function train(array $data, array $labels, float $testSize = 0.2): void
     {
         $dataset = new ArrayDataset($data, $labels);
-        list($trainSamples, $testSamples, $trainLabels, $testLabels) = $dataset->randomSplit($testSize);
-        
-        $this->_testSamples = $testSamples;
-        $this->_testLabels = $testLabels;
+        $samples = $dataset->getSamples();
+        $targets = $dataset->getTargets();
+
+        $count = count($samples);
+        $testCount = (int)($count * $testSize);
+        $trainCount = $count - $testCount;
+
+        $trainSamples = array_slice($samples, 0, $trainCount);
+        $trainLabels = array_slice($targets, 0, $trainCount);
+        $this->_testSamples = array_slice($samples, $trainCount);
+        $this->_testLabels = array_slice($targets, $trainCount);
 
         // Train the KNN classifier
         $this->_knn->train($trainSamples, $trainLabels);
@@ -44,11 +60,12 @@ class KNearestPrediction extends Strategy
     /**
      * Predict the label for the given features.
      *
-     * @param array $features The features to predict the label for.
+     * @param mixed $input The features to predict the label for.
      * @return mixed The predicted label.
      */
-    public function predict(array $features)
+    public function predict($input)
     {
+        $features = (array)$input;
         return $this->_knn->predict($features);
     }
 

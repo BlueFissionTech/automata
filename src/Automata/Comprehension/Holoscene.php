@@ -10,35 +10,60 @@
  Closure
  Common Fate
 
+ Holoscene is intended as a higher-level container for Scenes, capturing
+ a holistic view of experience across multiple episodes. Gestalt concepts
+ guide which scenes stand out and how they are related.
 */
-namespace BlueFission\Intelligence;
+namespace BlueFission\Automata\Comprehension;
 
-use BlueFission\Behavioral\Dispatcher;
+use BlueFission\Behavioral\Dispatches;
+use BlueFission\Automata\Collections\OrganizedCollection;
+use BlueFission\Behavioral\IDispatcher;
 
-class Holoscene extends Dispatcher {
-	protected $_holo;
+class Holoscene implements IDispatcher
+{
+	use Dispatches;
 
-	private $_assessment;
+	/**
+	 * @var OrganizedCollection<string,mixed> Map of scene keys to scene-like objects
+	 */
+	protected OrganizedCollection $_holo;
 
-	public function push( $input, $frame ) {
-		if ( $_holo->has($input) ) {
-			$scene = $_holo->get($input);
-			$scene->add($frame, (string)$scene);
-		}
+	/**
+	 * @var array Cached assessment data
+	 */
+	private array $_assessment = [];
+
+	public function __construct()
+	{
+		$this->_holo = new OrganizedCollection();
 	}
 
-	public function review() {
-		$map = new OrganizedCollection();
-		foreach ( $_holo->toArray() as $key=>$scene ) {
-			$scene->stats();
-			$data = $scene->data();
-			$map->add($data, $scene);
-		}
-		$map->stats();
-		$this->_assessment = $map->data();
+	/**
+	 * Push a scene or scene-like object into the holoscene under a key.
+	 *
+	 * @param string $key   Identifier for this scene (e.g., episode id)
+	 * @param mixed  $scene Scene or structure representing an episode.
+	 */
+	public function push(string $key, $scene): void
+	{
+		$this->_holo->add($scene, $key);
 	}
 
-	public function assessment() {
+	/**
+	 * Review all stored scenes and compute an assessment structure.
+	 *
+	 * For now, this simply mirrors the underlying OrganizedCollection
+	 * contents; in the future it can incorporate stats, Gestalt measures,
+	 * and cross-scene relationships.
+	 */
+	public function review(): void
+	{
+		$this->_assessment = $this->_holo->contents();
+	}
+
+	public function assessment(): array
+	{
 		return $this->_assessment;
 	}
 }

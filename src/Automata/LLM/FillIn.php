@@ -32,6 +32,13 @@ class FillIn implements IDispatcher
     protected array $tools = [];
     protected array $vars = [];
     protected string $output = '';
+    /**
+     * Optional soft token budget for the rendered prompt, expressed as
+     * approximate tokens (using a simple heuristic). This is intended
+     * as a guidance-style safeguard and does not perform hard truncation
+     * yet; callers can inspect or extend this in the future.
+     */
+    protected ?int $maxTokens = null;
 
     public function __construct($llm, string $prompt)
     {
@@ -71,11 +78,31 @@ class FillIn implements IDispatcher
         return $this->llm;
     }
 
+    /**
+     * Set an approximate soft token budget for the rendered prompt.
+     * This does not enforce truncation by default, but downstream
+     * LLM drivers or preparers may use it to adjust requests.
+     */
+    public function setMaxTokens(?int $maxTokens): void
+    {
+        $this->maxTokens = $maxTokens;
+    }
+
+    public function maxTokens(): ?int
+    {
+        return $this->maxTokens;
+    }
+
     public function run(array $config = []): array
     {
         $this->dispatch(Event::STARTED, new Meta(when: State::RUNNING, src: $this));
 
-        $output = $this->parser->render();
+        $this->output = $this->parser->render();
+
+        // TODO: Extend with richer guidance-style token management:
+        //  - Estimate tokens with model-specific heuristics.
+        //  - Enforce or negotiate budgets with the LLM client.
+        //  - Support streaming or chunked execution when prompts exceed limits.
 
         $this->dispatch(Event::COMPLETE, new Meta(when: State::RUNNING, data: [
             'output' => $this->output

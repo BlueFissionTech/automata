@@ -2,7 +2,9 @@
 
 namespace BlueFission\Automata\Memory;
 
-// Uses simple associative metadata in the context (e.g., category, type, tag) to boost or diminish similarity — useful for implicit logical grouping.
+use BlueFission\Automata\Context;
+
+// Uses simple associative metadata in the context (e.g., category, type, tag) to boost or diminish similarity.
 class SemanticDistanceStrategy implements IRecallScoringStrategy
 {
     public function score(array $vecA, array $vecB, Context $contextA, Context $contextB): float
@@ -12,7 +14,7 @@ class SemanticDistanceStrategy implements IRecallScoringStrategy
         $tagA = $contextA->get('tag');
         $tagB = $contextB->get('tag');
 
-        if ($tagA && $tagB && $tagA === $tagB) {
+        if ($tagA !== null && $tagB !== null && $tagA === $tagB) {
             $sim += 0.1; // boost slightly for same tags
         }
 

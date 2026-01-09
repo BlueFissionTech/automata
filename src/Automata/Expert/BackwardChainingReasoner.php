@@ -1,11 +1,18 @@
 <?php
 namespace BlueFission\Automata\Expert;
 
+/**
+ * BackwardChainingReasoner
+ *
+ * Simple backward chaining that, given a goal fact, looks
+ * for rules that conclude that fact and returns their
+ * antecedents (as modeled by IRule).
+ */
 class BackwardChainingReasoner implements IReasoner
 {
-    protected $_method;
+    protected IMethod $_method;
 
-    public function __construct(MethodInterface $method)
+    public function __construct(IMethod $method)
     {
         $this->_method = $method;
     }

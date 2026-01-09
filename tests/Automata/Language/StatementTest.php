@@ -1,28 +1,35 @@
-<?php 
-namespace BlueFission\Tests\Bot\NaturalLanguage\Statement;
+<?php
 
-class StatementTest extends \PHPUnit_Framework_TestCase {
- 	static $classname = 'BlueFission\Bot\NaturalLanguage\Statement';
+namespace BlueFission\Tests\Automata\Language;
 
-	public function setup()
-	{
-		$this->object = new static::$classname();
-	}
+use PHPUnit\Framework\TestCase;
+use BlueFission\Automata\Language\Statement;
 
-	public function testStatementPromptsToSatisfy()
-	{
-		echo $this->object->satisfy();
-		// die();
-	}
+class StatementTest extends TestCase
+{
+    public function testPercentSatisfiedReflectsFilledFields(): void
+    {
+        $statement = new Statement();
 
-	public function testStatementGeneratesStatement()
-	{
+        $initial = $statement->percentSatisfied();
 
-	}
+        $statement->field('subject', 'HospitalA');
+        $statement->field('behavior', 'requests');
 
-	public function testStatementExpectsToken()
-	{
+        $after = $statement->percentSatisfied();
 
-	}
+        $this->assertGreaterThan($initial, $after);
+    }
 
+    public function testEntitiesReturnsSubjectObjectAndIndirectObject(): void
+    {
+        $statement = new Statement();
+        $statement->field('subject', 'HospitalA');
+        $statement->field('object', 'oxygen');
+        $statement->field('indirect_object', 'ShelterB');
+
+        $entities = $statement->entities();
+
+        $this->assertNotEmpty($entities);
+    }
 }

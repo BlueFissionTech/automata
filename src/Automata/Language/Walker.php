@@ -6,6 +6,11 @@ class Walker {
 
 	protected $_statements = [];
 
+	/**
+	 * @var array<int,array<string,mixed>> Collected semantic actions
+	 */
+	protected $_log = [];
+
 	public function addStatement( $statement )
 	{
 		$this->_statements[] = $statement;
@@ -23,60 +28,42 @@ class Walker {
 
 	public function process( )
 	{
-		$properties = array(
-			'type'=>1,
-			'context'=>'',
-			'priority'=>0,
-			'subject'=>'',
-			'modality'=>'',
-			'behavior'=>'',
-			'condition'=>'',
-			'object'=>'',
-			'relationship'=>'',
-			'indirect_object'=>'',
-			'position'=>''
-		);
-		// $stack = []
+		$this->_log = [];
+
 		foreach ($this->_statements as $statement) {
-			$continue = true;
-			while ( $statement->satisfy() && $continue ) {
-				  
+			if (!is_object($statement)) {
+				continue;
 			}
-			foreach ($statement->entities() as $entity) {
-				$label = $this->getLabel($entity, 'entity');
-				$this->_entities[$label] = $entity;
-			}
-			foreach ($properties as $property) {
-				$label = $this->getLabel($statement->$property, $property);
-				switch ( $property ) {
-					case "type":
 
-					break;
-					case "subject":
-					case "object":
-					case "indirect_object":
-						$current = $this->_entities[$label];
-					break;
-					case "modality":
+			$entry = [
+				'type'            => method_exists($statement, 'field') ? $statement->field('type') : null,
+				'context'         => method_exists($statement, 'field') ? $statement->field('context') : null,
+				'priority'        => method_exists($statement, 'field') ? $statement->field('priority') : null,
+				'subject'         => method_exists($statement, 'field') ? $statement->field('subject') : null,
+				'modality'        => method_exists($statement, 'field') ? $statement->field('modality') : null,
+				'behavior'        => method_exists($statement, 'field') ? $statement->field('behavior') : null,
+				'condition'       => method_exists($statement, 'field') ? $statement->field('condition') : null,
+				'object'          => method_exists($statement, 'field') ? $statement->field('object') : null,
+				'relationship'    => method_exists($statement, 'field') ? $statement->field('relationship') : null,
+				'indirect_object' => method_exists($statement, 'field') ? $statement->field('indirect_object') : null,
+				'position'        => method_exists($statement, 'field') ? $statement->field('position') : null,
+				'satisfied'       => method_exists($statement, 'percentSatisfied') ? $statement->percentSatisfied() : null,
+			];
 
-					break;
-					case "behavior":
-						$this->operate($current, $label);
-					break;
-					case "condition":
-
-					break;
-					case "relationship":
-
-					break;
-					case "position":
-
-					break;
-				}
-				$statement->$property;
-			}
-			// $this->_stack[] = $statement;
+			$this->_log[] = $entry;
 		}
+	}
+
+	/**
+	 * Return the collected semantic action log. Each entry is a
+	 * snapshot of a Statement's core roles (subject, behavior,
+	 * object, etc.) and its satisfaction ratio.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function log(): array
+	{
+		return $this->_log;
 	}
 
 	private function _apply($subject, $object, $property, $name) {
@@ -163,11 +150,10 @@ class Walker {
 
 	public function traverse( $tree ) {
 		foreach ( $tree as $node ) {
-			die(var_dump($node));
-			// TODO: Move "runtime" class code to walker class
-			$statement = $node;
-			// $statement = new Statement();
-			$this->addStatement($statement);
+			// Documenter currently stores Statement instances directly
+			// in its tree. We simply record them here; richer runtime
+			// behavior can be layered on top by consumers.
+			$this->addStatement($node);
 		}
 	}
 }

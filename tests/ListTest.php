@@ -3,21 +3,21 @@
 namespace BlueFission\Tests;
 
 use PHPUnit\Framework\TestCase;
-use BlueFission\List;
-use Ds\Set;
+use BlueFission\Set;
+use Ds\Set as DsSet;
 
 class ListTest extends TestCase
 {
     public function testCanInstantiateList(): void
     {
-        $list = new List();
-        $this->assertInstanceOf(List::class, $list);
-        $this->assertInstanceOf(Set::class, $list->cast()->_data);
+        $list = new Set();
+        $this->assertInstanceOf(Set::class, $list);
+        $this->assertInstanceOf(DsSet::class, $list->cast()->_data);
     }
 
     public function testAddAndHasElement(): void
     {
-        $list = new List();
+        $list = new Set();
         $list->add('element');
 
         $this->assertTrue($list->has('element'));
@@ -25,7 +25,7 @@ class ListTest extends TestCase
 
     public function testRemoveElement(): void
     {
-        $list = new List(['element', 'other']);
+        $list = new Set(['element', 'other']);
         $list->remove('element');
 
         $this->assertFalse($list->has('element'));
@@ -34,7 +34,7 @@ class ListTest extends TestCase
 
     public function testClearList(): void
     {
-        $list = new List(['element', 'other']);
+        $list = new Set(['element', 'other']);
         $list->clear();
 
         $this->assertEquals(0, $list->count());
@@ -42,39 +42,39 @@ class ListTest extends TestCase
 
     public function testCountElementsInList(): void
     {
-        $list = new List(['a', 'b', 'c']);
+        $list = new Set(['a', 'b', 'c']);
         $this->assertEquals(3, $list->count());
     }
 
     public function testUnionOfSets(): void
     {
-        $list = new List([1, 2, 3]);
-        $otherSet = new Set([3, 4, 5]);
+        $list = new Set([1, 2, 3]);
+        $otherSet = new DsSet([3, 4, 5]);
 
         $union = $list->union($otherSet);
-        $expectedUnion = new Set([1, 2, 3, 4, 5]);
+        $expectedUnion = new DsSet([1, 2, 3, 4, 5]);
 
         $this->assertEquals($expectedUnion, $union);
     }
 
     public function testIntersectionOfSets(): void
     {
-        $list = new List([1, 2, 3, 4]);
-        $otherSet = new Set([3, 4, 5]);
+        $list = new Set([1, 2, 3, 4]);
+        $otherSet = new DsSet([3, 4, 5]);
 
         $intersection = $list->intersect($otherSet);
-        $expectedIntersection = new Set([3, 4]);
+        $expectedIntersection = new DsSet([3, 4]);
 
         $this->assertEquals($expectedIntersection, $intersection);
     }
 
     public function testDifferenceOfSets(): void
     {
-        $list = new List([1, 2, 3, 4]);
-        $otherSet = new Set([3, 4, 5]);
+        $list = new Set([1, 2, 3, 4]);
+        $otherSet = new DsSet([3, 4, 5]);
 
         $difference = $list->diff($otherSet);
-        $expectedDifference = new Set([1, 2]);
+        $expectedDifference = new DsSet([1, 2]);
 
         $this->assertEquals($expectedDifference, $difference);
     }

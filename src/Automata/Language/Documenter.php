@@ -48,6 +48,19 @@ class Documenter {
 		$this->_buffer = Arr::make([]);
 	}
 
+	/**
+	 * Return the currently active entity role label that
+	 * subsequent tokens should fill (for example, "subject",
+	 * "object", or "indirect_object"). This is primarily used
+	 * by higher-level configuration (such as Synthetiq's
+	 * sample documenter rules) to decide where to attach
+	 * additional entities in a compound phrase.
+	 */
+	public function get_entity_type(): ?string
+	{
+		return $this->_entity ?? null;
+	}
+
 	public function addRule($types, callable $callable, int $priority = 0) {
 		$this->_rules[$priority][] = ['types'=>$types, 'function'=>$callable];
 	}

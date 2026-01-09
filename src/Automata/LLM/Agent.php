@@ -75,7 +75,7 @@ class Agent implements IDispatcher
         $toolNames = "'".implode("', '", array_keys($this->tools))."'";
 
         $this->replacements['toolNames'] = $toolNames;
-        $this->replacements['toolList'] = $toolList;
+        $this->replacements['toolsList'] = $toolList;
         $this->replacements['input'] = $input;
 
         // Create a prompt using the template

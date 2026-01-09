@@ -6,113 +6,201 @@ use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Automata\GraphTheory\Graph;
 use BlueFission\Automata\Context;
 
-class Abs2Memory extends Graph implements IWorkingMemory {
-    protected OrganizedCollection $_nodes;
+/**
+ * ABS/working-memory implementation backed by a graph of MemoryNode instances.
+ *
+ * Nodes are stored both in a Develation Arr-backed Graph (for path operations)
+ * and in an OrganizedCollection (for reinforcement, decay, and ranked retrieval).
+ */
+class Abs2Memory extends Graph implements IWorkingMemory
+{
+    /** @var OrganizedCollection<string,MemoryNode> */
+    protected OrganizedCollection $_memoryNodes;
 
-    public function __construct(array $graph = []) {
+    public function __construct(array $graph = [])
+    {
         parent::__construct($graph);
-        $this->_nodes = new OrganizedCollection();
+        $this->_memoryNodes = new OrganizedCollection();
     }
 
-    public function store(string $label, Context $context, array $edges = []): void {
+    /**
+     * {@inheritdoc}
+     */
+    public function addMemory(string $label, Context $context, array $edges = []): void
+    {
         $node = new MemoryNode($label, $edges, $context);
-        $this->store($node);
+        $this->storeNode($node);
     }
 
-    public function store(MemoryNode $node): void {
-        $this->_nodes->add($node, $node->getName());
-        $this->_graph->set($node->getName(), $node->getEdges());
+    /**
+     * Internal helper to keep graph and memory collection in sync.
+     */
+    protected function storeNode(MemoryNode $node): void
+    {
+        $label = $node->getName();
+
+        $this->_memoryNodes->add($node, $label);
+
+        // Keep Graph::_nodes and Graph::_graph updated via the public API.
+        $this->addNode($node);
     }
 
-    public function getMemory(string $label): ?MemoryNode {
-        return $this->_nodes->has($label) ? $this->_nodes->get($label) : null;
+    public function getMemory(string $label): ?MemoryNode
+    {
+        return $this->_memoryNodes->has($label)
+            ? $this->_memoryNodes->get($label)
+            : null;
     }
 
-    public function associate(string $name1, string $name2, $weight = 1): void {
-        $node1 = $this->_nodes->get($name1);
-        $node2 = $this->_nodes->get($name2);
+    public function associate(string $name1, string $name2, float $weight = 1.0): void
+    {
+        $node1 = $this->getMemory($name1);
+        $node2 = $this->getMemory($name2);
 
-        if ($node1 && $node2) {
-            $edges1 = $node1->getEdges();
-            $edges2 = $node2->getEdges();
-
-            $edges1[$name2] = $weight;
-            $edges2[$name1] = $weight;
-
-            $node1 = new MemoryNode($name1, $edges1, $node1->getContext());
-            $node2 = new MemoryNode($name2, $edges2, $node2->getContext());
-
-            $this->store($node1);
-            $this->store($node2);
+        if (!$node1 || !$node2) {
+            return;
         }
+
+        $edges1 = $node1->getEdges();
+        $edges2 = $node2->getEdges();
+
+        $edges1[$name2] = $weight;
+        $edges2[$name1] = $weight;
+
+        $this->storeNode(new MemoryNode($name1, $edges1, $node1->getContext()));
+        $this->storeNode(new MemoryNode($name2, $edges2, $node2->getContext()));
     }
 
-    public function reinforcePath(string $start, string $end): array {
-        $path = $this->shortestPath($start, $end, fn($v) => 1); // basic weight
-        foreach ($path as $nodeName) {
-            /** @var MemoryNode $node */
-            $node = $this->getMemory($nodeName);
-            if ($node) {
+    public function reinforcePath(string $start, string $end): array
+    {
+        // Treat every traversed edge as equal cost here; callers that care
+        // about weights should use shortestAssociation instead.
+        $path = $this->shortestPath($start, $end, static fn($v) => 1);
+
+        foreach ($path as $label) {
+            $node = $this->getMemory($label);
+            if ($node instanceof MemoryNode) {
                 $node->reinforce();
+                $this->storeNode($node);
             }
         }
+
         return $path;
     }
 
-    public function contextSwitchPath(string $from, string $to): array {
+    public function contextSwitchPath(string $from, string $to): array
+    {
         return $this->reinforcePath($from, $to);
     }
 
-    public function recall(string $label): ?Context {
+    public function recall(string $label): ?Context
+    {
         $node = $this->getMemory($label);
-        return $node?->context();
+
+        return $node?->getContext();
     }
 
-    public function recallWithAssociations(string $label, int $max = 10): array {
+    public function recallWithAssociations(string $label, int $max = 10): array
+    {
         $node = $this->getMemory($label);
-        if (!$node) return [];
+        if (!$node) {
+            return [];
+        }
 
         $edges = $node->getEdges();
         $related = [];
 
-        foreach ($edges as $adj => $weight) {
-            if (count($related) >= $max) break;
-            $related[$adj] = $this->getMemory($adj)?->context();
-        }
+        foreach ($edges as $adj => $_weight) {
+            if (count($related) >= $max) {
+                break;
+            }
 
-        return array_filter($related);
-    }
-
-    public function recallSimilar(Context $context, float $threshold = 0.5): array {
-        $results = [];
-        foreach ($this->_nodes as $label => $node) {
-            if ($node instanceof MemoryNode) {
-                $similarity = $node->similarity($context);
-                if ($similarity >= $threshold) {
-                    $results[$label] = [
-                        'context' => $node->context(),
-                        'similarity' => $similarity,
-                    ];
-                }
+            $adjacent = $this->getMemory($adj);
+            if ($adjacent instanceof MemoryNode) {
+                $related[$adj] = $adjacent->getContext();
             }
         }
 
-        uasort($results, fn($a, $b) => $b['similarity'] <=> $a['similarity']);
+        return $related;
+    }
+
+    /**
+     * Recall similar memories using MemoryNode's built-in similarity metric.
+     *
+     * @return array<string,array{context:Context,similarity:float}>
+     */
+    public function recallSimilar(Context $context, float $threshold = 0.5): array
+    {
+        $results = [];
+        $stored = $this->_memoryNodes->contents();
+
+        foreach ($stored as $label => $entry) {
+            $node = $entry['value'] ?? null;
+            if (!$node instanceof MemoryNode) {
+                continue;
+            }
+
+            $similarity = $node->similarity($context);
+
+            if ($similarity >= $threshold) {
+                $results[$label] = [
+                    'context' => $node->getContext(),
+                    'similarity' => $similarity,
+                ];
+            }
+        }
+
+        uasort($results, static fn($a, $b) => $b['similarity'] <=> $a['similarity']);
+
         return $results;
     }
 
-    public function shortestAssociation(string $start, string $end): array {
-        return $this->shortestPath($start, $end, function($val) {
-            return $val; // weight is already value
-        });
+    public function shortestAssociation(string $start, string $end): array
+    {
+        // Use the edge weight directly as the path cost when present; if the
+        // edge value is a structured array, fall back to a neutral cost.
+        return $this->shortestPath(
+            $start,
+            $end,
+            static function ($val) {
+                if (is_numeric($val)) {
+                    return (float)$val;
+                }
+
+                if (is_array($val) && isset($val['weight']) && is_numeric($val['weight'])) {
+                    return (float)$val['weight'];
+                }
+
+                return 1.0;
+            }
+        );
     }
 
-    public function forget(string $name): void {
-        $this->_nodes->remove($name);
-        $this->_graph->remove($name);
+    public function forget(string $name): void
+    {
+        if ($this->_memoryNodes->has($name)) {
+            $this->_memoryNodes->remove($name);
+        }
+
+        // Remove from the underlying graph and node registry, if present.
+        if (isset($this->_graph[$name])) {
+            $this->_graph->delete($name);
+        }
+
+        if (isset($this->_nodes[$name])) {
+            $this->_nodes->delete($name);
+        }
     }
 
-    public function contents(): array {
-        return $this->_nodes->contents();
+    public function contents(): array
+    {
+        $out = [];
+        foreach ($this->_memoryNodes->contents() as $label => $entry) {
+            if (isset($entry['value']) && $entry['value'] instanceof MemoryNode) {
+                $out[$label] = $entry['value'];
+            }
+        }
+
+        return $out;
     }
 }

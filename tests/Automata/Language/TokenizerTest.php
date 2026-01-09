@@ -1,95 +1,25 @@
-<?php 
-namespace BlueFission\Tests\Bot\NaturalLanguage;
+<?php
 
-use BlueFission\Bot\NaturalLanguage\Tokenizer;
-// use BlueFission\Bot\NaturalLanguage\Grammar;
+namespace BlueFission\Tests\Automata\Language;
 
-class TokenizerTest extends \PHPUnit_Framework_TestCase {
- 	static $classname = 'BlueFission\Bot\NaturalLanguage\Tokenizer';
+use PHPUnit\Framework\TestCase;
+use BlueFission\Automata\Language\Preparer;
 
-	public function setup()
-	{
-		// $this->object = new static::$classname();
-		$this->commands = array();
-	}
+class TokenizerTest extends TestCase
+{
+    public function testPreparerTokenizesCommandString(): void
+    {
+        $preparer = new Preparer();
 
-	public function testTokenizerRecognizesTokens()
-	{
-		$expected = array(
-			array(
-				'match'=>'&',
-				'token'=>'T_TYPE_INDICATOR',
-				'line'=>1
-			),
-			array(
-				'match'=>' ',
-				'token'=>'T_WHITESPACE',
-				'line'=>1
-			),
-			array(
-				'match'=>'TYPE',
-				'token'=>'T_SYMBOL',
-				'line'=>1
-			),
-			array(
-				'match'=>' ',
-				'token'=>'T_WHITESPACE',
-				'line'=>1
-			),
-			array(
-				'match'=>'Person',
-				'token'=>'T_SYMBOL',
-				'line'=>1
-			),
-			array(
-				'match'=>' ',
-				'token'=>'T_WHITESPACE',
-				'line'=>1
-			),
-			array(
-				'match'=>'EXPECTS',
-				'token'=>'T_SYMBOL',
-				'line'=>1
-			),
-			array(
-				'match'=>' ',
-				'token'=>'T_WHITESPACE',
-				'line'=>1
-			),
-			array(
-				'match'=>'{',
-				'token'=>'T_CLASS_OPEN_BRACKET',
-				'line'=>1
-			),
-			array(
-				'match'=>'\'',
-				'token'=>'T_SINGLE_QUOTE',
-				'line'=>1
-			),
-			array(
-				'match'=>'name',
-				'token'=>'T_SYMBOL',
-				'line'=>1
-			),
-			array(
-				'match'=>'\'',
-				'token'=>'T_SINGLE_QUOTE',
-				'line'=>1
-			),
-			array(
-				'match'=>'}',
-				'token'=>'T_CLASS_CLOSE_BRACKET',
-				'line'=>1
-			),
-			array(
-				'match'=>'_EOL_',
-				'token'=>'T_EOL',
-				'line'=>1
-			),
-		);
-		$this->commands[] = "& TYPE Person EXPECTS {'name'}";
-		$tokens = Tokenizer::parse($this->commands);
+        $input = "& TYPE Person EXPECTS {'name'}";
+        $tokens = $preparer->tokenize($input);
 
-		$this->assertEquals($expected, $tokens);
-	}
+        $this->assertIsArray($tokens);
+        $this->assertNotEmpty($tokens);
+
+        // Noise words and punctuation are stripped; core symbols remain.
+        $this->assertContains('type', $tokens);
+        $this->assertContains('person', $tokens);
+        $this->assertContains('expects', $tokens);
+    }
 }

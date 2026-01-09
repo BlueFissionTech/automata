@@ -13,7 +13,7 @@ use BlueFission\Behavioral\Behaviors\Event;
  * @implements IVal
  */
 class Deq extends Val implements IVal {
-    protected $_type = DataTypes::DEQUE;
+    protected $_type = DataTypes::GENERIC;
 
     protected $_forceType = false;
 

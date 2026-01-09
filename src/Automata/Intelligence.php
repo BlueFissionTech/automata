@@ -23,7 +23,8 @@ class Intelligence extends Obj
 
     protected OrganizedCollection $_strategies; // Collection of strategies with weights
     protected float $_minThreshold; // Minimum accuracy threshold for a strategy
-    protected IStrategy $_lastStrategyUsed; // Last strategy used for prediction
+    protected ?IStrategy $_lastStrategyUsed = null; // Last strategy used for prediction
+    private ?string $_lastStrategyName = null; // Key/name of last strategy used
     private array $_strategyGroups; // Groups of strategies based on data type
     private BenchmarkService $_benchmarkService; // Service for benchmarking strategies
 
@@ -112,18 +113,18 @@ class Intelligence extends Obj
      */
     public function train(array $dataset, array $labels)
     {
-        foreach ($this->_strategies as $strategy) {
+        foreach ($this->_strategies->toArray() as $name => $meta) {
+            /** @var IStrategy $strategy */
+            $strategy = $meta['value'];
+
             $executionTime = $this->_benchmarkService->benchmarkTraining($strategy, $dataset, $labels);
             $accuracy = $strategy->accuracy();
             $score = $this->calculateScore($accuracy, $executionTime);
 
-            $this->_strategies->weight($strategy, $score);
-
-            if ($accuracy >= $this->_minThreshold) {
-                break;
-            }
+            $this->_strategies->weight($name, $score);
         }
 
+        // Reorder strategies so that the highest scoring strategy is preferred.
         $this->_strategies->sort();
     }
 
@@ -135,8 +136,28 @@ class Intelligence extends Obj
      */
     public function predict($input)
     {
-        $bestStrategy = $this->_strategies->first();
+        $strategies = $this->_strategies->toArray();
+        if (empty($strategies)) {
+            return null;
+        }
+
+        // Select the strategy with the highest weight.
+        $bestName = null;
+        $bestMeta = null;
+
+        foreach ($strategies as $name => $meta) {
+            if (!isset($bestMeta) || $meta['weight'] > $bestMeta['weight']) {
+                $bestMeta = $meta;
+                $bestName = $name;
+            }
+        }
+
+        /** @var IStrategy $bestStrategy */
+        $bestStrategy = $bestMeta['value'];
+
         $this->_lastStrategyUsed = $bestStrategy;
+        $this->_lastStrategyName = $bestName;
+
         return $bestStrategy->predict($input);
     }
 
@@ -145,10 +166,10 @@ class Intelligence extends Obj
      */
     public function approvePrediction()
     {
-        if (isset($this->_lastStrategyUsed)) {
-            $score = $this->_strategies->weight($this->_lastStrategyUsed);
+        if ($this->_lastStrategyName !== null && $this->_strategies->has($this->_lastStrategyName)) {
+            $score = $this->_strategies->weight($this->_lastStrategyName);
             $newScore = $score * 1.1;
-            $this->_strategies->weight($this->_lastStrategyUsed, $newScore);
+            $this->_strategies->weight($this->_lastStrategyName, $newScore);
             $this->_strategies->sort();
         }
     }
@@ -158,10 +179,10 @@ class Intelligence extends Obj
      */
     public function rejectPrediction()
     {
-        if (isset($this->_lastStrategyUsed)) {
-            $score = $this->_strategies->weight($this->_lastStrategyUsed);
+        if ($this->_lastStrategyName !== null && $this->_strategies->has($this->_lastStrategyName)) {
+            $score = $this->_strategies->weight($this->_lastStrategyName);
             $newScore = $score * 0.9;
-            $this->_strategies->weight($this->_lastStrategyUsed, $newScore);
+            $this->_strategies->weight($this->_lastStrategyName, $newScore);
             $this->_strategies->sort();
         }
     }

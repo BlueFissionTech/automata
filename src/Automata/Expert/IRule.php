@@ -3,7 +3,7 @@ namespace BlueFission\Automata\Expert;
 
 interface IRule
 {
-    public function __construct(string $name, callable $predicate);
+    public function __construct(string $name, callable $predicate, IFact $conclusion);
     public function getName(): string;
     public function getPredicate(): callable;
     public function evaluate(IFact $fact): bool;

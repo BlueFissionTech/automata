@@ -2,6 +2,8 @@
 
 namespace BlueFission\Automata\Memory;
 
+use BlueFission\Automata\Context;
+
 // Adds a time-decay penalty based on recency, helping models prefer more recent associations.
 class TemporalDecaySimilarityStrategy implements IRecallScoringStrategy
 {
@@ -14,18 +16,18 @@ class TemporalDecaySimilarityStrategy implements IRecallScoringStrategy
 
     public function score(array $vecA, array $vecB, Context $contextA, Context $contextB): float
     {
-        $sim = cosine_similarity($vecA, $vecB);
+        $base = (new CosineSimilarityStrategy())->score($vecA, $vecB, $contextA, $contextB);
 
         $now = time();
-        $timeA = $contextA->get('timestamp', $now);
-        $timeB = $contextB->get('timestamp', $now);
+        $timeA = (int)$contextA->get('timestamp', $now);
+        $timeB = (int)$contextB->get('timestamp', $now);
 
-        $ageA = $now - $timeA;
-        $ageB = $now - $timeB;
+        $ageA = max($now - $timeA, 0);
+        $ageB = max($now - $timeB, 0);
 
         $decayA = exp(-$ageA / $this->halfLife);
         $decayB = exp(-$ageB / $this->halfLife);
 
-        return $sim * sqrt($decayA * $decayB);
+        return $base * sqrt($decayA * $decayB);
     }
 }
