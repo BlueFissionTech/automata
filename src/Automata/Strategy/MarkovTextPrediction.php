@@ -37,7 +37,6 @@ class MarkovTextPrediction extends Strategy
      */
     public function train(array $samples, array $labels, float $testSize = 0.2)
     {
-        $transitions = [];
         $allPairs = [];
 
         foreach ($samples as $sample) {
@@ -46,22 +45,31 @@ class MarkovTextPrediction extends Strategy
                 $prevWord = $words[$i];
                 $nextWord = $words[$i + 1];
                 $allPairs[] = [$prevWord, $nextWord];
-
-                if (!isset($transitions[$prevWord])) {
-                    $transitions[$prevWord] = [];
-                }
-                if (!isset($transitions[$prevWord][$nextWord])) {
-                    $transitions[$prevWord][$nextWord] = 0;
-                }
-                $transitions[$prevWord][$nextWord]++;
             }
         }
-
-        $this->_markovChain->train($transitions);
 
         $totalPairs = count($allPairs);
         $testCount = (int)($totalPairs * $testSize);
         $trainCount = $totalPairs - $testCount;
+
+        // Build transitions only from the training subset so that
+        // held-out pairs are not leaked into the model.
+        $trainPairs = array_slice($allPairs, 0, $trainCount);
+
+        // Build transitions only from training pairs so that the held-out
+        // pairs used for accuracy() are not leaked into the model.
+        $transitions = [];
+        foreach ($trainPairs as [$prevWord, $nextWord]) {
+            if (!isset($transitions[$prevWord])) {
+                $transitions[$prevWord] = [];
+            }
+            if (!isset($transitions[$prevWord][$nextWord])) {
+                $transitions[$prevWord][$nextWord] = 0;
+            }
+            $transitions[$prevWord][$nextWord]++;
+        }
+
+        $this->_markovChain->train($transitions);
 
         $testPairs = array_slice($allPairs, $trainCount);
 

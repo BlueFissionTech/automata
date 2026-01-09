@@ -38,6 +38,7 @@ class NGramTextPrediction extends Strategy
         $this->_nGramTokenizer = new NGramTokenizer($n + 1);
 
         $allNGrams = [];
+        $this->_ngramCounts = [];
 
         foreach ($samples as $sample) {
             $words = $this->_tokenizer->tokenize((string)$sample);
@@ -46,14 +47,6 @@ class NGramTextPrediction extends Strategy
                 $context = implode(' ', array_slice($nGram, 0, -1));
                 $target = end($nGram);
                 $allNGrams[] = [$context, $target];
-
-                if (!isset($this->_ngramCounts[$context])) {
-                    $this->_ngramCounts[$context] = [];
-                }
-                if (!isset($this->_ngramCounts[$context][$target])) {
-                    $this->_ngramCounts[$context][$target] = 0;
-                }
-                $this->_ngramCounts[$context][$target]++;
             }
         }
 
@@ -61,7 +54,21 @@ class NGramTextPrediction extends Strategy
         $testCount = (int)($total * $testSize);
         $trainCount = $total - $testCount;
 
+        $trainNGrams = array_slice($allNGrams, 0, $trainCount);
         $testNGrams = array_slice($allNGrams, $trainCount);
+
+        // Populate counts only from the training n-grams so that the
+        // test n-grams remain held out for evaluation and do not
+        // inflate accuracy() metrics.
+        foreach ($trainNGrams as [$context, $target]) {
+            if (!isset($this->_ngramCounts[$context])) {
+                $this->_ngramCounts[$context] = [];
+            }
+            if (!isset($this->_ngramCounts[$context][$target])) {
+                $this->_ngramCounts[$context][$target] = 0;
+            }
+            $this->_ngramCounts[$context][$target]++;
+        }
 
         $this->_testSamples = array_column($testNGrams, 0);
         $this->_testTargets = array_column($testNGrams, 1);

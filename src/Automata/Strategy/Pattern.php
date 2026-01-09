@@ -47,24 +47,33 @@ class Pattern extends Basic
         $this->_buffer[] = $val;
         $this->_prediction = null;
 
+        $bufferLength = count($this->_buffer);
+
         foreach ($this->_rules as $rule) {
-            $pos = array_search($this->_buffer[0], $rule, true);
-            while ($pos !== false) {
+            $ruleLength = count($rule);
+
+            // Scan the rule for any position where the buffer prefix matches.
+            // This avoids re-running array_search at the same index and
+            // guarantees that we always advance through the rule even when
+            // only the first element of the buffer matches.
+            for ($pos = 0; $pos <= $ruleLength - $bufferLength; $pos++) {
+                if ($rule[$pos] !== $this->_buffer[0]) {
+                    continue;
+                }
+
                 $match = true;
-                for ($i = 0; $i < count($this->_buffer); $i++) {
-                    if (!isset($rule[$pos + $i]) || $rule[$pos + $i] !== $this->_buffer[$i]) {
+                for ($i = 1; $i < $bufferLength; $i++) {
+                    if ($rule[$pos + $i] !== $this->_buffer[$i]) {
                         $match = false;
                         break;
                     }
                 }
 
                 if ($match) {
-                    $nextIndex = $pos + count($this->_buffer);
+                    $nextIndex = $pos + $bufferLength;
                     $this->_prediction = $rule[$nextIndex] ?? null;
                     break 2;
                 }
-
-                $pos = array_search($this->_buffer[0], $rule, true);
             }
         }
 
