@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "bluefission/develation",
-            "version": "v1.3.2-alpha",
+            "version": "v1.3.4-alpha",
             "source": {
                 "type": "git",
                 "url": "https://github.com/BlueFissionTech/develation.git",
-                "reference": "3a5f9b6f861a8bd6065b789bbc63f264dd5bb889"
+                "reference": "23686a8380093091c96b271eed5433d3c97eaca1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/BlueFissionTech/develation/zipball/3a5f9b6f861a8bd6065b789bbc63f264dd5bb889",
-                "reference": "3a5f9b6f861a8bd6065b789bbc63f264dd5bb889",
+                "url": "https://api.github.com/repos/BlueFissionTech/develation/zipball/23686a8380093091c96b271eed5433d3c97eaca1",
+                "reference": "23686a8380093091c96b271eed5433d3c97eaca1",
                 "shasum": ""
             },
             "require": {
@@ -66,10 +66,10 @@
                 "php"
             ],
             "support": {
-                "source": "https://github.com/BlueFissionTech/develation/tree/v1.3.2-alpha",
+                "source": "https://github.com/BlueFissionTech/develation/tree/v1.3.4-alpha",
                 "issues": "https://github.com/BlueFissionTech/develation/issues"
             },
-            "time": "2026-01-12T19:53:19+00:00"
+            "time": "2026-01-12T23:17:14+00:00"
         },
         {
             "name": "cboden/ratchet",
