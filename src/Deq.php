@@ -24,7 +24,8 @@ class Deq extends Val implements IVal {
      * @param bool $snapshot Whether to take a snapshot after initialization
      */
     public function __construct($value = null, bool $snapshot = true) {
-        parent::__construct(new Deque($value), $snapshot, false);
+        $seed = $value ?? [];
+        parent::__construct(new Deque($seed), $snapshot, false);
     }
 
     /**
@@ -33,7 +34,8 @@ class Deq extends Val implements IVal {
      */
     public function cast(): IVal {
         if (!($this->_data instanceof Deque)) {
-            $this->_data = new Deque($this->_data);
+            $seed = $this->_data ?? [];
+            $this->_data = new Deque($seed);
         }
         return $this;
     }
@@ -125,5 +127,13 @@ class Deq extends Val implements IVal {
      */
     public function count(): int {
         return $this->_data->count();
+    }
+
+    /**
+     * Check if the Deque is empty.
+     */
+    public function isEmpty(): bool
+    {
+        return $this->_data->isEmpty();
     }
 }

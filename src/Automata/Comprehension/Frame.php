@@ -2,6 +2,7 @@
 namespace BlueFission\Automata\Comprehension;
 
 use BlueFission\Automata\Collections\OrganizedCollection;
+use BlueFission\DevElation as Dev;
 
 class Frame {
 	private $_experiences = [];
@@ -14,14 +15,15 @@ class Frame {
 
 	public function addExperience( $experience, $source = null ) 
 	{
+        $experience = Dev::apply('comprehension.frame.experience', $experience);
 		$this->_experiences[$source] = $experience;
-		// die(var_dump($this->_experiences));
+        Dev::do('comprehension.frame.experience_added', ['source' => $source, 'experience' => $experience]);
 	}
 
 	public function process()
 	{
+        Dev::do('comprehension.frame.process_start', ['experiences' => $this->_experiences]);
 		$values = [];
-		// die(var_dump($this->_experiences));
 
 		foreach ( $this->_experiences as $experience ) { 
 			$values[] = $experience['values'] ?? [];
@@ -29,25 +31,24 @@ class Frame {
 
 		$aggregate = new OrganizedCollection();
 		$aggregate->autoSort(false);
-		// $aggregate = [];
 
 		foreach ( $values as $data ) {
 			foreach ($data as $key=>$datum) {
 				$aggregate->add($datum['value'], $key, $datum['weight']);
-				// $aggregate[$key] = $datum;
 			}
 		}
 		$aggregate->sort();
 		$aggregate->stats();
-		return $aggregate->data()['values'];
+		$result = $aggregate->data()['values'];
+        Dev::do('comprehension.frame.process_complete', ['result' => $result]);
+		return Dev::apply('comprehension.frame.process_result', $result);
 	}
 
 	public function extract() 
 	{
+        Dev::do('comprehension.frame.extract_start', ['experiences' => $this->_experiences]);
 		$values = [];
 		$aggregate = [];
-		// die(var_dump($this->_experiences));
-		// var_dump($this->_experiences);
 
 		foreach ( $this->_experiences as $experience ) { 
 			$values[] = $experience['values'] ?? [];
@@ -57,7 +58,6 @@ class Frame {
 		foreach ( $values as $data ) {
 			$i = 0;
 			foreach ($data as $key=>$datum) {
-				// $aggregate->add($datum, $key);
 				$aggregate[$key] = $datum;
 				$i++;
 				if ( $i >= 5) {
@@ -65,7 +65,8 @@ class Frame {
 				}
 			}
 		}
-		return $aggregate;
+        Dev::do('comprehension.frame.extracted', ['aggregate' => $aggregate]);
+        return Dev::apply('comprehension.frame.extract_result', $aggregate);
 	}
 
 	public function hashArray() 

@@ -27,7 +27,7 @@ class Pile extends Val implements IVal {
         parent::__construct(new Stack(), $snapshot, false);
 
         if (is_array($value)) {
-            foreach (array_reverse($value) as $item) { // reverse to maintain push order
+            foreach ($value as $item) {
                 $this->_data->push($item);
             }
         }

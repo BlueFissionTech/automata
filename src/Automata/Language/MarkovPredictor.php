@@ -2,6 +2,7 @@
 namespace BlueFission\Automata\Language;
 
 use BlueFission\Automata\Collections\OrganizedCollection;
+use BlueFission\DevElation as Dev;
 
 class MarkovPredictor {
     protected OrganizedCollection $states;
@@ -14,9 +15,14 @@ class MarkovPredictor {
 
         $this->beginnings = new OrganizedCollection();
         $this->beginnings->setMax(500); // Smaller number for beginnings as it usually holds less data
+        Dev::do('language.markov.construct', [
+            'states' => $this->states,
+            'beginnings' => $this->beginnings,
+        ]);
     }
 
     public function addSentence($sentence) {
+        $sentence = Dev::apply('language.markov.add_sentence', $sentence);
         $words = $this->tokenize($sentence);
         $previousWord = null;
 
@@ -33,18 +39,24 @@ class MarkovPredictor {
                 }
 
                 $transitions = $this->states->get($previousWord);
-                $currentCount = $transitions->get($word) ?? 0;
-                $transitions->add($currentCount + 1, $word);
+                $transitions->add($word, $word, 1);
             }
             $previousWord = $word;
         }
+        Dev::do('language.markov.sentence_added', ['sentence' => $sentence, 'words' => $words]);
     }
 
     public function tokenize($sentence) {
-        return preg_split('/\s+/', strtolower($sentence));
+        $sentence = Dev::apply('language.markov.tokenize_sentence', $sentence);
+        $tokens = preg_split('/\s+/', strtolower($sentence));
+        Dev::do('language.markov.tokenized', ['tokens' => $tokens]);
+        return $tokens;
     }
 
     public function predictNextWord($currentWord) {
+        $currentWord = Dev::apply('language.markov.predict_input', $currentWord);
+        $tokens = $this->tokenize($currentWord);
+        $currentWord = $tokens[0] ?? (string)$currentWord;
         if ($this->states->has($currentWord)) {
             $transitions = $this->states->get($currentWord);
             $raw = $transitions->contents();
@@ -65,16 +77,20 @@ class MarkovPredictor {
 
             foreach ($weights as $word => $count) {
                 if (($rand -= $count) < 0) {
+                    $word = Dev::apply('language.markov.predict_word', $word);
+                    Dev::do('language.markov.predicted', ['word' => $word, 'current' => $currentWord]);
                     return $word;
                 }
             }
         }
-        return null; // No next word found
+        return Dev::apply('language.markov.predict_none', null);
     }
 
     public function serializeModel() {
         // Serialize the model state
-        return serialize(['states' => $this->states, 'beginnings' => $this->beginnings]);
+        $model = serialize(['states' => $this->states, 'beginnings' => $this->beginnings]);
+        Dev::do('language.markov.serialize', ['data' => $model]);
+        return $model;
     }
 
     public function deserializeModel($data) {
@@ -82,5 +98,6 @@ class MarkovPredictor {
         $data = unserialize($data);
         $this->states = $data['states'];
         $this->beginnings = $data['beginnings'];
+        Dev::do('language.markov.deserialize', ['data' => $data]);
     }
 }

@@ -23,7 +23,8 @@ class Set extends Val implements IVal {
      * @param bool  $snapshot Whether to take a snapshot after initialization
      */
     public function __construct($value = null, bool $snapshot = true) {
-        parent::__construct(new DsSet($value), $snapshot, false);
+        $seed = $value ?? [];
+        parent::__construct(new DsSet($seed), $snapshot, false);
     }
 
     /**
@@ -31,7 +32,8 @@ class Set extends Val implements IVal {
      */
     public function cast(): IVal {
         if (!($this->_data instanceof DsSet)) {
-            $this->_data = new DsSet($this->_data);
+            $seed = $this->_data ?? [];
+            $this->_data = new DsSet($seed);
         }
         return $this;
     }

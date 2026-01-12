@@ -8,11 +8,23 @@ use Ds\Deque;
 
 class DeqTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        if (!extension_loaded('ds')) {
+            $this->markTestSkipped('The ds extension is required for Deq tests.');
+        }
+    }
+
     public function testCanInstantiateDeq(): void
     {
         $deq = new Deq();
         $this->assertInstanceOf(Deq::class, $deq);
-        $this->assertInstanceOf(Deque::class, $deq->cast()->_data);
+        $deq->cast();
+
+        $ref = new \ReflectionClass($deq);
+        $prop = $ref->getProperty('_data');
+        $prop->setAccessible(true);
+        $this->assertInstanceOf(Deque::class, $prop->getValue($deq));
     }
 
     public function testPushAndPopFront(): void

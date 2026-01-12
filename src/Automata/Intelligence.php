@@ -3,6 +3,8 @@
 namespace BlueFission\Automata;
 
 use BlueFission\Obj;
+use BlueFission\DevElation as Dev;
+use BlueFission\DevElation;
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Automata\Sensory\Input;
 use BlueFission\Automata\Strategy\IStrategy;
@@ -113,6 +115,10 @@ class Intelligence extends Obj
      */
     public function train(array $dataset, array $labels)
     {
+        // Allow filters to adjust training data or inject instrumentation.
+        $dataset = Dev::apply('automata.intelligence.train.1', $dataset);
+        $labels  = Dev::apply('automata.intelligence.train.2', $labels);
+
         foreach ($this->_strategies->toArray() as $name => $meta) {
             /** @var IStrategy $strategy */
             $strategy = $meta['value'];
@@ -122,6 +128,13 @@ class Intelligence extends Obj
             $score = $this->calculateScore($accuracy, $executionTime);
 
             $this->_strategies->weight($name, $score);
+
+            // Hook per-strategy training metrics.
+            Dev::do('automata.intelligence.train.action1', [
+                'strategy'      => $name,
+                'accuracy'      => $accuracy,
+                'executionTime' => $executionTime,
+            ]);
         }
 
         // Reorder strategies so that the highest scoring strategy is preferred.
@@ -136,6 +149,9 @@ class Intelligence extends Obj
      */
     public function predict($input)
     {
+        // Pre-prediction input filter.
+        $input = Dev::apply('automata.intelligence.predict.1', $input);
+
         $strategies = $this->_strategies->toArray();
         if (empty($strategies)) {
             return null;
@@ -158,7 +174,17 @@ class Intelligence extends Obj
         $this->_lastStrategyUsed = $bestStrategy;
         $this->_lastStrategyName = $bestName;
 
-        return $bestStrategy->predict($input);
+        $output = $bestStrategy->predict($input);
+
+        // Post-prediction filter and action hook.
+        $output = Dev::apply('automata.intelligence.predict.2', $output);
+        Dev::do('automata.intelligence.predict.action1', [
+            'strategy' => $bestName,
+            'input'    => $input,
+            'output'   => $output,
+        ]);
+
+        return $output;
     }
 
     /**

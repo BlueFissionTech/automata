@@ -5,6 +5,7 @@ namespace BlueFission\Automata\Memory;
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Automata\GraphTheory\Graph;
 use BlueFission\Automata\Context;
+use BlueFission\DevElation as Dev;
 
 /**
  * ABS/working-memory implementation backed by a graph of MemoryNode instances.
@@ -28,6 +29,10 @@ class Abs2Memory extends Graph implements IWorkingMemory
      */
     public function addMemory(string $label, Context $context, array $edges = []): void
     {
+        // Allow filters to adjust or enrich contexts before storage.
+        $context = Dev::apply('automata.memory.abs2memory.addMemory.1', $context);
+        Dev::do('automata.memory.abs2memory.addMemory.action1', ['label' => $label, 'context' => $context]);
+
         $node = new MemoryNode($label, $edges, $context);
         $this->storeNode($node);
     }
@@ -97,7 +102,13 @@ class Abs2Memory extends Graph implements IWorkingMemory
     {
         $node = $this->getMemory($label);
 
-        return $node?->getContext();
+        $context = $node?->getContext();
+
+        // Let hooks observe or transform recalled contexts.
+        $context = Dev::apply('automata.memory.abs2memory.recall.1', $context);
+        Dev::do('automata.memory.abs2memory.recall.action1', ['label' => $label, 'context' => $context]);
+
+        return $context;
     }
 
     public function recallWithAssociations(string $label, int $max = 10): array
@@ -131,6 +142,9 @@ class Abs2Memory extends Graph implements IWorkingMemory
      */
     public function recallSimilar(Context $context, float $threshold = 0.5): array
     {
+        // Filters may tweak the query context before similarity search.
+        $context = Dev::apply('automata.memory.abs2memory.recallSimilar.1', $context);
+
         $results = [];
         $stored = $this->_memoryNodes->contents();
 
@@ -151,6 +165,10 @@ class Abs2Memory extends Graph implements IWorkingMemory
         }
 
         uasort($results, static fn($a, $b) => $b['similarity'] <=> $a['similarity']);
+
+        // Allow post-processing or logging of similarity results.
+        $results = Dev::apply('automata.memory.abs2memory.recallSimilar.2', $results);
+        Dev::do('automata.memory.abs2memory.recallSimilar.action1', ['query' => $context, 'results' => $results]);
 
         return $results;
     }

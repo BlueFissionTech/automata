@@ -17,6 +17,9 @@ use BlueFission\Automata\LLM\Reply;
  */
 class GrokClient implements IClient
 {
+    private string $_apiKey;
+    private string $_baseUrl;
+
     public function __construct(string $apiKey, string $baseUrl = 'https://api.grok.com')
     {
         $this->_apiKey  = $apiKey;

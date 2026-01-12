@@ -3,15 +3,18 @@
 namespace BlueFission\Automata\Feature;
 
 use BlueFission\Vec;
+use BlueFission\DevElation as Dev;
 
 class ExtendedInteractionFeatures {
     private $_maxOrder;
 
     public function __construct($maxOrder = 3) {
-        $this->_maxOrder = $maxOrder;
+        $this->_maxOrder = Dev::apply('feature.extended.order', $maxOrder);
+        Dev::do('feature.extended.construct', ['maxOrder' => $this->_maxOrder]);
     }
 
     public function transform($data) {
+        $data = Dev::apply('feature.extended.input', $data);
         $interactionData = new Vec();
 
         foreach ($data as $row) {
@@ -25,7 +28,9 @@ class ExtendedInteractionFeatures {
 
             $interactionData->add($newRow);
         }
-        return $interactionData;
+        $result = Dev::apply('feature.extended.output', $interactionData);
+        Dev::do('feature.extended.complete', ['result' => $result]);
+        return $result;
     }
 
     private function addAllCombinations(Vec $vectorRow, Vec $newRow, $order) {

@@ -3,6 +3,7 @@ namespace BlueFission\Automata\Language;
 
 use BlueFission\Automata\Language\StemmerLemmatizer;
 use BlueFission\Automata\Collections\OrganizedCollection as Collection;
+use BlueFission\DevElation as Dev;
 
 class Grammar
 {
@@ -24,6 +25,12 @@ class Grammar
         $this->depth = 0;
         $this->previous = "";
         $this->stemmer = $stemmer;
+        Dev::do('language.grammar.construct', [
+            'stemmer' => $stemmer,
+            'rules' => $rules,
+            'commands' => $commands,
+            'tokens' => $tokens,
+        ]);
 
 		if ($rules) {
 			foreach ( $rules as $terminal=>$rule ) {
@@ -83,7 +90,8 @@ class Grammar
 	    $index = 0;
 	    $count = 0;
 
-	    $tokens = mb_str_split($input);
+        $input = Dev::apply('language.grammar.tokenize_input', $input);
+        $tokens = mb_str_split($input);
 	    $inputLength = count($tokens);
 
 	    $puntuations = ['.', ',', '!', '?', ';', ':', '(', ')', '[', ']', '{', '}', '<', '>'];
@@ -164,15 +172,16 @@ class Grammar
 	                foreach ($classifications as $classification) {
 	                    $expectation = $this->commands[$classification];
 	                    $guess = $expectation ? $expectation : [];
-	                    if ($guess && isset($guess['expects'])) {
-	                        if ($guess['expects'][0] != 'C_PREVIOUS') {
+	                    if ($guess && isset($guess['expects']) && is_array($guess['expects'])) {
+	                        $expects = $guess['expects'];
+	                        if (isset($expects[0]) && $expects[0] != 'C_PREVIOUS') {
 	                            if ($new) {
 	                                $next = [];
 	                                $expected = [];
 	                                $new = false;
 	                            }
 
-	                            $expected[$classification] = $guess['expects'];
+	                            $expected[$classification] = $expects;
 	                            $next = array_merge($next, $expected[$classification]);
 	                        } else {
 	                            for ($k = 0; $k < count($next); $k++) {
@@ -203,14 +212,24 @@ class Grammar
 	        // }
 	    }
 
-	    return $output;
+        $output = Dev::apply('language.grammar.tokenize_output', $output);
+        Dev::do('language.grammar.tokenize_complete', [
+            'input' => $input,
+            'output' => $output,
+        ]);
+        return $output;
 	}
 
 
     public function parse($tokens)
     {
+        $tokens = Dev::apply('language.grammar.parse_tokens', $tokens);
+        Dev::do('language.grammar.parse_start', ['tokens' => $tokens]);
+        $node = $this->parseNonterminal('T_DOCUMENT', $tokens);
+        $node = Dev::apply('language.grammar.parse_result', $node);
+        Dev::do('language.grammar.parse_complete', ['node' => $node]);
         $this->index = 0;
-        return $this->parseNonterminal('T_DOCUMENT', $tokens);
+        return $node;
     }
 
 	private function parseNonterminal($nonterminal, $tokens)

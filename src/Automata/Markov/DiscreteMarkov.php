@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\Markov;
 
 use BlueFission\Obj;
+use BlueFission\DevElation as Dev;
 use BlueFission\Behavioral\Dispatches;
 use BlueFission\Behavioral\Behaviors\Event;
 
@@ -39,6 +40,9 @@ class DiscreteMarkov extends Obj
      */
     public function step(array $current, array $matrix): array
     {
+        $current = Dev::apply('automata.markov.discretemarkov.step.1', $current);
+        $matrix  = Dev::apply('automata.markov.discretemarkov.step.2', $matrix);
+
         $next = [];
 
         foreach ($current as $state => $prob) {
@@ -63,6 +67,9 @@ class DiscreteMarkov extends Obj
             'next' => $next,
         ]));
 
+        $next = Dev::apply('automata.markov.discretemarkov.step.3', $next);
+        Dev::do('automata.markov.discretemarkov.step.action1', ['current' => $current, 'next' => $next]);
+
         return $next;
     }
 
@@ -76,10 +83,17 @@ class DiscreteMarkov extends Obj
      */
     public function stepMany(array $current, array $matrix, int $steps): array
     {
+        $current = Dev::apply('automata.markov.discretemarkov.stepMany.1', $current);
+        $matrix  = Dev::apply('automata.markov.discretemarkov.stepMany.2', $matrix);
+        Dev::do('automata.markov.discretemarkov.stepMany.action1', ['current' => $current, 'matrix' => $matrix, 'steps' => $steps]);
+
         $distribution = $current;
         for ($i = 0; $i < $steps; $i++) {
             $distribution = $this->step($distribution, $matrix);
         }
+
+        $distribution = Dev::apply('automata.markov.discretemarkov.stepMany.3', $distribution);
+        Dev::do('automata.markov.discretemarkov.stepMany.action2', ['final' => $distribution]);
 
         return $distribution;
     }

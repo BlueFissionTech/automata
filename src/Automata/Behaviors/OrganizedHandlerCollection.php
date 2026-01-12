@@ -35,7 +35,7 @@ class OrganizedHandlerCollection extends OrganizedCollection {
 		if (is_string($behavior))
 			$behavior = new Behavior($behavior);
 
-		$behavior->_target = $behavior->_target ? $behavior->_target : $sender;
+		$behavior->target = $behavior->target ? $behavior->target : $sender;
 
 		foreach ($this->_value as $c)
 		{

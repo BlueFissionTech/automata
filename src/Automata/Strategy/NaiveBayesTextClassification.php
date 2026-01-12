@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Strategy;
 
+use BlueFission\DevElation as Dev;
 use Phpml\Classification\NaiveBayes;
 use Phpml\FeatureExtraction\TokenCountVectorizer;
 use Phpml\Tokenization\WhitespaceTokenizer;
@@ -62,6 +63,10 @@ class NaiveBayesTextClassification extends Strategy
      */
     public function train($samples, $labels, float $testSize = 0.2)
     {
+        $samples = Dev::apply('automata.strategy.naivebayestextclassification.train.1', $samples);
+        $labels  = Dev::apply('automata.strategy.naivebayestextclassification.train.2', $labels);
+        Dev::do('automata.strategy.naivebayestextclassification.train.action1', ['samples' => $samples, 'labels' => $labels, 'testSize' => $testSize]);
+
         $splitDataset = new RandomSplit(new ArrayDataset($samples, $labels), $testSize);
         $trainSamples = $splitDataset->getTrainSamples();
         $trainLabels = $splitDataset->getTrainLabels();
@@ -80,11 +85,18 @@ class NaiveBayesTextClassification extends Strategy
      */
     public function predict($input): string
     {
+        $input = Dev::apply('automata.strategy.naivebayestextclassification.predict.1', $input);
+        Dev::do('automata.strategy.naivebayestextclassification.predict.action1', ['input' => $input]);
+
         $samples = [$input];
 
         $prediction = $this->_pipeline->predict($samples);
+        $label = $prediction[0];
 
-        return $prediction[0];
+        $label = Dev::apply('automata.strategy.naivebayestextclassification.predict.2', $label);
+        Dev::do('automata.strategy.naivebayestextclassification.predict.action2', ['input' => $input, 'prediction' => $label]);
+
+        return $label;
     }
 
     /**
@@ -100,7 +112,10 @@ class NaiveBayesTextClassification extends Strategy
     {
         try {
             $predictedLabels = $this->_pipeline->predict($this->_testSamples);
-            return Accuracy::score($this->_testLabels, $predictedLabels);
+            $accuracy = Accuracy::score($this->_testLabels, $predictedLabels);
+            $accuracy = Dev::apply('automata.strategy.naivebayestextclassification.accuracy.1', $accuracy);
+            Dev::do('automata.strategy.naivebayestextclassification.accuracy.action1', ['accuracy' => $accuracy]);
+            return $accuracy;
         } catch (\Throwable $e) {
             return 0.0;
         }
@@ -114,11 +129,15 @@ class NaiveBayesTextClassification extends Strategy
      */
     public function saveModel(string $path): bool
     {
+        $path = Dev::apply('automata.strategy.naivebayestextclassification.saveModel.1', $path);
+        Dev::do('automata.strategy.naivebayestextclassification.saveModel.action1', ['path' => $path, 'model' => 'naive_bayes_pipeline']);
+
         try {
             $this->_modelManager->saveToFile($this->_pipeline, $path);
+            Dev::do('automata.strategy.naivebayestextclassification.saveModel.action2', ['path' => $path, 'saved' => true]);
             return true;
         } catch (\Exception $e) {
-            // Handle the exception
+            Dev::do('automata.strategy.naivebayestextclassification.saveModel.action3', ['path' => $path, 'saved' => false, 'error' => $e]);
             return false;
         }
     }
@@ -131,15 +150,20 @@ class NaiveBayesTextClassification extends Strategy
      */
     public function loadModel(string $path): bool
     {
+        $path = Dev::apply('automata.strategy.naivebayestextclassification.loadModel.1', $path);
+        Dev::do('automata.strategy.naivebayestextclassification.loadModel.action1', ['path' => $path]);
+
         try {
             if (file_exists($path)) {
                 $this->_pipeline = $this->_modelManager->restoreFromFile($path);
+                Dev::do('automata.strategy.naivebayestextclassification.loadModel.action2', ['path' => $path, 'loaded' => true]);
                 return true;
             } else {
+                Dev::do('automata.strategy.naivebayestextclassification.loadModel.action3', ['path' => $path, 'loaded' => false, 'reason' => 'missing']);
                 return false;
             }
         } catch (\Exception $e) {
-            // Handle the exception
+            Dev::do('automata.strategy.naivebayestextclassification.loadModel.action4', ['path' => $path, 'loaded' => false, 'error' => $e]);
             return false;
         }
     }

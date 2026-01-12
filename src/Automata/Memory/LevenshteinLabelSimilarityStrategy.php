@@ -3,8 +3,9 @@
 namespace BlueFission\Automata\Memory;
 
 use BlueFission\Automata\Context;
+use BlueFission\DevElation as Dev;
 
-// For non-embedded, string-label-only comparisons — useful in fallback or string-centric memory.
+// For non-embedded, string-label-only comparisons - useful in fallback or string-centric memory.
 class LevenshteinLabelSimilarityStrategy implements IRecallScoringStrategy
 {
     public function score(array $vecA, array $vecB, Context $contextA, Context $contextB): float
@@ -30,7 +31,11 @@ class LevenshteinLabelSimilarityStrategy implements IRecallScoringStrategy
 
         // Normalize to 0.0 - 1.0 (1.0 = identical, 0.0 = totally different)
         $similarity = 1.0 - ($distance / $maxLength);
+        $similarity = max(0.0, min(1.0, $similarity));
 
-        return max(0.0, min(1.0, $similarity));
+        $similarity = Dev::apply('automata.memory.levenshteinlabelsimilaritystrategy.score.1', $similarity);
+        Dev::do('automata.memory.levenshteinlabelsimilaritystrategy.score.action1', ['labelA' => $labelA, 'labelB' => $labelB, 'score' => $similarity]);
+
+        return $similarity;
     }
 }

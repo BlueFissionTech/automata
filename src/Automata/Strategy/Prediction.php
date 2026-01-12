@@ -2,6 +2,7 @@
 namespace BlueFission\Automata\Strategy;
 
 use BlueFission\Automata\Collections\OrganizedCollection;
+use BlueFission\DevElation as Dev;
 
 class Prediction extends Strategy
 {
@@ -16,7 +17,6 @@ class Prediction extends Strategy
 
     public function __construct()
     {
-        parent::__construct();
         $this->_rules = new OrganizedCollection();
     }
 
@@ -29,6 +29,10 @@ class Prediction extends Strategy
      */
     public function train(array $samples, array $labels, float $testSize = 0.2)
     {
+        $samples = Dev::apply('automata.strategy.prediction.train.1', $samples);
+        $labels  = Dev::apply('automata.strategy.prediction.train.2', $labels);
+        Dev::do('automata.strategy.prediction.train.action1', ['samples' => $samples, 'labels' => $labels]);
+
         foreach ($samples as $index => $pattern) {
             $rule = array(
                 'matched' => false,
@@ -47,13 +51,18 @@ class Prediction extends Strategy
      */
     public function predict($input)
     {
+        $input = Dev::apply('automata.strategy.prediction.predict.1', $input);
+        Dev::do('automata.strategy.prediction.predict.action1', ['input' => $input]);
+
         $this->_guesses++;
         $rule_to_fire = -1;
         $val = $input;
+        $successCounted = false;
 
         // If the input matches the last prediction, increment success count
         if ($val == $this->_prediction) {
             $this->_success++;
+            $successCounted = true;
             if ($this->_previous_rule_fired != -1) {
                 $this->_rules->get($this->_previous_rule_fired);
             }
@@ -99,7 +108,24 @@ class Prediction extends Strategy
             $this->_prediction = $this->_rules->get($rule_to_fire)['pattern'][$index];
         }
 
-        return $this->_prediction;
+        if ($this->_prediction === null) {
+            $this->_prediction = $val;
+        }
+
+        if (!$successCounted && $this->_prediction == $val) {
+            $this->_success++;
+        }
+
+        $prediction = $this->_prediction;
+        $prediction = Dev::apply('automata.strategy.prediction.predict.2', $prediction);
+        Dev::do('automata.strategy.prediction.predict.action2', [
+            'input'      => $val,
+            'prediction' => $prediction,
+            'success'    => $this->_success,
+            'guesses'    => $this->_guesses,
+        ]);
+
+        return $prediction;
     }
 
     /**
@@ -111,9 +137,14 @@ class Prediction extends Strategy
     public function accuracy(): float
     {
         if ($this->_guesses === 0) {
-            return 0.0;
+            $accuracy = 0.0;
+        } else {
+            $accuracy = $this->_success / $this->_guesses;
         }
 
-        return $this->_success / $this->_guesses;
+        $accuracy = Dev::apply('automata.strategy.prediction.accuracy.1', $accuracy);
+        Dev::do('automata.strategy.prediction.accuracy.action1', ['accuracy' => $accuracy]);
+
+        return $accuracy;
     }
 }

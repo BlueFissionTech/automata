@@ -2,6 +2,7 @@
 namespace BlueFission\Automata\GameTheory;
 
 use BlueFission\Arr;
+use BlueFission\DevElation as Dev;
 
 /**
  * PayoffMatrix
@@ -32,10 +33,15 @@ class PayoffMatrix
      */
     public function setPayoff(array $actions, array $payoffs): void
     {
+        $actions = Dev::apply('automata.gametheory.payoffmatrix.setPayoff.1', $actions);
+        $payoffs = Dev::apply('automata.gametheory.payoffmatrix.setPayoff.2', $payoffs);
+
         $key = $this->keyFor($actions);
         $table = $this->_matrix->val();
         $table[$key] = $payoffs;
         $this->_matrix->val($table);
+
+        Dev::do('automata.gametheory.payoffmatrix.setPayoff.action1', ['actions' => $actions, 'payoffs' => $payoffs]);
     }
 
     /**
@@ -49,7 +55,11 @@ class PayoffMatrix
         $key = $this->keyFor($actions);
         $table = $this->_matrix->val();
 
-        return $table[$key] ?? null;
+        $payoffs = $table[$key] ?? null;
+        $payoffs = Dev::apply('automata.gametheory.payoffmatrix.getPayoff.1', $payoffs);
+        Dev::do('automata.gametheory.payoffmatrix.getPayoff.action1', ['actions' => $actions, 'payoffs' => $payoffs]);
+
+        return $payoffs;
     }
 
     /**
@@ -57,7 +67,11 @@ class PayoffMatrix
      */
     public function toArray(): array
     {
-        return $this->_matrix->val();
+        $matrix = $this->_matrix->val();
+        $matrix = Dev::apply('automata.gametheory.payoffmatrix.toArray.1', $matrix);
+        Dev::do('automata.gametheory.payoffmatrix.toArray.action1', ['matrix' => $matrix]);
+
+        return $matrix;
     }
 
     private function keyFor(array $actions): string

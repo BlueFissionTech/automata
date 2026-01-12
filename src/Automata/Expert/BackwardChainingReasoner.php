@@ -1,6 +1,8 @@
 <?php
 namespace BlueFission\Automata\Expert;
 
+use BlueFission\DevElation as Dev;
+
 /**
  * BackwardChainingReasoner
  *
@@ -14,25 +16,26 @@ class BackwardChainingReasoner implements IReasoner
 
     public function __construct(IMethod $method)
     {
-        $this->_method = $method;
+        $this->_method = Dev::apply('expert.backward.method', $method);
     }
 
     public function infer(Expert $system, Fact $fact): array
     {
-        $inferredFacts = [];
-
-        // get rules from system
+        $fact = Dev::apply('expert.backward.fact', $fact);
         $rules = $system->getRules();
-
-        // order rules based on method
         $rules = $this->_method->orderRules($rules);
+        $rules = Dev::apply('expert.backward.rules_ordered', $rules);
+
+        $inferredFacts = [];
 
         foreach ($rules as $rule) {
             if ($rule->hasConsequent($fact)) {
-                $inferredFacts[] = $rule->getAntecedent();
+                $inferredFacts[] = Dev::apply('expert.backward.antecedent', $rule->getAntecedent());
             }
         }
 
+        $inferredFacts = Dev::apply('expert.backward.inferred', $inferredFacts);
+        Dev::do('expert.backward.result', ['infer' => $inferredFacts, 'fact' => $fact]);
         return $inferredFacts;
     }
 }

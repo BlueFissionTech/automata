@@ -7,6 +7,7 @@ use BlueFission\Automata\Comprehension\Scene;
 use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\Comprehension\Log;
 use BlueFission\Automata\Memory\IWorkingMemory;
+use BlueFission\DevElation as Dev;
 
 /**
  * Reader
@@ -27,8 +28,12 @@ class Reader
 
     public function __construct(?Grammar $grammar, Documenter $documenter)
     {
-        $this->grammar = $grammar;
-        $this->documenter = $documenter;
+        $this->grammar = Dev::apply('language.reader.grammar', $grammar);
+        $this->documenter = Dev::apply('language.reader.documenter', $documenter);
+        Dev::do('language.reader.construct', [
+            'grammar' => $this->grammar,
+            'documenter' => $this->documenter,
+        ]);
     }
 
     /**
@@ -44,9 +49,16 @@ class Reader
             throw new \RuntimeException('Reader requires a Grammar to read raw documents. Use readTokens() when providing pre-tokenized input.');
         }
 
-        $tokens = $this->grammar->tokenize($text);
+        $text = Dev::apply('language.reader.text', $text);
+        $tokens = Dev::apply('language.reader.tokenize', $this->grammar->tokenize($text));
+        $tree = $this->readTokens($tokens);
+        Dev::do('language.reader.document_read', [
+            'text' => $text,
+            'tokens' => $tokens,
+            'tree' => $tree,
+        ]);
 
-        return $this->readTokens($tokens);
+        return Dev::apply('language.reader.document_result', $tree);
     }
 
     /**
@@ -58,18 +70,15 @@ class Reader
      */
     public function readTokens(array $tokens): array
     {
+        $tokens = Dev::apply('language.reader.tokens', $tokens);
         foreach ($tokens as $token) {
             $this->documenter->push($token);
         }
 
         $this->documenter->processStatements();
 
-        $tree = $this->documenter->getTree();
+        $tree = Dev::apply('language.reader.tree_raw', $this->documenter->getTree());
 
-        // If no completed statements were emitted, fall back to any
-        // in-progress current statement. This keeps Reader usable
-        // for partial or very short inputs without changing core
-        // Documenter semantics used elsewhere (e.g., Synthetiq).
         if (empty($tree)) {
             $ref = new \ReflectionClass($this->documenter);
             if ($ref->hasProperty('_currentStatement')) {
@@ -78,12 +87,14 @@ class Reader
                 $current = $prop->getValue($this->documenter);
 
                 if (is_object($current)) {
-                    return [$current];
+                    $tree = Dev::apply('language.reader.tree_fallback', [$current]);
                 }
             }
         }
 
-        return $tree;
+        Dev::do('language.reader.tree_ready', ['tree' => $tree, 'tokens' => $tokens]);
+
+        return Dev::apply('language.reader.tree', $tree);
     }
 
     /**
@@ -96,7 +107,13 @@ class Reader
      */
     public function toHoloscene(array $statements, Holoscene $holoscene, IWorkingMemory $memory, string $episodeId): void
     {
+        $statements = Dev::apply('language.reader.holoscene_statements', $statements);
+        $memory = Dev::apply('language.reader.holoscene_memory', $memory);
         $scene = new Scene($memory);
+        Dev::do('language.reader.holoscene_start', [
+            'statements' => $statements,
+            'episodeId' => $episodeId,
+        ]);
 
         foreach ($statements as $statement) {
             if (!is_object($statement)) {
@@ -131,6 +148,10 @@ class Reader
         }
 
         $holoscene->push($episodeId, $scene);
+        Dev::do('language.reader.holoscene_complete', [
+            'episodeId' => $episodeId,
+            'scene' => $scene,
+        ]);
     }
 
     /**
@@ -185,6 +206,9 @@ class Reader
 
         $log->setDescription('Narrative summary generated from Holoscene episodes.');
 
-        return $log->compose();
+        $result = Dev::apply('language.reader.narrative', $log->compose());
+        Dev::do('language.reader.narrate', ['log' => $log, 'result' => $result]);
+
+        return $result;
     }
 }

@@ -8,11 +8,23 @@ use Ds\Set as DsSet;
 
 class ListTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        if (!extension_loaded('ds')) {
+            $this->markTestSkipped('The ds extension is required for List tests.');
+        }
+    }
+
     public function testCanInstantiateList(): void
     {
         $list = new Set();
         $this->assertInstanceOf(Set::class, $list);
-        $this->assertInstanceOf(DsSet::class, $list->cast()->_data);
+        $list->cast();
+
+        $ref = new \ReflectionClass($list);
+        $prop = $ref->getProperty('_data');
+        $prop->setAccessible(true);
+        $this->assertInstanceOf(DsSet::class, $prop->getValue($list));
     }
 
     public function testAddAndHasElement(): void

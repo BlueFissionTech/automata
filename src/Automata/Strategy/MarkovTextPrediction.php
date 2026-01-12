@@ -1,28 +1,23 @@
 <?php
 namespace BlueFission\Automata\Strategy;
 
-use Phpml\Tokenization\WhitespaceTokenizer;
-use Phpml\Tokenization\NGramTokenizer;
-use Phpml\Classification\MarkovChain;
-use Phpml\Metric\Accuracy;
+use BlueFission\DevElation as Dev;
+use BlueFission\Automata\Language\MarkovPredictor;
 
 /**
  * MarkovTextPrediction
  *
- * Adapts php-ai/php-ml MarkovChain to the Strategy interface.
+ * Adapts Automata's MarkovPredictor to the Strategy interface.
  * Train is given samples and labels; Markov transitions are
  * inferred from adjacent pairs in the samples.
  */
 class MarkovTextPrediction extends Strategy
 {
-    private MarkovChain $_markovChain;
-    private WhitespaceTokenizer $_tokenizer;
-    private ?NGramTokenizer $_nGramTokenizer = null;
+    private MarkovPredictor $_markovPredictor;
 
     public function __construct()
     {
-        $this->_markovChain = new MarkovChain();
-        $this->_tokenizer = new WhitespaceTokenizer();
+        $this->_markovPredictor = new MarkovPredictor();
     }
 
     /**
@@ -37,44 +32,50 @@ class MarkovTextPrediction extends Strategy
      */
     public function train(array $samples, array $labels, float $testSize = 0.2)
     {
-        $allPairs = [];
+        $samples = Dev::apply('automata.strategy.markovtextprediction.train.1', $samples);
+        $labels  = Dev::apply('automata.strategy.markovtextprediction.train.2', $labels);
+        Dev::do('automata.strategy.markovtextprediction.train.action1', ['samples' => $samples, 'labels' => $labels, 'testSize' => $testSize]);
 
-        foreach ($samples as $sample) {
-            $words = $this->_tokenizer->tokenize((string)$sample);
-            for ($i = 0; $i < count($words) - 1; $i++) {
-                $prevWord = $words[$i];
-                $nextWord = $words[$i + 1];
-                $allPairs[] = [$prevWord, $nextWord];
+        $this->_markovPredictor = new MarkovPredictor();
+
+        $totalSamples = count($samples);
+        $testCount = (int)($totalSamples * $testSize);
+        $trainCount = $totalSamples - $testCount;
+
+        $trainSamples = array_slice($samples, 0, $trainCount);
+        $testSamples = array_slice($samples, $trainCount);
+
+        foreach ($trainSamples as $sample) {
+            $this->_markovPredictor->addSentence((string)$sample);
+        }
+
+        $this->_testSamples = [];
+        $this->_testTargets = [];
+
+        foreach ($testSamples as $sample) {
+            $tokens = $this->_markovPredictor->tokenize((string)$sample);
+            $tokenCount = count($tokens);
+            for ($i = 0; $i < $tokenCount - 1; $i++) {
+                $this->_testSamples[] = $tokens[$i];
+                $this->_testTargets[] = $tokens[$i + 1];
             }
         }
 
-        $totalPairs = count($allPairs);
-        $testCount = (int)($totalPairs * $testSize);
-        $trainCount = $totalPairs - $testCount;
-
-        // Build transitions only from the training subset so that
-        // held-out pairs are not leaked into the model.
-        $trainPairs = array_slice($allPairs, 0, $trainCount);
-
-        // Build transitions only from training pairs so that the held-out
-        // pairs used for accuracy() are not leaked into the model.
-        $transitions = [];
-        foreach ($trainPairs as [$prevWord, $nextWord]) {
-            if (!isset($transitions[$prevWord])) {
-                $transitions[$prevWord] = [];
+        if (empty($this->_testSamples)) {
+            foreach ($trainSamples as $sample) {
+                $tokens = $this->_markovPredictor->tokenize((string)$sample);
+                $tokenCount = count($tokens);
+                for ($i = 0; $i < $tokenCount - 1; $i++) {
+                    $this->_testSamples[] = $tokens[$i];
+                    $this->_testTargets[] = $tokens[$i + 1];
+                }
             }
-            if (!isset($transitions[$prevWord][$nextWord])) {
-                $transitions[$prevWord][$nextWord] = 0;
-            }
-            $transitions[$prevWord][$nextWord]++;
         }
 
-        $this->_markovChain->train($transitions);
-
-        $testPairs = array_slice($allPairs, $trainCount);
-
-        $this->_testSamples = array_column($testPairs, 0);
-        $this->_testTargets = array_column($testPairs, 1);
+        Dev::do('automata.strategy.markovtextprediction.train.action2', [
+            'trainSamples' => $trainSamples,
+            'testSamples'  => $testSamples,
+        ]);
     }
 
     /**
@@ -85,7 +86,15 @@ class MarkovTextPrediction extends Strategy
      */
     public function predict($input): string
     {
-        return $this->_markovChain->predict((string)$input);
+        $input = Dev::apply('automata.strategy.markovtextprediction.predict.1', $input);
+        Dev::do('automata.strategy.markovtextprediction.predict.action1', ['input' => $input]);
+
+        $prediction = $this->_markovPredictor->predictNextWord((string)$input);
+
+        $prediction = Dev::apply('automata.strategy.markovtextprediction.predict.2', $prediction);
+        Dev::do('automata.strategy.markovtextprediction.predict.action2', ['input' => $input, 'prediction' => $prediction]);
+
+        return (string)($prediction ?? '');
     }
 
     public function accuracy(): float
@@ -94,11 +103,23 @@ class MarkovTextPrediction extends Strategy
             return 0.0;
         }
 
-        $predicted = [];
-        foreach ($this->_testSamples as $sample) {
-            $predicted[] = $this->_markovChain->predict($sample);
+        $total = count($this->_testSamples);
+        if ($total === 0) {
+            return 0.0;
         }
 
-        return Accuracy::score($this->_testTargets, $predicted);
+        $matches = 0;
+        foreach ($this->_testSamples as $index => $sample) {
+            $prediction = $this->_markovPredictor->predictNextWord($sample);
+            if ($prediction !== null && $prediction === $this->_testTargets[$index]) {
+                $matches++;
+            }
+        }
+
+        $accuracy = $matches / $total;
+        $accuracy = Dev::apply('automata.strategy.markovtextprediction.accuracy.1', $accuracy);
+        Dev::do('automata.strategy.markovtextprediction.accuracy.action1', ['accuracy' => $accuracy]);
+
+        return $accuracy;
     }
 }

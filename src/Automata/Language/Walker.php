@@ -2,6 +2,8 @@
 
 namespace BlueFission\Automata\Language;
 
+use BlueFission\DevElation as Dev;
+
 class Walker {
 
 	protected $_statements = [];
@@ -13,7 +15,9 @@ class Walker {
 
 	public function addStatement( $statement )
 	{
+        $statement = Dev::apply('language.walker.add_statement', $statement);
 		$this->_statements[] = $statement;
+        Dev::do('language.walker.statement_added', ['statement' => $statement]);
 		// foreach ($statement->entities() as $entity) {
 		// 	$this->_entities[] = $entity;
 		// }
@@ -28,6 +32,7 @@ class Walker {
 
 	public function process( )
 	{
+        Dev::do('language.walker.process_start', ['statements' => $this->_statements]);
 		$this->_log = [];
 
 		foreach ($this->_statements as $statement) {
@@ -52,6 +57,7 @@ class Walker {
 
 			$this->_log[] = $entry;
 		}
+        Dev::do('language.walker.process_complete', ['log' => $this->_log]);
 	}
 
 	/**
@@ -63,7 +69,7 @@ class Walker {
 	 */
 	public function log(): array
 	{
-		return $this->_log;
+        return Dev::apply('language.walker.log', $this->_log);
 	}
 
 	private function _apply($subject, $object, $property, $name) {
@@ -149,11 +155,10 @@ class Walker {
 	}
 
 	public function traverse( $tree ) {
+        $tree = Dev::apply('language.walker.traverse', $tree);
 		foreach ( $tree as $node ) {
-			// Documenter currently stores Statement instances directly
-			// in its tree. We simply record them here; richer runtime
-			// behavior can be layered on top by consumers.
 			$this->addStatement($node);
 		}
+        Dev::do('language.walker.traverse_complete', ['tree' => $tree]);
 	}
 }

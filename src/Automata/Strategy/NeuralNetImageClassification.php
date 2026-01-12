@@ -2,7 +2,7 @@
 
 namespace BlueFission\Automata\Strategy;
 
-use Phpml\Dataset\ArrayDataset;
+use BlueFission\DevElation as Dev;
 use Phpml\NeuralNetwork\ActivationFunction\Sigmoid;
 use Phpml\Classification\MLPClassifier;
 use Phpml\Metric\Accuracy;
@@ -17,8 +17,9 @@ class NeuralNetImageClassification extends Strategy
 
     public function __construct()
     {
-        // Initialize the MLP classifier
-        $this->_classifier = new MLPClassifier(784, [100], 10, new Sigmoid());
+        // Initialize the MLP classifier with explicit class list (0-9) compatible with php-ml
+        $classes = range(0, 9);
+        $this->_classifier = new MLPClassifier(784, [100], $classes, 1000, new Sigmoid());
         $this->_modelManager = new ModelManager();
     }
 
@@ -31,12 +32,28 @@ class NeuralNetImageClassification extends Strategy
      */
     public function train(array $samples, array $targets, float $testSize = 0.2)
     {
-        // Split data into training and testing sets
-        $dataset = new ArrayDataset($samples, $targets);
-        list($trainSamples, $testSamples, $trainTargets, $testTargets) = $dataset->randomSplit($testSize);
+        $samples = Dev::apply('automata.strategy.neuralnetimageclassification.train.1', $samples);
+        $targets = Dev::apply('automata.strategy.neuralnetimageclassification.train.2', $targets);
+        Dev::do('automata.strategy.neuralnetimageclassification.train.action1', ['samples' => $samples, 'targets' => $targets, 'testSize' => $testSize]);
 
-        $this->_testSamples = $testSamples;
-        $this->_testTargets = $testTargets;
+        // Split data into training and testing sets
+        $count = count($samples);
+        if ($count === 0) {
+            return;
+        }
+
+        $testCount = (int)ceil($count * $testSize);
+        if ($testCount >= $count) {
+            $testCount = max(0, $count - 1);
+        }
+
+        $trainCount = max(1, $count - $testCount);
+
+        $trainSamples = array_slice($samples, 0, $trainCount);
+        $trainTargets = array_slice($targets, 0, $trainCount);
+
+        $this->_testSamples = array_slice($samples, $trainCount);
+        $this->_testTargets = array_slice($targets, $trainCount);
 
         // Train the classifier
         $this->_classifier->train($trainSamples, $trainTargets);
@@ -50,7 +67,15 @@ class NeuralNetImageClassification extends Strategy
      */
     public function predict($sample)
     {
-        return $this->_classifier->predict($sample);
+        $sample = Dev::apply('automata.strategy.neuralnetimageclassification.predict.1', $sample);
+        Dev::do('automata.strategy.neuralnetimageclassification.predict.action1', ['sample' => $sample]);
+
+        $prediction = $this->_classifier->predict($sample);
+
+        $prediction = Dev::apply('automata.strategy.neuralnetimageclassification.predict.2', $prediction);
+        Dev::do('automata.strategy.neuralnetimageclassification.predict.action2', ['sample' => $sample, 'prediction' => $prediction]);
+
+        return $prediction;
     }
 
     /**
@@ -60,12 +85,20 @@ class NeuralNetImageClassification extends Strategy
      */
     public function accuracy(): float
     {
+        if (empty($this->_testSamples) || empty($this->_testTargets)) {
+            return 0.0;
+        }
+
         $predicted = [];
         foreach ($this->_testSamples as $sample) {
             $predicted[] = $this->_classifier->predict($sample);
         }
 
-        return Accuracy::score($this->_testTargets, $predicted);
+        $accuracy = Accuracy::score($this->_testTargets, $predicted);
+        $accuracy = Dev::apply('automata.strategy.neuralnetimageclassification.accuracy.1', $accuracy);
+        Dev::do('automata.strategy.neuralnetimageclassification.accuracy.action1', ['accuracy' => $accuracy]);
+
+        return $accuracy;
     }
 
     /**
@@ -76,11 +109,15 @@ class NeuralNetImageClassification extends Strategy
      */
     public function saveModel(string $path): bool
     {
+        $path = Dev::apply('automata.strategy.neuralnetimageclassification.saveModel.1', $path);
+        Dev::do('automata.strategy.neuralnetimageclassification.saveModel.action1', ['path' => $path, 'model' => 'neural_net_classifier']);
+
         try {
             $this->_modelManager->saveToFile($this->_classifier, $path);
+            Dev::do('automata.strategy.neuralnetimageclassification.saveModel.action2', ['path' => $path, 'saved' => true]);
             return true;
         } catch (\Exception $e) {
-            // Handle the exception
+            Dev::do('automata.strategy.neuralnetimageclassification.saveModel.action3', ['path' => $path, 'saved' => false, 'error' => $e]);
             return false;
         }
     }
@@ -93,15 +130,20 @@ class NeuralNetImageClassification extends Strategy
      */
     public function loadModel(string $path): bool
     {
+        $path = Dev::apply('automata.strategy.neuralnetimageclassification.loadModel.1', $path);
+        Dev::do('automata.strategy.neuralnetimageclassification.loadModel.action1', ['path' => $path]);
+
         try {
             if (file_exists($path)) {
                 $this->_classifier = $this->_modelManager->restoreFromFile($path);
+                Dev::do('automata.strategy.neuralnetimageclassification.loadModel.action2', ['path' => $path, 'loaded' => true]);
                 return true;
             } else {
+                Dev::do('automata.strategy.neuralnetimageclassification.loadModel.action3', ['path' => $path, 'loaded' => false, 'reason' => 'missing']);
                 return false;
             }
         } catch (\Exception $e) {
-            // Handle the exception
+            Dev::do('automata.strategy.neuralnetimageclassification.loadModel.action4', ['path' => $path, 'loaded' => false, 'error' => $e]);
             return false;
         }
     }

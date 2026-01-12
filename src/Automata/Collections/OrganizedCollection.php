@@ -127,23 +127,28 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		
 		// Percentiles
 		$index = .25 * $count;
-		$modulus = $index%2;
+		$modulus = fmod($index, 2);
 		if ($modulus || $count <= 2) { // balancing arrays smaller than 2. TODO: Check is this math still works!!!
-			$q1 = $values[round($index)]['weight'];
+			$q1Index = (int)round($index);
+			$q1 = $values[$q1Index]['weight'];
 		} else {
-			$q1 = ($values[round($index)]['weight'] + $values[round($index+1)]['weight']) / 2;
+			$q1Index = (int)round($index);
+			$q1NextIndex = (int)round($index + 1);
+			$q1 = ($values[$q1Index]['weight'] + $values[$q1NextIndex]['weight']) / 2;
 		}
 
 		$index = .75 * $count;
-		$modulus = $index%2;
+		$modulus = fmod($index, 2);
 		if ($modulus || $count <= 3) { // balancing arrays smaller than 3. TODO: Check is this math still works!!!
-			$i = ($count <= 3) ? 0 : round($index);
+			$i = ($count <= 3) ? 0 : (int)round($index);
 			$q3 = $values[$i]['weight'];
 		} else {
 			if (count($values) == round($index+1)) { // fix for "Undefined Offset 6" error for values of length 5
 				$index--; // TODO: Make sure this math still works for quartiles!
 			}
-			$q3 = ($values[round($index)]['weight'] + $values[round($index+1)]['weight']) / 2;
+			$q3Index = (int)round($index);
+			$q3NextIndex = (int)round($index + 1);
+			$q3 = ($values[$q3Index]['weight'] + $values[$q3NextIndex]['weight']) / 2;
 		}
 
 		// die(var_dump($q3));
@@ -198,10 +203,13 @@ class OrganizedCollection extends Collection implements ICollection, ArrayAccess
 		$modulus = $count%2;
 		
 		if ($modulus && $count != 1) {
-			$median = ($values[round($middle, 0, PHP_ROUND_HALF_UP)]['weight'] + $values[round($middle, 0, PHP_ROUND_HALF_DOWN)]['weight']) / 2;
+			$upperIndex = (int)round($middle, 0, PHP_ROUND_HALF_UP);
+			$lowerIndex = (int)round($middle, 0, PHP_ROUND_HALF_DOWN);
+			$median = ($values[$upperIndex]['weight'] + $values[$lowerIndex]['weight']) / 2;
 		} else {
 			$middle = ($count == 1) ? 0 : $middle;
-			$median = $values[round($middle)]['weight'];
+			$medianIndex = (int)round($middle);
+			$median = $values[$medianIndex]['weight'];
 		}
 
 		$variancediff1 = $variancediff2 = $variancediff3 = 0;

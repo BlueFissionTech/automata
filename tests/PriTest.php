@@ -8,11 +8,23 @@ use Ds\PriorityQueue;
 
 class PriTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        if (!extension_loaded('ds')) {
+            $this->markTestSkipped('The ds extension is required for Pri tests.');
+        }
+    }
+
     public function testCanInstantiatePri(): void
     {
         $pri = new Pri();
         $this->assertInstanceOf(Pri::class, $pri);
-        $this->assertInstanceOf(PriorityQueue::class, $pri->cast()->_data);
+        $pri->cast();
+
+        $ref = new \ReflectionClass($pri);
+        $prop = $ref->getProperty('_data');
+        $prop->setAccessible(true);
+        $this->assertInstanceOf(PriorityQueue::class, $prop->getValue($pri));
     }
 
     public function testInsertElementIntoPri(): void

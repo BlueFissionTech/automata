@@ -6,6 +6,7 @@ use Exception;
 use BlueFission\Arr;
 use BlueFission\Str;
 use BlueFission\Func;
+use BlueFission\DevElation as Dev;
 
 class Documenter {
 
@@ -46,6 +47,7 @@ class Documenter {
 
 	public function __construct( ) {
 		$this->_buffer = Arr::make([]);
+        Dev::do('language.documenter.construct', ['buffer' => $this->_buffer]);
 	}
 
 	/**
@@ -67,6 +69,8 @@ class Documenter {
 
 	public function push( $cmd )
 	{
+        $cmd = Dev::apply('language.documenter.push_cmd', $cmd);
+        Dev::do('language.documenter.push_start', ['cmd' => $cmd]);
 		if ( !isset($this->_currentStatement) ) {
 			$this->_currentStatement = new Statement();
 		}
@@ -89,7 +93,9 @@ class Documenter {
 		if ( $this->_currentStatement->percentSatisfied() >= .7 ) {
 			$this->_statements[] = $this->_currentStatement;
 			$this->_currentStatement = new Statement();
+            Dev::do('language.documenter.statement_complete', ['statement' => end($this->_statements)]);
 		}
+        Dev::do('language.documenter.push_complete', ['cmd' => $cmd]);
 	}
 
 	private function isExpected( $cmd ) {
@@ -135,20 +141,23 @@ class Documenter {
 
 	public function processStatements()
 	{
+        Dev::do('language.documenter.process_start', ['statements' => $this->_statements]);
 		foreach ( $this->_statements as $statement ) {
 			$this->processStatement($statement);
 		}
+        Dev::do('language.documenter.process_complete', ['tree' => $this->_tree]);
 	}
 
 	private function processStatement( $statement )
 	{
 		$this->_nodes++;
 		$this->_tree[$this->_nodes] = $statement;
+        Dev::do('language.documenter.process_statement', ['statement' => $statement, 'index' => $this->_nodes]);
 	}
 
 	public function getTree()
 	{
-		return $this->_tree;
+        return Dev::apply('language.documenter.tree', $this->_tree);
 	}
 	
 	public function prepare_entity() {

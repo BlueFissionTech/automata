@@ -10,6 +10,7 @@ use Phpml\Tokenization\WhitespaceTokenizer;
 use Phpml\FeatureExtraction\TfIdfTransformer;
 use Phpml\ModelManager;
 use BlueFission\Arr;
+use BlueFission\DevElation as Dev;
 
 class KeywordIntentAnalyzer implements IAnalyzer
 {
@@ -18,12 +19,19 @@ class KeywordIntentAnalyzer implements IAnalyzer
 
     public function __construct(NaiveBayesTextClassification $intentClassifier, string $modelDirPath)
     {
-        $this->_intentClassifier = $intentClassifier;
-        $this->_modelDirPath = $modelDirPath;
+        $this->_intentClassifier = Dev::apply('intent.keyword.intent_classifier', $intentClassifier);
+        $this->_modelDirPath = Dev::apply('intent.keyword.model_dir', $modelDirPath);
+        Dev::do('intent.keyword.construct', ['keyword_analyzer_construct' => $this]);
     }
 
     public function analyze(string $input, Context $context, array $intents): Arr
     {
+        $input = Dev::apply('intent.keyword.input', $input);
+        $context = Dev::apply('intent.keyword.context', $context);
+        $intents = Dev::apply('intent.keyword.intents', $intents);
+
+        Dev::do('intent.keyword.analyze', ['keyword_analyze' => $input, 'context' => $context]);
+
         $scores = [];
 
         // Tokenize the input into words and convert to lowercase
@@ -92,6 +100,9 @@ class KeywordIntentAnalyzer implements IAnalyzer
         if ( !empty($scores) ) {
             arsort($scores);
         }
+
+        $scores = Dev::apply('intent.keyword.scores', $scores);
+        Dev::do('intent.keyword.result', ['keyword_scores' => $scores, 'classification' => $classification]);
 
         return Arr::make($scores);
     }

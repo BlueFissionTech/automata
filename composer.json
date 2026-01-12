@@ -29,6 +29,9 @@
         "phpunit/phpunit": "^11.1@dev",
         "php": ">=8.0.0"
     },
+    "suggest": {
+        "ext-ds": "Improves performance for collection types (Deque, Map, Set, Stack, PriorityQueue, Vector). Optional; Automata falls back when absent."
+    },
     "autoload": {
         "psr-4": {
             "BlueFission\\": "src/"

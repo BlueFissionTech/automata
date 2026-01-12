@@ -2,7 +2,7 @@
 
 namespace BlueFission\Automata\Strategy;
 
-use BlueFission\Obj;
+use BlueFission\DevElation as Dev;
 
 /**
  * KNearestRegression
@@ -39,6 +39,10 @@ class KNearestRegression extends Strategy
      */
     public function train(array $samples, array $labels, float $testSize = 0.2)
     {
+        $samples = Dev::apply('automata.strategy.knearestregression.train.1', $samples);
+        $labels  = Dev::apply('automata.strategy.knearestregression.train.2', $labels);
+        Dev::do('automata.strategy.knearestregression.train.action1', ['samples' => $samples, 'labels' => $labels]);
+
         $this->trainSamples = array_values($samples);
         $this->trainTargets = array_map('floatval', array_values($labels));
 
@@ -55,6 +59,9 @@ class KNearestRegression extends Strategy
      */
     public function predict($input)
     {
+        $input = Dev::apply('automata.strategy.knearestregression.predict.1', $input);
+        Dev::do('automata.strategy.knearestregression.predict.action1', ['input' => $input]);
+
         $features = (array)$input;
         $neighbors = $this->neighbors($features, $this->k);
 
@@ -77,10 +84,15 @@ class KNearestRegression extends Strategy
         }
 
         if ($weightSum === 0.0) {
-            return 0.0;
+            $prediction = 0.0;
+        } else {
+            $prediction = $sum / $weightSum;
         }
 
-        return $sum / $weightSum;
+        $prediction = Dev::apply('automata.strategy.knearestregression.predict.2', $prediction);
+        Dev::do('automata.strategy.knearestregression.predict.action2', ['input' => $input, 'prediction' => $prediction]);
+
+        return $prediction;
     }
 
     /**
@@ -89,23 +101,28 @@ class KNearestRegression extends Strategy
     public function accuracy(): float
     {
         if (empty($this->_testSamples) || empty($this->_testTargets)) {
-            return 0.0;
+            $rmse = 0.0;
+        } else {
+            $n = count($this->_testSamples);
+            if ($n === 0) {
+                $rmse = 0.0;
+            } else {
+                $sumSq = 0.0;
+                foreach ($this->_testSamples as $i => $sample) {
+                    $pred = $this->predict($sample);
+                    $actual = (float)$this->_testTargets[$i];
+                    $sumSq += ($pred - $actual) ** 2;
+                }
+
+                $mse = $sumSq / $n;
+                $rmse = sqrt($mse);
+            }
         }
 
-        $n = count($this->_testSamples);
-        if ($n === 0) {
-            return 0.0;
-        }
+        $rmse = Dev::apply('automata.strategy.knearestregression.accuracy.1', $rmse);
+        Dev::do('automata.strategy.knearestregression.accuracy.action1', ['rmse' => $rmse]);
 
-        $sumSq = 0.0;
-        foreach ($this->_testSamples as $i => $sample) {
-            $pred = $this->predict($sample);
-            $actual = (float)$this->_testTargets[$i];
-            $sumSq += ($pred - $actual) ** 2;
-        }
-
-        $mse = $sumSq / $n;
-        return sqrt($mse);
+        return $rmse;
     }
 
     /**
@@ -117,6 +134,9 @@ class KNearestRegression extends Strategy
      */
     public function neighbors(array $features, int $k): array
     {
+        $features = Dev::apply('automata.strategy.knearestregression.neighbors.1', $features);
+        Dev::do('automata.strategy.knearestregression.neighbors.action1', ['features' => $features, 'k' => $k]);
+
         $distances = [];
 
         foreach ($this->trainSamples as $index => $sample) {
@@ -130,7 +150,11 @@ class KNearestRegression extends Strategy
             return $a['distance'] <=> $b['distance'];
         });
 
-        return array_slice($distances, 0, max(0, $k));
+        $neighbors = array_slice($distances, 0, max(0, $k));
+        $neighbors = Dev::apply('automata.strategy.knearestregression.neighbors.2', $neighbors);
+        Dev::do('automata.strategy.knearestregression.neighbors.action2', ['features' => $features, 'k' => $k, 'neighbors' => $neighbors]);
+
+        return $neighbors;
     }
 
     /**

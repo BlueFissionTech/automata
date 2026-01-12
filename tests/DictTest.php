@@ -8,11 +8,23 @@ use Ds\Map;
 
 class DictTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        if (!extension_loaded('ds')) {
+            $this->markTestSkipped('The ds extension is required for Dict tests.');
+        }
+    }
+
     public function testCanInstantiateDict(): void
     {
         $dict = new Dict();
         $this->assertInstanceOf(Dict::class, $dict);
-        $this->assertInstanceOf(Map::class, $dict->cast()->_data);
+        $dict->cast();
+
+        $ref = new \ReflectionClass($dict);
+        $prop = $ref->getProperty('_data');
+        $prop->setAccessible(true);
+        $this->assertInstanceOf(Map::class, $prop->getValue($dict));
     }
 
     public function testPutAndGetElement(): void

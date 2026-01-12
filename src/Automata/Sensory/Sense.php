@@ -8,8 +8,11 @@ use BlueFission\Arr;
 use BlueFission\Behavioral\Programmable;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\Action;
+use BlueFission\Behavioral\Behaviors\Behavior;
+use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Automata\Language\Preparer;
 use BlueFission\Str;
+use BlueFission\DevElation as Dev;
 
 /**
  * Possible senses: visual, textual, auditory
@@ -69,7 +72,7 @@ class Sense extends Obj {
 		parent::__construct();
 		$this->__programmableConstruct();
 
-		$this->_parent = $parent;
+		$this->_parent = Dev::apply('sensory.sense.parent', $parent);
 		$this->_map = new OrganizedCollection();
 		$this->_map->autoSort(false);
 		$this->reset();
@@ -101,6 +104,7 @@ class Sense extends Obj {
 	        }
 	        return [];
 		};
+        Dev::do('sensory.sense.construct', ['parent' => $this->_parent]);
 	}
 
 	/**
@@ -108,6 +112,7 @@ class Sense extends Obj {
      */
 	public function reset()
 	{
+        Dev::do('sensory.sense.reset', ['settings' => $this->_settings]);
 		$this->_settings = $this->_config;
 		$this->_map->clear();
 		$this->_depth = -1;
@@ -120,6 +125,7 @@ class Sense extends Obj {
      */
 	protected function build( $input )
 	{
+        $input = Dev::apply('sensory.sense.build_input', $input);
 		$data = [];
 		foreach ($input as $piece) {
 			// if ( $this->_depth > 0) {
@@ -128,7 +134,7 @@ class Sense extends Obj {
 			// 	$data[] = $piece;
 			// }
 			$data[] = $piece;
-		}
+        }
 
 		$i = 0;
 		$j = 0;
@@ -159,7 +165,9 @@ class Sense extends Obj {
      * @return array Prepared input data.
      */
 	protected function prepare( $input ) {
-		return call_user_func_array($this->_preparation, [$input]);
+        $input = Dev::apply('sensory.sense.prepare_input', $input);
+		$result = call_user_func_array($this->_preparation, [$input]);
+        return Dev::apply('sensory.sense.prepare_result', $result);
 	}
 
 	/**
@@ -178,8 +186,10 @@ class Sense extends Obj {
      * @return mixed The translated data.
      */
 	protected function buffer( $data ) {
+        $data = Dev::apply('sensory.sense.buffer_input', $data);
 		$this->_buffer[] = $data;
 		$translation = $this->translate($data);
+		$translation = Dev::apply('sensory.sense.buffer_translation', $translation);
 		return $translation;
 	}
 
@@ -195,7 +205,7 @@ class Sense extends Obj {
 
 		$this->_buffer = [];
 
-		$this->_input = $input;
+		$this->_input = Dev::apply('sensory.sense.invoke_input', $input);
 
 		$input = $this->prepare($this->_input);
 
@@ -305,6 +315,7 @@ class Sense extends Obj {
 		$this->_map->stats();
 
 		$data = $this->_map->data();
+        Dev::do('sensory.sense.invoke_success', ['data' => $data]);
 
 		$this->dispatch(Event::SUCCESS, $data);
 		$this->focus($data);
@@ -334,6 +345,7 @@ class Sense extends Obj {
      * @param array $data The processed data.
      */
 	protected function focus( $data ) {
+        $data = Dev::apply('sensory.sense.focus_input', $data);
 		// $data = $data[0];
 		$this->dispatch('OnSweep', $data);
 		
@@ -345,7 +357,7 @@ class Sense extends Obj {
 
 			// $this->invoke($this->_matrix);
 			$event = new Action('DoEnhance');
-			$event->_context = ['config'=>$this->_settings,'input'=>$this->_input, 'data'=>$data];
+			$event->context = ['config'=>$this->_settings,'input'=>$this->_input, 'data'=>$data];
 			$this->dispatch($event);
 
 			if ($this->_depth < self::MAX_DEPTH) {
@@ -359,6 +371,7 @@ class Sense extends Obj {
 		// die(var_dump($data['values']));
 		$this->_map->optimize();
 		$data = $this->_map->data();
+        Dev::do('sensory.sense.complete', ['data' => $data]);
 		$this->dispatch(Event::COMPLETE, $data);
 		// if ( $this->_config['attention'] ) {
 		// 	$this->_config['quality'] =
@@ -378,9 +391,9 @@ class Sense extends Obj {
 		// if ( $this->_map->has($chunk) ) {
 		// 	return $chunk;
 		// }
-		$this->dispatch('OnCapture', $chunk);
-		
-		return crc32 ($chunk);
+        Dev::do('sensory.sense.capture', ['chunk' => $chunk]);
+		$translated = crc32 ($chunk);
+        return Dev::apply('sensory.sense.translated', $translated);
 		
 		// return $chunk;
 	}
@@ -465,4 +478,25 @@ class Sense extends Obj {
 		$this->behavior( new Event( Event::COMPLETE ) );
 		$this->behavior( new Event( 'OnCapture' ) );
 	}
+
+	/**
+     * Dispatches a behavior event with the context set on the behavior.
+     *
+     * @param mixed $behavior
+     * @param mixed|null $args
+     */
+    public function dispatch($behavior, $args = null): IDispatcher
+    {
+        if (Str::is($behavior)) {
+            $behavior = new Behavior($behavior);
+            $behavior->target = $this;
+        }
+
+        if ($behavior->target == $this) {
+            $behavior->context = $args;
+            $args = null;
+        }
+
+        return parent::dispatch($behavior, $args);
+    }
 }

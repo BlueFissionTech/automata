@@ -1,6 +1,8 @@
 <?php
 namespace BlueFission\Automata\Strategy;
 
+use BlueFission\DevElation as Dev;
+
 class Basic extends Strategy
 {
     protected $_success;
@@ -15,7 +17,7 @@ class Basic extends Strategy
         $this->_buffer = [];
         $this->_rules = [];
         $this->_success = 0;
-        $this->_prediction = 0;
+        $this->_prediction = null;
         $this->_guesses = 0;
         $this->_totaltime = 0;
     }
@@ -29,6 +31,11 @@ class Basic extends Strategy
      */
     public function train(array $samples, array $labels, float $testSize = 0.2)
     {
+        // Allow callers to tweak or instrument training data.
+        $samples = Dev::apply('automata.strategy.basic.train.1', $samples);
+        $labels  = Dev::apply('automata.strategy.basic.train.2', $labels);
+        Dev::do('automata.strategy.basic.train.action1', ['samples' => $samples, 'labels' => $labels]);
+
         foreach ($samples as $index => $pattern) {
             $array = [];
             $array[] = $pattern;
@@ -45,26 +52,45 @@ class Basic extends Strategy
      */
     public function predict($val)
     {
+        // Input can be filtered or observed by DevElation.
+        $val = Dev::apply('automata.strategy.basic.predict.1', $val);
+        Dev::do('automata.strategy.basic.predict.action1', ['input' => $val]);
+
         $this->_guesses++;
         $this->_buffer[] = $val;
 
-        // Check if the buffer matches any rule
+        $matched = false;
         foreach ($this->_rules as $rule) {
             if ($this->_buffer === $rule[0]) {
                 $this->_prediction = $rule[1];
+                $matched = true;
                 break;
             }
         }
 
-        // If the prediction matches the input, increment success count
-        if ($this->_prediction == $val) {
-            $this->_success++;
-        } else {
-            // Clear the buffer if prediction is incorrect
+        if (!$matched) {
+            $this->_prediction = $val;
+            $this->_buffer = [];
+        } elseif ($this->_prediction != $val) {
             $this->_buffer = [];
         }
 
-        return $this->_prediction;
+        if ($this->_prediction == $val) {
+            $this->_success++;
+        }
+
+        $prediction = $this->_prediction;
+
+        // Allow post-prediction filters and actions.
+        $prediction = Dev::apply('automata.strategy.basic.predict.2', $prediction);
+        Dev::do('automata.strategy.basic.predict.action2', [
+            'input'      => $val,
+            'prediction' => $prediction,
+            'success'    => $this->_success,
+            'guesses'    => $this->_guesses,
+        ]);
+
+        return $prediction;
     }
 
     /**
@@ -75,9 +101,15 @@ class Basic extends Strategy
     public function accuracy(): float
     {
         if ($this->_guesses === 0) {
-            return 0.0;
+            $accuracy = 0.0;
+        } else {
+            $accuracy = $this->_success / $this->_guesses;
         }
-        return $this->_success / $this->_guesses;
+
+        $accuracy = Dev::apply('automata.strategy.basic.accuracy.1', $accuracy);
+        Dev::do('automata.strategy.basic.accuracy.action1', ['accuracy' => $accuracy]);
+
+        return $accuracy;
     }
 
     /**
@@ -88,12 +120,16 @@ class Basic extends Strategy
      */
     public function saveModel(string $path): bool
     {
+        $path = Dev::apply('automata.strategy.basic.saveModel.1', $path);
+        Dev::do('automata.strategy.basic.saveModel.action1', ['path' => $path, 'model' => $this]);
+
         try {
             $modelData = serialize($this);
             file_put_contents($path, $modelData);
+            Dev::do('automata.strategy.basic.saveModel.action2', ['path' => $path, 'saved' => true]);
             return true;
         } catch (\Exception $e) {
-            // Handle the exception
+            Dev::do('automata.strategy.basic.saveModel.action3', ['path' => $path, 'saved' => false, 'error' => $e]);
             return false;
         }
     }
@@ -106,6 +142,9 @@ class Basic extends Strategy
      */
     public function loadModel(string $path): bool
     {
+        $path = Dev::apply('automata.strategy.basic.loadModel.1', $path);
+        Dev::do('automata.strategy.basic.loadModel.action1', ['path' => $path]);
+
         try {
             if (file_exists($path)) {
                 $modelData = file_get_contents($path);
@@ -113,12 +152,14 @@ class Basic extends Strategy
                 foreach (get_object_vars($model) as $property => $value) {
                     $this->$property = $value;
                 }
+                Dev::do('automata.strategy.basic.loadModel.action2', ['path' => $path, 'loaded' => true, 'model' => $this]);
                 return true;
             } else {
+                Dev::do('automata.strategy.basic.loadModel.action3', ['path' => $path, 'loaded' => false, 'reason' => 'missing']);
                 return false;
             }
         } catch (\Exception $e) {
-            // Handle the exception
+            Dev::do('automata.strategy.basic.loadModel.action4', ['path' => $path, 'loaded' => false, 'error' => $e]);
             return false;
         }
     }

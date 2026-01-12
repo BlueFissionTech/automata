@@ -5,6 +5,7 @@ use BlueFission\Arr;
 use BlueFission\Behavioral\Configurable;
 use BlueFission\Behavioral\IConfigurable;
 use BlueFission\Behavioral\IDispatcher;
+use BlueFission\DevElation as Dev;
 
 /**
  * Expert
@@ -42,7 +43,9 @@ class Expert implements IConfigurable, IDispatcher
      */
     public function addFact(IFact $fact): void
     {
+        $fact = Dev::apply('expert.add_fact', $fact);
         $this->_facts->set($fact->getName(), $fact);
+        Dev::do('expert.fact_added', ['fact' => $fact]);
     }
 
     /**
@@ -50,7 +53,9 @@ class Expert implements IConfigurable, IDispatcher
      */
     public function addRule(IRule $rule): void
     {
+        $rule = Dev::apply('expert.add_rule', $rule);
         $this->_rules->set($rule->getName(), $rule);
+        Dev::do('expert.rule_added', ['rule' => $rule]);
     }
 
     /**
@@ -58,7 +63,9 @@ class Expert implements IConfigurable, IDispatcher
      */
     public function setStrategy(IApproach $approach): void
     {
+        $approach = Dev::apply('expert.set_strategy', $approach);
         $this->_approach = $approach;
+        Dev::do('expert.strategy_set', ['approach' => $approach]);
     }
 
     /**
@@ -71,7 +78,18 @@ class Expert implements IConfigurable, IDispatcher
             throw new \RuntimeException("No approach has been set.");
         }
 
-        return $this->_approach->execute($this);
+        Dev::do('expert.reason_start', [
+            'approach' => $this->_approach,
+            'facts' => $this->getFacts(),
+            'rules' => $this->getRules(),
+        ]);
+
+        $result = $this->_approach->execute($this);
+
+        $result = Dev::apply('expert.reason_complete', $result);
+        Dev::do('expert.reason_result', ['result' => $result]);
+
+        return $result;
     }
 
     /**
@@ -81,7 +99,8 @@ class Expert implements IConfigurable, IDispatcher
      */
     public function getFacts(): array
     {
-        return $this->_facts->val();
+        $facts = $this->_facts->val();
+        return Dev::apply('expert.get_facts', $facts);
     }
 
     /**
@@ -91,7 +110,8 @@ class Expert implements IConfigurable, IDispatcher
      */
     public function getRules(): array
     {
-        return $this->_rules->val();
+        $rules = $this->_rules->val();
+        return Dev::apply('expert.get_rules', $rules);
     }
 
     /**
@@ -106,14 +126,18 @@ class Expert implements IConfigurable, IDispatcher
         do {
             $changes = false;
 
-            foreach ($this->_rules as $rule) {
-                if ($rule->isApplicable($this->_facts->val())) {
+            $rules = Dev::apply('expert.infer_rules', $this->_rules->val());
+            $facts = Dev::apply('expert.infer_facts', $this->_facts->val());
+
+            foreach ($rules as $rule) {
+                if ($rule->isApplicable($facts)) {
                     $fact = $rule->infer();
                     // Avoid infinite loops by only adding facts
                     // that are not already present by name.
                     if (!$this->query($fact)) {
                         $this->addFact($fact);
                         $changes = true;
+                        Dev::do('expert.inferred_fact', ['inferred_fact' => $fact, 'rule' => $rule]);
                     }
                 }
             }
@@ -126,6 +150,9 @@ class Expert implements IConfigurable, IDispatcher
      */
     public function query(Fact $fact): bool
     {
-        return $this->_facts->hasKey($fact->getName());
+        $fact = Dev::apply('expert.query_fact', $fact);
+        $result = $this->_facts->hasKey($fact->getName());
+        Dev::do('expert.query_result', ['query' => $fact, 'exists' => $result]);
+        return $result;
     }
 }

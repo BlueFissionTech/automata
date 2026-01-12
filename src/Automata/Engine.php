@@ -167,7 +167,7 @@ class Engine extends Intelligence implements ISphere {
 		} else {
 			// $this->confirm($recipientName, $behavior);
 			$event = new Action('DoConfirm');
-			$event->_context = array('service'=>$recipientName, 'behavior'=>$behavior);
+			$event->context = array('service'=>$recipientName, 'behavior'=>$behavior);
 			$this->dispatch($event);
 		}
 	}
@@ -222,8 +222,8 @@ class Engine extends Intelligence implements ISphere {
 	}
 
 	public function queueInput( $behavior ) {
-		$this->classify($behavior->_context);
-		// Queue::enqueue( $behavior->_target->name(), $behavior->_context );
+		$this->classify($behavior->context);
+		// Queue::enqueue( $behavior->target->name(), $behavior->context );
 	}
 
 	public function strategy($name, $class) {

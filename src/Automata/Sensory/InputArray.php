@@ -1,13 +1,19 @@
 <?php
 namespace BlueFission\Automata\Sensory;
 
-use BlueFission\Behavioral\Dispatcher;
+use BlueFission\Behavioral\Dispatches;
+use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Collections\Collection;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Data\Queues\MemQueue as Queue;
 use BlueFission\Automata\Collections\OrganizedCollection;
+use BlueFission\Automata\InputType;
+use BlueFission\DevElation as Dev;
 
-class InputArray extends Dispatcher {
+class InputArray implements IDispatcher {
+	use Dispatches {
+		Dispatches::__construct as private __dispatchesConstruct;
+	}
 	
 	private $_name;
 	private $_inputs;
@@ -15,15 +21,19 @@ class InputArray extends Dispatcher {
 
 	public function __construct($name) {
 
-		parent::__construct();
+		$this->__dispatchesConstruct();
 
-		$this->_name = $name;
+		$this->_name = Dev::apply('sensory.inputarray.name', $name);
 		$this->_inputs = [];
 		$this->_senses = [];
+
+		Dev::do('sensory.inputarray.construct', ['name' => $this->_name]);
 	}
 
 	public function create( $label, $processors = [] )
 	{
+        $label = Dev::apply('sensory.inputarray.create_label', $label);
+        $processors = Dev::apply('sensory.inputarray.create_processors', $processors);
 		$input = new Input();
 
 		$input->name($label);
@@ -53,17 +63,21 @@ class InputArray extends Dispatcher {
 
 		$this->_inputs[$label] = $input;
 		$this->_senses[$label] = $sense;
+        Dev::do('sensory.inputarray.created', ['label' => $label, 'input' => $input, 'sense' => $sense]);
 	}
 
 	public function observe( $package )
 	{
-		foreach( $package as $key=>$data ) {
+        $package = Dev::apply('sensory.inputarray.observe_package', $package);
+		foreach ($package as $key=>$data ) {
 			$this->read($data, $key);
 		}
+        Dev::do('sensory.inputarray.observe', ['package' => $package]);
 	}
 
 	public function read( $data, $type = null )
 	{
+        $data = Dev::apply('sensory.inputarray.read_data', $data);
 		$type = $type ?? $this->detect($data);
 
 		if ( isset($this->_inputs[$type]) ) {
@@ -72,18 +86,20 @@ class InputArray extends Dispatcher {
 			current($this->_inputs)->scan($data);
 		}
 
-		// $this->_inputs->get($type)->scan($data);
+		Dev::do('sensory.inputarray.read', ['type' => $type, 'data' => $data]);
 	}
 
 	public function parse($data, $type = null) 
 	{
 		$type = $type ?? $this->detect($data);
-
+	
+		Dev::do('sensory.inputarray.invoke', ['type' => $type, 'data' => $data]);
 		$this->_senses[$type]->invoke($data);
 	}
 
 	public function process()
 	{
+        Dev::do('sensory.inputarray.process_start', ['queue' => $this->_name]);
 		$count = 0;
 		$max = 10000;
 		while (!Queue::is_empty($this->_name)) {
@@ -100,33 +116,38 @@ class InputArray extends Dispatcher {
 				break;
 			}
 		}
+        Dev::do('sensory.inputarray.process_complete', ['count' => $count]);
 	}
 
 	public function reset()
 	{
+        Dev::do('sensory.inputarray.reset_start', []);
 		foreach( $this->_senses as $sense ) {
 			$sense->reset();
 		}
+        Dev::do('sensory.inputarray.reset', []);
 	}
 
 	public function detect( $data )
 	{
-		return self::TEXTUAL;
+		return InputType::TEXT;
 	}
 
 	public function onInputComplete( $behavior )
 	{
-		// Queue::enqueue( $behavior->_target->name(), $behavior->_context );
-		Queue::enqueue( $this->_name, [$behavior->_target->name(), $behavior->_context] );
+		Queue::enqueue( $this->_name, [$behavior->target->name(), $behavior->context] );
+        Dev::do('sensory.inputarray.input_complete', ['behavior' => $behavior]);
 	}
 
 	public function onParseSuccess( $behavior, $data )
 	{
+        Dev::do('sensory.inputarray.parse_success', ['behavior' => $behavior, 'data' => $data]);
 		$this->dispatch($behavior, $data[0]);
 	}
 
 	public function onParseComplete( $behavior, $data )
 	{
+        Dev::do('sensory.inputarray.parse_complete', ['behavior' => $behavior, 'data' => $data]);
 		$this->dispatch($behavior, $data[0]);
 	}
 }

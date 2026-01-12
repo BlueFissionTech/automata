@@ -12,7 +12,18 @@ class VecTest extends TestCase
     {
         $vec = new Vec();
         $this->assertInstanceOf(Vec::class, $vec);
-        $this->assertInstanceOf(Vector::class, $vec->cast()->_data); // Ensure the data is indeed a Vector
+        $vec->cast();
+
+        $ref = new \ReflectionClass($vec);
+        $prop = $ref->getProperty('_data');
+        $prop->setAccessible(true);
+        $data = $prop->getValue($vec);
+
+        if (extension_loaded('ds')) {
+            $this->assertInstanceOf(Vector::class, $data); // Ensure the data is indeed a Vector
+        } else {
+            $this->assertIsArray($data);
+        }
     }
 
     public function testAddElementToVec(): void

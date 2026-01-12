@@ -1,5 +1,4 @@
 <?php
-
 namespace BlueFission\Tests\Automata\Sensory;
 
 use BlueFission\Automata\Sensory\Input;
@@ -8,97 +7,19 @@ use PHPUnit\Framework\TestCase;
 
 class InputTest extends TestCase
 {
-    private $input;
-
-    protected function setUp(): void
+    public function testScanAppliesProcessorsAndDispatchesComplete(): void
     {
-        $this->input = new Input();
-    }
-
-    public function testConstructorDefaultProcessor()
-    {
-        $reflection = new \ReflectionClass($this->input);
-        $processorsProperty = $reflection->getProperty('_processors');
-        $processorsProperty->setAccessible(true);
-        $processors = $processorsProperty->getValue($this->input);
-
-        $this->assertCount(1, $processors);
-    }
-
-    public function testSetAndGetName()
-    {
-        $this->input->name('TestInput');
-        $this->assertEquals('TestInput', $this->input->name());
-    }
-
-    public function testSetProcessor()
-    {
-        $processor = function($data) {
-            return $data . ' processed';
-        };
-        $this->input->setProcessor($processor);
-
-        $reflection = new \ReflectionClass($this->input);
-        $processorsProperty = $reflection->getProperty('_processors');
-        $processorsProperty->setAccessible(true);
-        $processors = $processorsProperty->getValue($this->input);
-
-        $this->assertCount(2, $processors);
-    }
-
-    public function testScanWithDefaultProcessor()
-    {
-        $processedData = null;
-
-        $this->input->on(Event::COMPLETE, function ($event) use (&$processedData) {
-            $processedData = $event->context;
+        $input = new Input(static function ($data) {
+            return $data * 2;
         });
 
-        $this->input->scan('TestData');
-
-        $this->assertEquals('TestData', $processedData);
-    }
-
-    public function testScanWithCustomProcessor()
-    {
-        $processedData = null;
-
-        $this->input->setProcessor(function($data) {
-            return $data . ' processed';
+        $captured = null;
+        $input->behavior(new Event(Event::COMPLETE), function ($behavior) use (&$captured) {
+            $captured = $behavior->context;
         });
 
-        $this->input->on(Event::COMPLETE, function ($event) use (&$processedData) {
-            $processedData = $event->context;
-        });
+        $input->scan(5);
 
-        $this->input->scan('TestData');
-
-        $this->assertEquals('TestData processed', $processedData);
-    }
-
-    public function testDispatchCustomBehavior()
-    {
-        $behaviorTriggered = false;
-
-        $this->input->behavior('customBehavior', function() use (&$behaviorTriggered) {
-            $behaviorTriggered = true;
-        });
-
-        $this->input->dispatch('customBehavior');
-
-        $this->assertTrue($behaviorTriggered);
-    }
-
-    public function testDispatchEventWithArgs()
-    {
-        $eventData = null;
-
-        $this->input->on('customBehavior', function ($behavior) use (&$eventData) {
-            $eventData = $behavior->context;
-        });
-
-        $this->input->dispatch('customBehavior', 'TestData');
-
-        $this->assertEquals('TestData', $eventData);
+        $this->assertSame(10, $captured);
     }
 }

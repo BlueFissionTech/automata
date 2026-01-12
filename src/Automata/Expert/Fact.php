@@ -1,6 +1,8 @@
 <?php
 namespace BlueFission\Automata\Expert;
 
+use BlueFission\DevElation as Dev;
+
 class Fact implements IFact
 {
     protected string $_name;
@@ -8,25 +10,27 @@ class Fact implements IFact
 
     public function __construct(string $name, mixed $value)
     {
-        $this->_name = $name;
-        $this->_value = $value;
+        $this->_name = Dev::apply('fact.init.name', $name);
+        $this->_value = Dev::apply('fact.init.value', $value);
+        Dev::do('fact.created', ['fact' => $this]);
     }
 
     public function getName(): string
     {
-        return $this->_name;
+        return Dev::apply('fact.name', $this->_name);
     }
 
     public function getValue(): mixed
     {
-        return $this->_value;
+        $value = Dev::apply('fact.value', $this->_value);
+        Dev::do('fact.access_value', ['fact' => $this, 'value' => $value]);
+        return $value;
     }
 
     public function evaluate(): bool
     {
-        // Define the fact evaluation logic here.
-        // This could be as simple or as complex as needed.
-        // For this example, let's assume the fact value is itself the boolean evaluation.
-        return (bool) $this->_value;
+        $result = (bool) Dev::apply('fact.evaluate', $this->_value);
+        Dev::do('fact.evaluated', ['fact' => $this, 'evaluation' => $result]);
+        return $result;
     }
 }

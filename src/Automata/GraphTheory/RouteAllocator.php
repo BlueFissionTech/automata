@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\GraphTheory;
 
 use BlueFission\Obj;
+use BlueFission\DevElation as Dev;
 use BlueFission\Behavioral\Dispatches;
 use BlueFission\Behavioral\Behaviors\Event;
 
@@ -52,6 +53,16 @@ class RouteAllocator extends Obj
      */
     public function allocate(array $assets, array $demands, array $edgeCapacities): array
     {
+        // Allow filters/actions to adjust or observe allocation inputs.
+        $assets         = Dev::apply('automata.graphtheory.routeallocator.allocate.1', $assets);
+        $demands        = Dev::apply('automata.graphtheory.routeallocator.allocate.2', $demands);
+        $edgeCapacities = Dev::apply('automata.graphtheory.routeallocator.allocate.3', $edgeCapacities);
+        Dev::do('automata.graphtheory.routeallocator.allocate.action1', [
+            'assets'         => $assets,
+            'demands'        => $demands,
+            'edgeCapacities' => $edgeCapacities,
+        ]);
+
         $fitness = $this->fitness;
         $allocations = [];
         $used = []; // edgeKey => usedAmount
@@ -125,6 +136,9 @@ class RouteAllocator extends Obj
                 }
             }
         }
+
+        $allocations = Dev::apply('automata.graphtheory.routeallocator.allocate.4', $allocations);
+        Dev::do('automata.graphtheory.routeallocator.allocate.action2', ['allocations' => $allocations]);
 
         return $allocations;
     }

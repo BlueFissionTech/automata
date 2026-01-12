@@ -8,11 +8,23 @@ use Ds\Stack;
 
 class PileTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        if (!extension_loaded('ds')) {
+            $this->markTestSkipped('The ds extension is required for Pile tests.');
+        }
+    }
+
     public function testCanInstantiatePile(): void
     {
         $pile = new Pile();
         $this->assertInstanceOf(Pile::class, $pile);
-        $this->assertInstanceOf(Stack::class, $pile->cast()->_data);
+        $pile->cast();
+
+        $ref = new \ReflectionClass($pile);
+        $prop = $ref->getProperty('_data');
+        $prop->setAccessible(true);
+        $this->assertInstanceOf(Stack::class, $prop->getValue($pile));
     }
 
     public function testPushAndPeekElement(): void

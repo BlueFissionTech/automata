@@ -1,8 +1,8 @@
 <?php
 namespace BlueFission\Automata\Strategy;
 
+use BlueFission\DevElation as Dev;
 use Phpml\Tokenization\WhitespaceTokenizer;
-use Phpml\Tokenization\NGramTokenizer;
 use Phpml\Metric\Accuracy;
 
 /**
@@ -15,8 +15,6 @@ use Phpml\Metric\Accuracy;
 class NGramTextPrediction extends Strategy
 {
     private WhitespaceTokenizer $_tokenizer;
-    private ?NGramTokenizer $_nGramTokenizer = null;
-
     /** @var array<string,array<string,int>> */
     private array $_ngramCounts = [];
 
@@ -34,15 +32,19 @@ class NGramTextPrediction extends Strategy
      */
     public function train(array $samples, array $labels, float $testSize = 0.2)
     {
+        $samples = Dev::apply('automata.strategy.ngramtextprediction.train.1', $samples);
+        $labels  = Dev::apply('automata.strategy.ngramtextprediction.train.2', $labels);
+        Dev::do('automata.strategy.ngramtextprediction.train.action1', ['samples' => $samples, 'labels' => $labels, 'testSize' => $testSize]);
+
         $n = 2; // default to bigrams for simplicity
-        $this->_nGramTokenizer = new NGramTokenizer($n + 1);
+        $size = $n + 1;
 
         $allNGrams = [];
         $this->_ngramCounts = [];
 
         foreach ($samples as $sample) {
             $words = $this->_tokenizer->tokenize((string)$sample);
-            $nGrams = $this->_nGramTokenizer->tokenize($words);
+            $nGrams = $this->buildNGrams($words, $size);
             foreach ($nGrams as $nGram) {
                 $context = implode(' ', array_slice($nGram, 0, -1));
                 $target = end($nGram);
@@ -72,6 +74,11 @@ class NGramTextPrediction extends Strategy
 
         $this->_testSamples = array_column($testNGrams, 0);
         $this->_testTargets = array_column($testNGrams, 1);
+
+        Dev::do('automata.strategy.ngramtextprediction.train.action2', [
+            'trainNGrams' => $trainNGrams,
+            'testNGrams'  => $testNGrams,
+        ]);
     }
 
     /**
@@ -82,6 +89,9 @@ class NGramTextPrediction extends Strategy
      */
     public function predict($input): string
     {
+        $input = Dev::apply('automata.strategy.ngramtextprediction.predict.1', $input);
+        Dev::do('automata.strategy.ngramtextprediction.predict.action1', ['input' => $input]);
+
         $context = is_array($input) ? implode(' ', $input) : (string)$input;
 
         if (!isset($this->_ngramCounts[$context])) {
@@ -91,7 +101,11 @@ class NGramTextPrediction extends Strategy
         $choices = $this->_ngramCounts[$context];
         arsort($choices);
 
-        return (string)array_key_first($choices);
+        $prediction = (string)array_key_first($choices);
+        $prediction = Dev::apply('automata.strategy.ngramtextprediction.predict.2', $prediction);
+        Dev::do('automata.strategy.ngramtextprediction.predict.action2', ['input' => $input, 'prediction' => $prediction]);
+
+        return $prediction;
     }
 
     public function accuracy(): float
@@ -101,11 +115,48 @@ class NGramTextPrediction extends Strategy
         }
 
         $predicted = [];
-        foreach ($this->_testSamples as $context) {
+        $targets = [];
+        foreach ($this->_testSamples as $index => $context) {
+            if (!isset($this->_ngramCounts[$context])) {
+                continue;
+            }
+
             $words = explode(' ', $context);
             $predicted[] = $this->predict($words);
+            $targets[] = $this->_testTargets[$index];
         }
 
-        return Accuracy::score($this->_testTargets, $predicted);
+        if (empty($targets)) {
+            return 0.0;
+        }
+
+        $accuracy = Accuracy::score($targets, $predicted);
+        $accuracy = Dev::apply('automata.strategy.ngramtextprediction.accuracy.1', $accuracy);
+        Dev::do('automata.strategy.ngramtextprediction.accuracy.action1', ['accuracy' => $accuracy]);
+
+        return $accuracy;
+    }
+
+    /**
+     * Build n-gram sequences of tokens from a list of words.
+     *
+     * @param array<int,string> $tokens
+     * @param int $size number of words per n-gram
+     * @return array<int,array<int,string>>
+     */
+    private function buildNGrams(array $tokens, int $size): array
+    {
+        $ngrams = [];
+        $count = count($tokens);
+
+        if ($size <= 0 || $count < $size) {
+            return $ngrams;
+        }
+
+        for ($i = 0; $i <= $count - $size; $i++) {
+            $ngrams[] = array_slice($tokens, $i, $size);
+        }
+
+        return $ngrams;
     }
 }

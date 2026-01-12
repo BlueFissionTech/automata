@@ -4,6 +4,7 @@ namespace BlueFission\Automata\Parsing\Preparers;
 
 use BlueFission\Parsing\Preparers\BasePreparer;
 use BlueFission\Parsing\Element;
+use BlueFission\DevElation as Dev;
 
 class LLMPreparer extends BasePreparer
 {
@@ -14,7 +15,10 @@ class LLMPreparer extends BasePreparer
 		}
 
         if (method_exists($element, 'setDriver')) {
-        	$element->setDriver($this->data->getLLM());
+        	$driver = $this->data->getLLM();
+        	$driver = Dev::apply('automata.parsing.preparers.llmpreparer.prepare.1', $driver);
+        	$element->setDriver($driver);
+        	Dev::do('automata.parsing.preparers.llmpreparer.prepare.action1', ['element' => $element, 'driver' => $driver]);
         }
 	}
 }

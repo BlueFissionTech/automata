@@ -4,16 +4,23 @@ namespace BlueFission\Automata\Sensory;
 
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\Behavior;
-use BlueFission\Behavioral\Dispatcher;
+use BlueFission\Behavioral\Dispatches;
+use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Collections\Collection;
 use BlueFission\Str;
+use BlueFission\DevElation as Dev;
 
 /**
  * Input class handles the processing of input data through a series of processors.
  * It extends Dispatcher to utilize event-driven behavior.
  */
-class Input extends Dispatcher
+class Input implements IDispatcher
 {
+    use Dispatches {
+        Dispatches::__construct as private __dispatchesConstruct;
+        Dispatches::dispatch as private __dispatchFromTrait;
+    }
+
     /**
      * @var Collection $_processors Collection of processors to process the input data.
      */
@@ -31,9 +38,8 @@ class Input extends Dispatcher
      */
     public function __construct($processor = null)
     {
-        parent::__construct();
+        $this->__dispatchesConstruct();
 
-        // If no processor is provided, use a default processor that returns the data as is
         if (!$processor) {
             $processor = function($data) {
                 return $data;
@@ -41,7 +47,8 @@ class Input extends Dispatcher
         }
 
         $this->_processors = new Collection();
-        $this->_processors[] = $processor;
+        $this->_processors[] = Dev::apply('sensory.input.processor', $processor);
+        Dev::do('sensory.input.construct', ['processor' => $processor, 'instance' => $this]);
     }
 
     /**
@@ -78,17 +85,19 @@ class Input extends Dispatcher
     {
         // Add the additional processor function if provided
         if ($processor) {
-            $this->_processors[] = $processor;
+            $this->_processors[] = Dev::apply('sensory.input.extra_processor', $processor);
         }
 
         // Process the data through all processors
         foreach ($this->_processors as $processor) {
             // Apply the processor function to the data
-            $data = call_user_func_array($processor, [$data]);
+            $data = Dev::apply('sensory.input.processor.apply', call_user_func_array($processor, [$data]));
         }
 
         // Dispatch a complete event with the processed data
+        $data = Dev::apply('sensory.input.scan_result', $data);
         $this->dispatch(Event::COMPLETE, $data);
+        Dev::do('sensory.input.scan', ['data' => $data]);
     }
 
     /**
@@ -97,22 +106,22 @@ class Input extends Dispatcher
      * @param mixed $behavior The behavior to dispatch. Can be a string or a Behavior object.
      * @param mixed|null $args Optional arguments to pass with the behavior.
      */
-    public function dispatch($behavior, $args = null)
+    public function dispatch($behavior, $args = null): IDispatcher
     {
         // If the behavior is a string, create a new Behavior object
         if (Str::is($behavior)) {
             $behavior = new Behavior($behavior);
-            $behavior->_target = $this;
+            $behavior->target = $this;
         }
 
         // If the behavior's target is this input, set the context and clear the args
-        if ($behavior->_target == $this) {
-            $behavior->_context = $args;
+        if ($behavior->target == $this) {
+            $behavior->context = $args;
             $args = null;
         }
 
         // Call the parent dispatch method
-        parent::dispatch($behavior, $args);
+        return $this->__dispatchFromTrait($behavior, $args);
     }
 
     /**
@@ -120,6 +129,6 @@ class Input extends Dispatcher
      */
     protected function init()
     {
-        parent::init();
+        // Dispatches trait handles base setup; nothing additional for Input.
     }
 }

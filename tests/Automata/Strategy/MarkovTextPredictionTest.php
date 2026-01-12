@@ -10,11 +10,6 @@ class MarkovTextPredictionTest extends TestCase
 
     protected function setUp(): void
     {
-        if (!class_exists(\Phpml\Tokenization\WhitespaceTokenizer::class) ||
-            !class_exists(\Phpml\Classification\MarkovChain::class)) {
-            $this->markTestSkipped('php-ai/php-ml is not available; skipping MarkovTextPrediction tests.');
-        }
-
         $this->_markovPrediction = new MarkovTextPrediction();
     }
 

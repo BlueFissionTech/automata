@@ -19,6 +19,7 @@ namespace BlueFission\Automata\Comprehension;
 use BlueFission\Behavioral\Dispatches;
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Behavioral\IDispatcher;
+use BlueFission\DevElation as Dev;
 
 class Holoscene implements IDispatcher
 {
@@ -37,6 +38,7 @@ class Holoscene implements IDispatcher
 	public function __construct()
 	{
 		$this->_holo = new OrganizedCollection();
+        Dev::do('comprehension.holoscene.construct', ['collection' => $this->_holo]);
 	}
 
 	/**
@@ -47,7 +49,9 @@ class Holoscene implements IDispatcher
 	 */
 	public function push(string $key, $scene): void
 	{
+        $scene = Dev::apply('comprehension.holoscene.push_scene', $scene);
 		$this->_holo->add($scene, $key);
+        Dev::do('comprehension.holoscene.pushed', ['key' => $key, 'scene' => $scene]);
 	}
 
 	/**
@@ -59,11 +63,13 @@ class Holoscene implements IDispatcher
 	 */
 	public function review(): void
 	{
+        Dev::do('comprehension.holoscene.review_start', ['collection' => $this->_holo]);
 		$this->_assessment = $this->_holo->contents();
+        Dev::do('comprehension.holoscene.reviewed', ['assessment' => $this->_assessment]);
 	}
 
 	public function assessment(): array
 	{
-		return $this->_assessment;
+        return Dev::apply('comprehension.holoscene.assessment', $this->_assessment);
 	}
 }

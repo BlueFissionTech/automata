@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\Simulation;
 
 use BlueFission\Arr;
+use BlueFission\DevElation as Dev;
 
 /**
  * Simulation
@@ -24,8 +25,10 @@ class Simulation
 
     public function __construct(int $ticks = 1)
     {
+        $ticks = Dev::apply('automata.simulation.simulation.__construct.1', $ticks);
         $this->_ticks = max(0, $ticks);
         $this->_entities = new Arr([]);
+        Dev::do('automata.simulation.simulation.__construct.action1', ['ticks' => $this->_ticks]);
     }
 
     /**
@@ -33,9 +36,11 @@ class Simulation
      */
     public function addEntity(ISimulatable $entity): void
     {
+        $entity = Dev::apply('automata.simulation.simulation.addEntity.1', $entity);
         $entities = $this->_entities->val();
         $entities[] = $entity;
         $this->_entities->val($entities);
+        Dev::do('automata.simulation.simulation.addEntity.action1', ['entity' => $entity]);
     }
 
     /**
@@ -46,6 +51,9 @@ class Simulation
      */
     public function run(array $initialState = []): array
     {
+        $initialState = Dev::apply('automata.simulation.simulation.run.1', $initialState);
+        Dev::do('automata.simulation.simulation.run.action1', ['initialState' => $initialState]);
+
         $world = new Arr($initialState);
         $log   = [];
 
@@ -64,6 +72,9 @@ class Simulation
             $world->val($state);
             $log[] = $state;
         }
+
+        $log = Dev::apply('automata.simulation.simulation.run.2', $log);
+        Dev::do('automata.simulation.simulation.run.action2', ['log' => $log]);
 
         return $log;
     }

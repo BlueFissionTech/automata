@@ -1,6 +1,8 @@
 <?php
 namespace BlueFission\Automata\Expert;
 
+use BlueFission\DevElation as Dev;
+
 /**
  * Rule
  *
@@ -16,19 +18,20 @@ class Rule implements IRule
 
     public function __construct(string $name, callable $predicate, IFact $conclusion)
     {
-        $this->_name = $name;
-        $this->_predicate = $predicate;
-        $this->_conclusion = $conclusion;
+        $this->_name = Dev::apply('rule.init.name', $name);
+        $this->_predicate = Dev::apply('rule.init.predicate', $predicate);
+        $this->_conclusion = Dev::apply('rule.init.conclusion', $conclusion);
+        Dev::do('rule.created', ['rule' => $this]);
     }
 
     public function getName(): string
     {
-        return $this->_name;
+        return Dev::apply('rule.get_name', $this->_name);
     }
 
     public function getPredicate(): callable
     {
-        return $this->_predicate;
+        return Dev::apply('rule.get_predicate', $this->_predicate);
     }
 
     /**
@@ -38,7 +41,10 @@ class Rule implements IRule
     public function evaluate(IFact $fact): bool
     {
         $fn = $this->_predicate;
-        return (bool)$fn($fact->getValue());
+        $result = (bool)$fn($fact->getValue());
+        $result = Dev::apply('rule.evaluate', $result);
+        Dev::do('rule.evaluated', ['rule' => $this, 'fact' => $fact, 'match' => $result]);
+        return $result;
     }
 
     /**
@@ -50,7 +56,11 @@ class Rule implements IRule
      */
     public function isApplicable(array $facts): bool
     {
-        return (bool)call_user_func($this->_predicate, $facts);
+        $facts = Dev::apply('rule.applicable.facts', $facts);
+        $result = (bool)call_user_func($this->_predicate, $facts);
+        $result = Dev::apply('rule.applicable.result', $result);
+        Dev::do('rule.applicable', ['rule' => $this, 'facts' => $facts, 'applicable' => $result]);
+        return $result;
     }
 
     /**
@@ -58,7 +68,9 @@ class Rule implements IRule
      */
     public function infer(): Fact
     {
-        return $this->_conclusion;
+        $conclusion = Dev::apply('rule.infer.conclusion', $this->_conclusion);
+        Dev::do('rule.infer', ['rule' => $this, 'conclusion' => $conclusion]);
+        return $conclusion;
     }
 
     /**
@@ -68,7 +80,10 @@ class Rule implements IRule
      */
     public function matchesFact(IFact $fact): bool
     {
-        return $this->evaluate($fact);
+        $result = $this->evaluate($fact);
+        $result = Dev::apply('rule.matches', $result);
+        Dev::do('rule.match_result', ['rule' => $this, 'fact' => $fact, 'matches' => $result]);
+        return $result;
     }
 
     /**
@@ -76,7 +91,10 @@ class Rule implements IRule
      */
     public function hasConsequent(IFact $fact): bool
     {
-        return $fact->getName() === $this->_conclusion->getName();
+        $result = $fact->getName() === $this->_conclusion->getName();
+        $result = Dev::apply('rule.has_consequent', $result);
+        Dev::do('rule.consequent_check', ['rule' => $this, 'fact' => $fact, 'consequent' => $result]);
+        return $result;
     }
 
     /**
@@ -87,11 +105,11 @@ class Rule implements IRule
      */
     public function getAntecedent(): IFact
     {
-        return new Fact($this->_name, true);
+        return Dev::apply('rule.get_antecedent', new Fact($this->_name, true));
     }
 
     public function getConsequent(): IFact
     {
-        return $this->_conclusion;
+        return Dev::apply('rule.get_conclusion', $this->_conclusion);
     }
 }

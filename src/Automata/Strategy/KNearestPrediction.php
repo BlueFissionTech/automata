@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Strategy;
 
+use BlueFission\DevElation as Dev;
 use Phpml\Classification\KNearestNeighbors;
 use Phpml\Dataset\ArrayDataset;
 use Phpml\Metric\Accuracy;
@@ -40,6 +41,10 @@ class KNearestPrediction extends Strategy
      */
     public function train(array $data, array $labels, float $testSize = 0.2): void
     {
+        $data   = Dev::apply('automata.strategy.knearestprediction.train.1', $data);
+        $labels = Dev::apply('automata.strategy.knearestprediction.train.2', $labels);
+        Dev::do('automata.strategy.knearestprediction.train.action1', ['data' => $data, 'labels' => $labels]);
+
         $dataset = new ArrayDataset($data, $labels);
         $samples = $dataset->getSamples();
         $targets = $dataset->getTargets();
@@ -65,8 +70,16 @@ class KNearestPrediction extends Strategy
      */
     public function predict($input)
     {
+        $input = Dev::apply('automata.strategy.knearestprediction.predict.1', $input);
+        Dev::do('automata.strategy.knearestprediction.predict.action1', ['input' => $input]);
+
         $features = (array)$input;
-        return $this->_knn->predict($features);
+        $prediction = $this->_knn->predict($features);
+
+        $prediction = Dev::apply('automata.strategy.knearestprediction.predict.2', $prediction);
+        Dev::do('automata.strategy.knearestprediction.predict.action2', ['input' => $input, 'prediction' => $prediction]);
+
+        return $prediction;
     }
 
     /**
@@ -81,7 +94,11 @@ class KNearestPrediction extends Strategy
             $predictedLabels[] = $this->_knn->predict($sample);
         }
 
-        return Accuracy::score($this->_testLabels, $predictedLabels);
+        $accuracy = Accuracy::score($this->_testLabels, $predictedLabels);
+        $accuracy = Dev::apply('automata.strategy.knearestprediction.accuracy.1', $accuracy);
+        Dev::do('automata.strategy.knearestprediction.accuracy.action1', ['accuracy' => $accuracy]);
+
+        return $accuracy;
     }
 
     /**
@@ -92,11 +109,15 @@ class KNearestPrediction extends Strategy
      */
     public function saveModel(string $path): bool
     {
+        $path = Dev::apply('automata.strategy.knearestprediction.saveModel.1', $path);
+        Dev::do('automata.strategy.knearestprediction.saveModel.action1', ['path' => $path, 'model' => 'knn']);
+
         try {
             $this->_modelManager->saveToFile($this->_knn, $path);
+            Dev::do('automata.strategy.knearestprediction.saveModel.action2', ['path' => $path, 'saved' => true]);
             return true;
         } catch (\Exception $e) {
-            // Handle the exception
+            Dev::do('automata.strategy.knearestprediction.saveModel.action3', ['path' => $path, 'saved' => false, 'error' => $e]);
             return false;
         }
     }
@@ -109,15 +130,20 @@ class KNearestPrediction extends Strategy
      */
     public function loadModel(string $path): bool
     {
+        $path = Dev::apply('automata.strategy.knearestprediction.loadModel.1', $path);
+        Dev::do('automata.strategy.knearestprediction.loadModel.action1', ['path' => $path]);
+
         try {
             if (file_exists($path)) {
                 $this->_knn = $this->_modelManager->restoreFromFile($path);
+                Dev::do('automata.strategy.knearestprediction.loadModel.action2', ['path' => $path, 'loaded' => true]);
                 return true;
             } else {
+                Dev::do('automata.strategy.knearestprediction.loadModel.action3', ['path' => $path, 'loaded' => false, 'reason' => 'missing']);
                 return false;
             }
         } catch (\Exception $e) {
-            // Handle the exception
+            Dev::do('automata.strategy.knearestprediction.loadModel.action4', ['path' => $path, 'loaded' => false, 'error' => $e]);
             return false;
         }
     }

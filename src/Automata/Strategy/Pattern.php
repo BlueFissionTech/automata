@@ -1,6 +1,8 @@
 <?php
 namespace BlueFission\Automata\Strategy;
 
+use BlueFission\DevElation as Dev;
+
 /**
  * Pattern
  *
@@ -26,6 +28,10 @@ class Pattern extends Basic
      */
     public function train(array $samples, array $labels, float $testSize = 0.2)
     {
+        $samples = Dev::apply('automata.strategy.pattern.train.1', $samples);
+        $labels  = Dev::apply('automata.strategy.pattern.train.2', $labels);
+        Dev::do('automata.strategy.pattern.train.action1', ['samples' => $samples, 'labels' => $labels]);
+
         $this->_rules = [];
         foreach ($samples as $sequence) {
             if (!is_array($sequence) || count($sequence) < 2) {
@@ -43,6 +49,9 @@ class Pattern extends Basic
      */
     public function predict($val)
     {
+        $val = Dev::apply('automata.strategy.pattern.predict.1', $val);
+        Dev::do('automata.strategy.pattern.predict.action1', ['input' => $val]);
+
         $this->_guesses++;
         $this->_buffer[] = $val;
         $this->_prediction = null;
@@ -90,6 +99,10 @@ class Pattern extends Basic
             $this->_prediction = $rule[array_rand($rule)];
         }
 
-        return $this->_prediction;
+        $prediction = $this->_prediction;
+        $prediction = Dev::apply('automata.strategy.pattern.predict.2', $prediction);
+        Dev::do('automata.strategy.pattern.predict.action2', ['input' => $val, 'prediction' => $prediction]);
+
+        return $prediction;
     }
 }

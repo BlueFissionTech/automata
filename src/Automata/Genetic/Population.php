@@ -2,12 +2,15 @@
 namespace BlueFission\Automata\Genetic;
 
 use BlueFission\Arr;
+use BlueFission\DevElation as Dev;
 
 class Population {
     private $_individuals;
 
     public function __construct(array $individuals = []) {
+        $individuals = Dev::apply('automata.genetic.population.__construct.1', $individuals);
         $this->_individuals = new Arr($individuals);
+        Dev::do('automata.genetic.population.__construct.action1', ['individuals' => $this->_individuals->val()]);
     }
 
     /**
@@ -24,21 +27,28 @@ class Population {
         }
 
         $this->_individuals->val($current);
+        Dev::do('automata.genetic.population.initialize.action1', ['initialized' => $this->_individuals->val()]);
     }
 
     public function mutate(callable $mutator): void {
         foreach ($this->_individuals as $individual) {
             $mutator($individual);
         }
+        Dev::do('automata.genetic.population.mutate.action1', ['mutated' => $this->_individuals->val()]);
     }
 
     public function selection(callable $selector): self {
         $newIndividuals = $selector($this->_individuals->val());
+        $newIndividuals = Dev::apply('automata.genetic.population.selection.1', $newIndividuals);
+        Dev::do('automata.genetic.population.selection.action1', ['selected' => $newIndividuals]);
         return new self($newIndividuals);
     }
 
     public function getIndividuals(): array {
-        return $this->_individuals->val();
+        $individuals = $this->_individuals->val();
+        $individuals = Dev::apply('automata.genetic.population.getIndividuals.1', $individuals);
+        Dev::do('automata.genetic.population.getIndividuals.action1', ['individuals' => $individuals]);
+        return $individuals;
     }
 }
 
