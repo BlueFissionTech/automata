@@ -4,7 +4,14 @@ namespace BlueFission\Automata\LLM;
 use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Behavioral\Dispatches;
 use BlueFission\Automata\LLM\Tools\ITool;
+use BlueFission\Automata\LLM\MCP\MCPClient;
+use BlueFission\Automata\LLM\MCP\Tools\MCPDiscoveryTool;
+use BlueFission\Automata\LLM\MCP\Tools\MCPResourceTool;
+use BlueFission\Automata\LLM\MCP\Tools\MCPToolCallTool;
+use BlueFission\Automata\LLM\MCP\Tools\MCPRequestTool;
+use BlueFission\Automata\LLM\MCP\Tools\MCPRegisterServerTool;
 use BlueFission\Behavioral\Behaviors\Event;
+use BlueFission\DevElation as Dev;
 // https://bootcamp.uxdesign.cc/a-comprehensive-and-hands-on-guide-to-autonomous-agents-with-gpt-b58d54724d50
 class Agent implements IDispatcher
 {
@@ -17,6 +24,7 @@ class Agent implements IDispatcher
     protected $template;
     protected $fillIn;
     protected $replacements = [];
+    protected ?MCPClient $mcpClient = null;
 
     public function __construct($llm) {
         $this->__dispatchesConstruct();
@@ -64,6 +72,27 @@ class Agent implements IDispatcher
 
     public function registerTool(string $name, ITool $tool) {
         $this->tools[$name] = $tool;
+    }
+
+    public function registerMcpClient(MCPClient $client): void
+    {
+        $this->mcpClient = $client;
+
+        $tools = [
+            new MCPRegisterServerTool($client),
+            new MCPDiscoveryTool($client),
+            new MCPResourceTool($client),
+            new MCPToolCallTool($client),
+            new MCPRequestTool($client),
+        ];
+
+        foreach ($tools as $tool) {
+            $this->registerTool($tool->name(), $tool);
+        }
+
+        Dev::do('automata.llm.agent.mcp_registered', [
+            'tool_count' => count($tools),
+        ]);
     }
 
     public function execute($input) {
