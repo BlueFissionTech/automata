@@ -3,8 +3,8 @@
 namespace BlueFission\Tests\Automata\LLM;
 
 use PHPUnit\Framework\TestCase;
-use BlueFission\Automata\LLM\Clients\ClaudeClient;
-use BlueFission\Automata\LLM\Clients\GrokClient;
+use BlueFission\SimpleClients\ClaudeClient;
+use BlueFission\SimpleClients\GrokClient;
 use BlueFission\Automata\LLM\Prompts\Prompt;
 
 class ClaudeGrokClientTest extends TestCase
@@ -16,9 +16,9 @@ class ClaudeGrokClientTest extends TestCase
 
         $reply = $client->complete($prompt);
 
-        $this->assertTrue($reply->success());
-        $msg = $reply->messages()->get(0);
-        $this->assertStringContainsString('Mock Claude completion', $msg);
+        $this->assertIsArray($reply);
+        $this->assertArrayHasKey('completion', $reply);
+        $this->assertStringContainsString('Claude mock completion', $reply['completion']);
     }
 
     public function testGrokClientReturnsMockReply(): void
@@ -28,9 +28,9 @@ class ClaudeGrokClientTest extends TestCase
 
         $reply = $client->respond($prompt);
 
-        $this->assertTrue($reply->success());
-        $msg = $reply->messages()->get(0);
-        $this->assertStringContainsString('Mock Grok response', $msg);
+        $this->assertIsArray($reply);
+        $this->assertArrayHasKey('message', $reply);
+        $this->assertStringContainsString('Grok mock response', $reply['message']);
     }
 }
 

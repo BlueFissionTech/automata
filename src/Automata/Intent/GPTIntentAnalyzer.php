@@ -3,14 +3,14 @@
 namespace BlueFission\Automata\Intent;
 
 use BlueFission\Automata\Context;
-use BlueFission\Automata\LLM\Clients\IClient;
+use BlueFission\Automata\LLM\Reply;
 use BlueFission\DevElation as Dev;
 
 class LLMIntentAnalyzer implements IAnalyzer
 {
     private $llm;
 
-    public function __construct(IClient $llm)
+    public function __construct($llm)
     {
         if (!$llm) {
             throw new \Exception("Language model service is not registered.");
@@ -46,10 +46,10 @@ class LLMIntentAnalyzer implements IAnalyzer
             $response = Dev::apply('intent.llm.response', $response);
 
             $score = 0;
+            $responseText = $this->extractResponseText($response);
 
-            if ($response->success()) {
-                // Get the score from the response
-                $score = floatval($response->messages()->first());
+            if ($responseText !== null) {
+                $score = floatval($responseText);
                 $score = Dev::apply('intent.llm.score', $score);
             }
 
@@ -62,5 +62,44 @@ class LLMIntentAnalyzer implements IAnalyzer
         Dev::do('intent.llm.result', ['llm_scores' => $scores]);
 
         return $scores;
+    }
+
+    private function extractResponseText($response): ?string
+    {
+        if ($response instanceof Reply) {
+            if (!$response->success()) {
+                return null;
+            }
+
+            return (string)$response->messages()->get(0);
+        }
+
+        if (is_array($response)) {
+            if (!empty($response['choices'][0]['text'])) {
+                return (string)$response['choices'][0]['text'];
+            }
+
+            if (!empty($response['choices'][0]['message']['content'])) {
+                return (string)$response['choices'][0]['message']['content'];
+            }
+
+            if (!empty($response['completion'])) {
+                return (string)$response['completion'];
+            }
+
+            if (!empty($response['message'])) {
+                return (string)$response['message'];
+            }
+
+            if (!empty($response['text'])) {
+                return (string)$response['text'];
+            }
+        }
+
+        if (is_string($response) || is_numeric($response)) {
+            return (string)$response;
+        }
+
+        return null;
     }
 }

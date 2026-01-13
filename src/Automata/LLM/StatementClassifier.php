@@ -1,7 +1,6 @@
 <?php
 namespace BlueFission\Automata\LLM;
 
-use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Prompts\StatementClassification;
 use Phpml\ModelManager;
 use Phpml\Classification\NaiveBayes;
@@ -20,7 +19,7 @@ class StatementClassifier
     protected $_modelFilePath;
     protected $_pipeline;
 
-    public function __construct( IClient $llmClient = null, string $modelFilePath = null )
+    public function __construct($llmClient = null, string $modelFilePath = null)
     {
         $this->_llmClient = $llmClient;
         $this->_modelManager = new ModelManager();
@@ -38,7 +37,7 @@ class StatementClassifier
 
     public function classify($input)
     {
-        if (env('OPEN_AI_API_KEY')) {
+        if ($this->_llmClient && env('OPEN_AI_API_KEY')) {
             $prompt = new StatementClassification($input);
             $result = $this->_llmClient->complete($prompt->prompt(), ['max_tokens'=>2, 'stop'=>' ']);
             if ($result) {
@@ -92,12 +91,35 @@ class StatementClassifier
 
     protected function extractClassification($result)
     {
-        if (!empty($result['choices'][0]['text'])) {
-            $classification = strtolower(trim($result['choices'][0]['text']));
-            if (in_array($classification, ['question', 'statement', 'stop'])) {
-                return $classification;
+        $text = null;
+
+        if ($result instanceof Reply) {
+            $text = $result->messages()->get(0);
+        } elseif (is_array($result)) {
+            if (!empty($result['choices'][0]['text'])) {
+                $text = $result['choices'][0]['text'];
+            } elseif (!empty($result['choices'][0]['message']['content'])) {
+                $text = $result['choices'][0]['message']['content'];
+            } elseif (!empty($result['completion'])) {
+                $text = $result['completion'];
+            } elseif (!empty($result['message'])) {
+                $text = $result['message'];
+            } elseif (!empty($result['text'])) {
+                $text = $result['text'];
             }
+        } elseif (is_string($result)) {
+            $text = $result;
         }
+
+        if ($text === null) {
+            return null;
+        }
+
+        $classification = strtolower(trim((string)$text));
+        if (in_array($classification, ['question', 'statement', 'stop'], true)) {
+            return $classification;
+        }
+
         return null;
     }
 

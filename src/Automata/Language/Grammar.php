@@ -91,6 +91,7 @@ class Grammar
 	    $count = 0;
 
         $input = Dev::apply('language.grammar.tokenize_input', $input);
+        $input = ContractionNormalizer::normalize($input);
         $tokens = mb_str_split($input);
 	    $inputLength = count($tokens);
 

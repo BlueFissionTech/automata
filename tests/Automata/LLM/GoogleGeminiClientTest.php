@@ -3,71 +3,101 @@
 namespace BlueFission\Tests\Automata\LLM;
 
 use PHPUnit\Framework\TestCase;
-use BlueFission\Automata\LLM\Clients\GoogleGeminiClient;
+use BlueFission\SimpleClients\GoogleGeminiClient;
+
+class GeminiResponseStub
+{
+    private string $text;
+
+    public function __construct(string $text)
+    {
+        $this->text = $text;
+    }
+
+    public function text(): string
+    {
+        return $this->text;
+    }
+}
+
+class GeminiProStub
+{
+    public array $history = [];
+    public array $sent = [];
+
+    public function generateContent($input, array $config = []): GeminiResponseStub
+    {
+        $this->sent[] = ['input' => $input, 'config' => $config];
+        return new GeminiResponseStub("generated: {$input}");
+    }
+
+    public function sendMessage($input, array $config = []): GeminiResponseStub
+    {
+        $this->sent[] = ['input' => $input, 'config' => $config];
+        return new GeminiResponseStub("chat: {$input}");
+    }
+
+    public function startChat(array $history = []): void
+    {
+        $this->history = $history;
+    }
+}
+
+class GeminiEmbeddingStub
+{
+    public function embedContent($input): array
+    {
+        return ['embedding' => ['values' => ["{$input}-v1", "{$input}-v2"]]];
+    }
+}
+
+class GeminiClientStub
+{
+    public GeminiProStub $pro;
+
+    public function __construct()
+    {
+        $this->pro = new GeminiProStub();
+    }
+
+    public function geminiPro(): GeminiProStub
+    {
+        return $this->pro;
+    }
+
+    public function embeddingModel(): GeminiEmbeddingStub
+    {
+        return new GeminiEmbeddingStub();
+    }
+}
 
 class GoogleGeminiClientTest extends TestCase
 {
-    private function loadEnv(): void
+    public function testGenerateUsesStubbedClient(): void
     {
-        if (getenv('GEMINI_API_KEY') || getenv('GOOGLE_GEMINI_API_KEY')) {
-            return;
-        }
+        $clientStub = new GeminiClientStub();
+        $client = new GoogleGeminiClient('test-key', $clientStub);
 
-        $path = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.env';
-        if (!is_file($path)) {
-            return;
-        }
+        $result = $client->generate('hello', ['top_p' => 0.5]);
 
-        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '' || str_starts_with($line, '#')) {
-                continue;
-            }
-            if (!str_contains($line, '=')) {
-                continue;
-            }
-
-            [$key, $value] = explode('=', $line, 2);
-            $key = trim($key);
-            $value = trim($value);
-
-            $value = trim($value, "\"'");
-            putenv($key . '=' . $value);
-            $_ENV[$key] = $value;
-            $_SERVER[$key] = $value;
-        }
+        $this->assertSame('generated: hello', $result);
+        $this->assertSame(
+            ['input' => 'hello', 'config' => ['top_p' => 0.5]],
+            $clientStub->pro->sent[0]
+        );
     }
 
-    private function canRunLive(): bool
+    public function testRespondUsesHistoryAndEmbeddings(): void
     {
-        $this->loadEnv();
-        $apiKey = getenv('GEMINI_API_KEY') ?: getenv('GOOGLE_GEMINI_API_KEY') ?: '';
-        $flag = getenv('AUTOMATA_LIVE_LLM_TESTS') ?: '';
+        $clientStub = new GeminiClientStub();
+        $client = new GoogleGeminiClient('test-key', $clientStub);
+        $history = [['role' => 'user', 'content' => 'past']];
 
-        if ($apiKey === '') {
-            return false;
-        }
+        $result = $client->respond('hi', ['max_tokens' => 10], $history);
+        $embedding = $client->embeddings('text');
 
-        return filter_var($flag, FILTER_VALIDATE_BOOLEAN) === true;
-    }
-
-    public function testGenerateRespondsWhenLiveKeyPresent(): void
-    {
-        if (!$this->canRunLive()) {
-            $this->markTestSkipped('GEMINI_API_KEY (or GOOGLE_GEMINI_API_KEY) and AUTOMATA_LIVE_LLM_TESTS=true are required for live connector tests.');
-        }
-
-        $apiKey = getenv('GEMINI_API_KEY') ?: getenv('GOOGLE_GEMINI_API_KEY');
-        $client = new GoogleGeminiClient($apiKey);
-        $reply = $client->generate('Reply with "ready".', [
-            'max_tokens' => 16,
-            'temperature' => 0,
-        ]);
-
-        $this->assertTrue($reply->success());
-        $message = $reply->messages()->get(0);
-        $this->assertIsString($message);
-        $this->assertNotSame('', $message);
+        $this->assertSame('chat: hi', $result);
+        $this->assertSame($history, $clientStub->pro->history);
+        $this->assertSame(['embedding' => ['values' => ['text-v1', 'text-v2']]], $embedding);
     }
 }

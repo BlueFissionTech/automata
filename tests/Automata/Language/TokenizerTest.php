@@ -22,4 +22,15 @@ class TokenizerTest extends TestCase
         $this->assertContains('person', $tokens);
         $this->assertContains('expects', $tokens);
     }
+
+    public function testPreparerExpandsContractions(): void
+    {
+        $preparer = new Preparer();
+
+        $tokens = $preparer->tokenize("She's ready");
+
+        $this->assertContains('she', $tokens);
+        $this->assertContains('ready', $tokens);
+        $this->assertNotContains('shes', $tokens);
+    }
 }

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "6b5541896b52d4d0c12d2fafc52a1558",
+    "content-hash": "a4610cf490df3d8b9a3def37db69c8b7",
     "packages": [
         {
             "name": "bluefission/develation",
@@ -70,6 +70,59 @@
                 "issues": "https://github.com/BlueFissionTech/develation/issues"
             },
             "time": "2026-01-12T23:17:14+00:00"
+        },
+        {
+            "name": "bluefission/simpleclients",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/BlueFissionTech/simpleclients.git",
+                "reference": "6ed036a0a54176ab2d92478523ea21bab9a94ebd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/BlueFissionTech/simpleclients/zipball/6ed036a0a54176ab2d92478523ea21bab9a94ebd",
+                "reference": "6ed036a0a54176ab2d92478523ea21bab9a94ebd",
+                "shasum": ""
+            },
+            "require": {
+                "bluefission/develation": "^1.0.0-alpha",
+                "simplehtmldom/simplehtmldom": "^2.0@RC"
+            },
+            "require-dev": {
+                "php": ">=8.0.0",
+                "phpunit/phpunit": "^11.1@dev"
+            },
+            "default-branch": true,
+            "type": "package",
+            "autoload": {
+                "psr-4": {
+                    "BlueFission\\": "src/"
+                },
+                "classmap": [
+                    "src/"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Devon Scott",
+                    "email": "dscott@bluefission.com",
+                    "homepage": "https://bluefission.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Simple Client Wrappers For BlueFission",
+            "keywords": [
+                "clients, api, http, services"
+            ],
+            "support": {
+                "source": "https://github.com/BlueFissionTech/simpleclients/tree/master",
+                "issues": "https://github.com/BlueFissionTech/simpleclients/issues"
+            },
+            "time": "2026-01-13T14:50:27+00:00"
         },
         {
             "name": "cboden/ratchet",
@@ -1393,6 +1446,81 @@
                 }
             ],
             "time": "2025-10-15T07:30:20+00:00"
+        },
+        {
+            "name": "simplehtmldom/simplehtmldom",
+            "version": "2.0-RC2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/simplehtmldom/simplehtmldom.git",
+                "reference": "3c87726400e59d8e1bc4709cfe82353abeb0f4d1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/simplehtmldom/simplehtmldom/zipball/3c87726400e59d8e1bc4709cfe82353abeb0f4d1",
+                "reference": "3c87726400e59d8e1bc4709cfe82353abeb0f4d1",
+                "shasum": ""
+            },
+            "require": {
+                "ext-iconv": "*",
+                "php": ">=5.6"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^6 || ^7"
+            },
+            "suggest": {
+                "ext-curl": "Needed to support cURL downloads in class HtmlWeb",
+                "ext-mbstring": "Allows better decoding for multi-byte documents",
+                "ext-openssl": "Allows loading HTTPS pages when using cURL"
+            },
+            "type": "library",
+            "autoload": {
+                "classmap": [
+                    "./"
+                ],
+                "exclude-from-classmap": [
+                    "/example/",
+                    "/manual/",
+                    "/testcase/",
+                    "/tests/",
+                    "simple_html_dom.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "S.C. Chen",
+                    "role": "Developer"
+                },
+                {
+                    "name": "John Schlick",
+                    "role": "Developer"
+                },
+                {
+                    "name": "logmanoriginal",
+                    "role": "Developer"
+                }
+            ],
+            "description": "A fast, simple and reliable HTML document parser for PHP.",
+            "homepage": "https://simplehtmldom.sourceforge.io/",
+            "keywords": [
+                "Simple",
+                "dom",
+                "html",
+                "parser",
+                "php",
+                "simplehtmldom"
+            ],
+            "support": {
+                "issues": "https://sourceforge.net/p/simplehtmldom/bugs/",
+                "rss": "https://sourceforge.net/p/simplehtmldom/news/feed.rss",
+                "source": "https://sourceforge.net/p/simplehtmldom/repository/",
+                "wiki": "https://simplehtmldom.sourceforge.io/docs/"
+            },
+            "time": "2019-11-09T15:42:50+00:00"
         },
         {
             "name": "symfony/deprecation-contracts",
@@ -4104,6 +4232,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
+        "bluefission/simpleclients": 20,
         "symfony/http-client": 20,
         "phpunit/phpunit": 20
     },

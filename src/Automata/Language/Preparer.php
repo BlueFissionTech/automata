@@ -43,6 +43,7 @@ class Preparer {
 		$chr = array_keys  ($chr_map); // but: for efficiency you should
 		$rpl = array_values($chr_map); // pre-calculate these two arrays
 		$input = str_replace($chr, $rpl, html_entity_decode($input, ENT_QUOTES, "UTF-8"));
+		$input = ContractionNormalizer::normalize($input);
 		$input = str_replace(['?', '!', '.', ',', '"', '\''], '', $input);
 
 		$array = preg_split($boundary, strtolower($input), -1, PREG_SPLIT_NO_EMPTY);
