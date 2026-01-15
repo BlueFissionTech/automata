@@ -9,6 +9,8 @@ use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Automata\Sensory\Input;
 use BlueFission\Automata\Strategy\IStrategy;
 use BlueFission\Automata\Service\BenchmarkService;
+use BlueFission\Automata\Analysis\IAnalyzer;
+use BlueFission\Automata\Context;
 use BlueFission\Behavioral\Dispatches;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\Behavior;
@@ -28,7 +30,13 @@ class Intelligence extends Obj
     protected ?IStrategy $_lastStrategyUsed = null; // Last strategy used for prediction
     private ?string $_lastStrategyName = null; // Key/name of last strategy used
     private array $_strategyGroups; // Groups of strategies based on data type
+    private array $_strategyProfiles; // Strategy metadata (types, tags, weights)
     private BenchmarkService $_benchmarkService; // Service for benchmarking strategies
+    private array $_intentAnalyzers;
+    private array $_structureClassifiers;
+    private array $_contextProviders;
+    private array $_intents;
+    private ?Context $_context = null;
 
     const PREDICTION_EVENT = 'prediction_event'; // Event name for predictions
 
@@ -42,7 +50,12 @@ class Intelligence extends Obj
         $this->_strategies = new OrganizedCollection();
         $this->_minThreshold = $minThreshold;
         $this->_strategyGroups = [];
+        $this->_strategyProfiles = [];
         $this->_benchmarkService = new BenchmarkService(); // Initialize benchmark service
+        $this->_intentAnalyzers = [];
+        $this->_structureClassifiers = [];
+        $this->_contextProviders = [];
+        $this->_intents = [];
         parent::__construct();
     }
 
@@ -55,6 +68,82 @@ class Intelligence extends Obj
     public function registerStrategy(IStrategy $strategy, string $name)
     {
         $this->_strategies->add($strategy, $name);
+    }
+
+    /**
+     * Register a strategy with metadata for insight analysis.
+     *
+     * @param IStrategy $strategy The strategy to register
+     * @param string $name The name of the strategy
+     * @param array $profile Metadata such as types, tags, and weight
+     */
+    public function registerStrategyProfile(IStrategy $strategy, string $name, array $profile = []): void
+    {
+        $defaults = [
+            'types' => [],
+            'tags' => [],
+            'weight' => null,
+        ];
+
+        $profile = array_merge($defaults, $profile);
+
+        $this->registerStrategy($strategy, $name);
+        $this->_strategyProfiles[$name] = $profile;
+
+        if ($profile['weight'] !== null) {
+            $this->_strategies->weight($name, (float)$profile['weight']);
+            $this->_strategies->sort();
+        }
+    }
+
+    /**
+     * Register an intent analyzer (callable or IAnalyzer implementation).
+     *
+     * @param callable|IAnalyzer $analyzer
+     */
+    public function registerIntentAnalyzer($analyzer): void
+    {
+        $this->_intentAnalyzers[] = $analyzer;
+    }
+
+    /**
+     * Register a structure classifier callable.
+     *
+     * @param callable $classifier
+     */
+    public function registerStructureClassifier(callable $classifier): void
+    {
+        $this->_structureClassifiers[] = $classifier;
+    }
+
+    /**
+     * Register a context provider callable.
+     *
+     * @param callable $provider
+     */
+    public function registerContextProvider(callable $provider): void
+    {
+        $this->_contextProviders[] = $provider;
+    }
+
+    /**
+     * Provide a catalog of intents for analyzers.
+     *
+     * @param array $intents
+     */
+    public function setIntentCatalog(array $intents): void
+    {
+        $this->_intents = $intents;
+    }
+
+    /**
+     * Set a shared context for analyzers.
+     *
+     * @param Context $context
+     */
+    public function setContext(Context $context): void
+    {
+        $this->_context = $context;
     }
 
     /**
@@ -224,6 +313,32 @@ class Intelligence extends Obj
     }
 
     /**
+     * Analyze input using multiple strategies, returning scored insights.
+     *
+     * @param mixed $input
+     * @param array $options
+     * @return array
+     */
+    public function analyze($input, array $options = []): array
+    {
+        $segments = $this->segmentInput($input, $options);
+        $insights = [];
+
+        foreach ($segments as $segment) {
+            $segmentInsights = $this->analyzeSegment($segment, $options);
+            $insights = array_merge($insights, $segmentInsights);
+        }
+
+        $gestalt = $this->buildGestalt($segments, $insights);
+
+        return [
+            'segments' => $segments,
+            'insights' => $insights,
+            'gestalt' => $gestalt,
+        ];
+    }
+
+    /**
      * Get the data type of the input
      *
      * @param mixed $input The input data
@@ -232,6 +347,280 @@ class Intelligence extends Obj
     private function getType($input): ?string
     {
         return InputTypeDetector::detect($input);
+    }
+
+    private function analyzeSegment(array $segment, array $options): array
+    {
+        $strategies = $this->resolveStrategiesForType($segment['type']);
+        $budget = $this->resolveStrategyBudget(count($strategies), $options);
+
+        $selected = array_slice($strategies, 0, $budget);
+        $insights = [];
+
+        foreach ($selected as $strategyMeta) {
+            $strategy = $strategyMeta['strategy'];
+            $name = $strategyMeta['name'];
+
+            $result = $this->_benchmarkService->benchmarkPrediction($strategy, $segment['payload']);
+            $accuracy = $strategy instanceof IStrategy ? $strategy->accuracy() : 0.0;
+            $score = $this->calculateScore($accuracy, $result['executionTime']);
+
+            $insight = [
+                'segment_index' => $segment['index'],
+                'segment_type' => $segment['type'],
+                'strategy' => $name,
+                'output' => $result['output'],
+                'accuracy' => $accuracy,
+                'execution_time' => $result['executionTime'],
+                'score' => $score,
+                'tags' => $strategyMeta['tags'],
+                'meta' => $segment['meta'],
+            ];
+
+            $insights[] = $insight;
+
+            $this->dispatch(self::PREDICTION_EVENT, [
+                'strategy' => $name,
+                'output' => $result['output'],
+                'executionTime' => $result['executionTime'],
+                'type' => $segment['type'],
+            ]);
+        }
+
+        return $insights;
+    }
+
+    private function resolveStrategiesForType(string $type): array
+    {
+        $strategies = [];
+        $allStrategies = $this->_strategies->toArray();
+
+        foreach ($allStrategies as $name => $meta) {
+            /** @var IStrategy $strategy */
+            $strategy = $meta['value'];
+            $profile = $this->_strategyProfiles[$name] ?? [];
+            $types = $profile['types'] ?? [];
+
+            if (!empty($types) && !in_array($type, $types, true)) {
+                continue;
+            }
+
+            $strategies[] = [
+                'name' => $name,
+                'strategy' => $strategy,
+                'weight' => $meta['weight'] ?? 1,
+                'tags' => $profile['tags'] ?? [],
+            ];
+        }
+
+        usort($strategies, function (array $a, array $b): int {
+            if ($a['weight'] === $b['weight']) {
+                return 0;
+            }
+
+            return ($a['weight'] < $b['weight']) ? 1 : -1;
+        });
+
+        return $strategies;
+    }
+
+    private function resolveStrategyBudget(int $strategyCount, array $options): int
+    {
+        if ($strategyCount <= 0) {
+            return 0;
+        }
+
+        if (isset($options['strategy_budget'])) {
+            $budget = (int)$options['strategy_budget'];
+            return max(1, min($strategyCount, $budget));
+        }
+
+        if (isset($options['attention_score'])) {
+            $score = (float)$options['attention_score'];
+            $score = max(0.0, min(1.0, $score));
+            $budget = (int)max(1, ceil($score * $strategyCount));
+
+            if (isset($options['max_strategy_budget'])) {
+                $budget = min($budget, (int)$options['max_strategy_budget']);
+            }
+            if (isset($options['min_strategy_budget'])) {
+                $budget = max($budget, (int)$options['min_strategy_budget']);
+            }
+
+            return $budget;
+        }
+
+        return $strategyCount;
+    }
+
+    private function segmentInput($input, array $options): array
+    {
+        if (isset($options['segmenter']) && is_callable($options['segmenter'])) {
+            $segments = call_user_func($options['segmenter'], $input, $options);
+            return $this->normalizeSegments($segments, $options);
+        }
+
+        return $this->normalizeSegments($input, $options);
+    }
+
+    private function normalizeSegments($input, array $options): array
+    {
+        $segments = [];
+        $items = [];
+        $baseMeta = $options['meta'] ?? [];
+
+        if (is_array($input)) {
+            if ($this->isAssociative($input) && isset($input['segments']) && is_array($input['segments'])) {
+                $items = $input['segments'];
+                $baseMeta = array_merge($baseMeta, $input['meta'] ?? []);
+            } elseif ($this->isAssociative($input) && (array_key_exists('payload', $input) || array_key_exists('type', $input))) {
+                $items = [$input];
+            } else {
+                $items = $input;
+            }
+        } else {
+            $items = [$input];
+        }
+
+        foreach ($items as $index => $item) {
+            $payload = $item;
+            $type = null;
+            $meta = $baseMeta;
+
+            if (is_array($item) && (array_key_exists('payload', $item) || array_key_exists('type', $item))) {
+                $payload = $item['payload'] ?? ($item['content'] ?? $item);
+                $type = $item['type'] ?? null;
+                $meta = array_merge($meta, $item['meta'] ?? []);
+            }
+
+            $type = $type ?: ($this->getType($payload) ?? InputType::TEXT);
+
+            if (isset($options['segment_meta']) && is_callable($options['segment_meta'])) {
+                $extraMeta = (array)call_user_func($options['segment_meta'], $payload, $type, $index, $meta);
+                $meta = array_merge($meta, $extraMeta);
+            }
+
+            $meta = $this->applyClassifiers($payload, $type, $meta, $options);
+
+            $segments[] = [
+                'index' => $index,
+                'type' => $type,
+                'payload' => $payload,
+                'meta' => $meta,
+            ];
+        }
+
+        return $segments;
+    }
+
+    private function applyClassifiers($payload, string $type, array $meta, array $options): array
+    {
+        $context = $this->resolveContext($options);
+        $intents = $options['intents'] ?? $this->_intents;
+
+        $intentSignals = [];
+        if (isset($options['intent_classifier']) && is_callable($options['intent_classifier'])) {
+            $intentSignals[] = call_user_func($options['intent_classifier'], $payload, $type, $meta, $context, $intents);
+        }
+
+        foreach ($this->_intentAnalyzers as $analyzer) {
+            $intentSignals[] = $this->runIntentAnalyzer($analyzer, $payload, $context, $intents);
+        }
+
+        if (!empty($intentSignals)) {
+            $meta['intent'] = $intentSignals;
+        }
+
+        $structureSignals = [];
+        if (isset($options['structure_classifier']) && is_callable($options['structure_classifier'])) {
+            $structureSignals[] = call_user_func($options['structure_classifier'], $payload, $type, $meta);
+        }
+        foreach ($this->_structureClassifiers as $classifier) {
+            $structureSignals[] = call_user_func($classifier, $payload, $type, $meta);
+        }
+        if (!empty($structureSignals)) {
+            $meta['structure'] = $structureSignals;
+        }
+
+        $contextSignals = [];
+        if (isset($options['context_provider']) && is_callable($options['context_provider'])) {
+            $contextSignals[] = call_user_func($options['context_provider'], $payload, $type, $meta);
+        }
+        foreach ($this->_contextProviders as $provider) {
+            $contextSignals[] = call_user_func($provider, $payload, $type, $meta);
+        }
+        if (!empty($contextSignals)) {
+            $meta['context'] = $contextSignals;
+        }
+
+        return $meta;
+    }
+
+    private function runIntentAnalyzer($analyzer, $payload, Context $context, array $intents)
+    {
+        if ($analyzer instanceof IAnalyzer) {
+            return $analyzer->analyze((string)$payload, $context, $intents);
+        }
+
+        if (is_callable($analyzer)) {
+            return call_user_func($analyzer, $payload, $context, $intents);
+        }
+
+        return null;
+    }
+
+    private function resolveContext(array $options): Context
+    {
+        $context = $options['context'] ?? $this->_context;
+
+        if ($context instanceof Context) {
+            return $context;
+        }
+
+        $contextObj = new Context();
+
+        if (is_array($context)) {
+            foreach ($context as $key => $value) {
+                $contextObj->set($key, $value);
+            }
+        }
+
+        return $contextObj;
+    }
+
+    private function buildGestalt(array $segments, array $insights): array
+    {
+        $segmentTypes = [];
+        foreach ($segments as $segment) {
+            $type = $segment['type'];
+            $segmentTypes[$type] = ($segmentTypes[$type] ?? 0) + 1;
+        }
+
+        $strategyScores = [];
+        foreach ($insights as $insight) {
+            $name = $insight['strategy'];
+            $strategyScores[$name] = ($strategyScores[$name] ?? 0) + (float)$insight['score'];
+        }
+
+        arsort($strategyScores);
+        $topStrategies = array_slice(array_keys($strategyScores), 0, 3);
+
+        return [
+            'segment_count' => count($segments),
+            'insight_count' => count($insights),
+            'segment_types' => $segmentTypes,
+            'strategy_scores' => $strategyScores,
+            'top_strategies' => $topStrategies,
+        ];
+    }
+
+    private function isAssociative(array $value): bool
+    {
+        if ($value === []) {
+            return false;
+        }
+
+        return array_keys($value) !== range(0, count($value) - 1);
     }
 
     /**

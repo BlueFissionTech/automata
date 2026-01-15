@@ -318,7 +318,7 @@ class Sense extends Obj {
         Dev::do('sensory.sense.invoke_success', ['data' => $data]);
 
 		$this->dispatch(Event::SUCCESS, $data);
-		$this->focus($data);
+		return $this->focus($data);
 	}
 
 	/**
@@ -348,6 +348,8 @@ class Sense extends Obj {
         $data = Dev::apply('sensory.sense.focus_input', $data);
 		// $data = $data[0];
 		$this->dispatch('OnSweep', $data);
+
+		$deepResult = null;
 		
 		if ( $data['variance1'] < 1 ) {
 
@@ -361,7 +363,7 @@ class Sense extends Obj {
 			$this->dispatch($event);
 
 			if ($this->_depth < self::MAX_DEPTH) {
-				$this->invoke($this->_input); // Recurse until it gets bored
+				$deepResult = $this->invoke($this->_input); // Recurse until it gets bored
 			}
 			// $this->dispatch('DoEnhance', ['config'=>$this->_config,'input'=>$this->_matrix]);
 		}
@@ -373,10 +375,33 @@ class Sense extends Obj {
 		$data = $this->_map->data();
         Dev::do('sensory.sense.complete', ['data' => $data]);
 		$this->dispatch(Event::COMPLETE, $data);
+		return $deepResult ?? $data;
 		// if ( $this->_config['attention'] ) {
 		// 	$this->_config['quality'] =
 		// }
 		// die();
+	}
+
+	public function attentionScore(): float
+	{
+		$initial = $this->_config['attention'] ?? 1;
+		$remaining = $this->_settings['attention'] ?? $initial;
+
+		if ($initial <= 0) {
+			return 0.0;
+		}
+
+		$used = max(0, $initial - $remaining);
+		return max(0.0, min(1.0, $used / $initial));
+	}
+
+	public function attentionState(): array
+	{
+		return [
+			'config' => $this->_config,
+			'settings' => $this->_settings,
+			'depth' => $this->_depth,
+		];
 	}
 
 	/**

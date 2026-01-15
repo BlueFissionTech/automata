@@ -4,6 +4,7 @@ namespace BlueFission\Automata;
 use BlueFission\Automata\Intelligence;
 use BlueFission\Behavioral\Behaviors\Action;
 use BlueFission\Automata\Collections\OrganizedCollection;
+use BlueFission\Automata\Sensory\Sense;
 
 use BlueFission\Data\Queues\Queue as Queue;
 
@@ -61,9 +62,9 @@ class Engine extends Intelligence implements ISphere {
 	protected $_scene;
 
 	protected $_permissions;
+	protected ?Sense $_sense = null;
 
 	// protected $_inputs;
-	protected $_strategies;
 	protected $_memory;
 	// protected $_outputs;
 
@@ -170,6 +171,44 @@ class Engine extends Intelligence implements ISphere {
 			$event->context = array('service'=>$recipientName, 'behavior'=>$behavior);
 			$this->dispatch($event);
 		}
+	}
+
+	public function setSense(Sense $sense): void
+	{
+		$this->_sense = $sense;
+	}
+
+	public function analyzeWithAttention($input, array $options = []): array
+	{
+		$sense = $this->_sense ?? new Sense($this);
+		$data = $sense->invoke($input);
+
+		$attentionScore = $sense->attentionScore();
+		$options['attention_score'] = $options['attention_score'] ?? $attentionScore;
+
+		$report = $this->analyze($input, $options);
+		$report['attention'] = $this->buildAttentionProfile($sense, $data, $attentionScore);
+
+		return $report;
+	}
+
+	protected function buildAttentionProfile(Sense $sense, $data, float $score): array
+	{
+		$stats = [];
+		if (is_array($data)) {
+			$stats = array_intersect_key($data, array_flip([
+				'count',
+				'mean1',
+				'variance1',
+				'std1',
+			]));
+		}
+
+		return [
+			'score' => $score,
+			'stats' => $stats,
+			'state' => $sense->attentionState(),
+		];
 	}
 
 	protected function isPermitted($service, $behaviorName)

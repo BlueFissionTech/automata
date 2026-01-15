@@ -46,6 +46,17 @@ Responsibilities:
 - Dispatch events when predictions are made (`PREDICTION_EVENT`).
 - Manage feedback loops (approve/reject predictions).
 
+**Intelligence Hub extension**
+
+The Intelligence Hub builds on `Automata\Intelligence` by:
+
+- Segmenting multi-modal inputs into typed slices with metadata.
+- Running multiple strategies per segment (not just a single best strategy).
+- Using `Sensory\Sense` attention metrics to set analysis depth and
+  strategy budget.
+- Aggregating outputs into structured insights plus a gestalt summary
+  suitable for an application or LLM coordinator.
+
 ### 2.2 Strategy Layer
 
 **Key modules:**
@@ -194,6 +205,16 @@ problems, similar to HTTP controllers for web routes.
 3. Over generations, better ensembles emerge.
 4. The best genome is converted back into a set of `DataGroup` configurations
    that `Intelligence` can use in production.
+
+### 3.5 Intelligence Hub: Multi-Modal Insight Pipeline
+
+1. A host app submits a complex input (PDF, URL, video, or mixed media bundle).
+2. The hub segments the input into slices (text, image, audio, video) and
+   attaches metadata like source, format, and provenance.
+3. `Sensory\Sense` evaluates attention and novelty to determine depth/budget.
+4. A ranked list of strategies is applied per segment; outputs are scored.
+5. Insights are aggregated into a gestalt summary for downstream systems,
+   including LLM-driven orchestration.
 
 ## 4. Module Status and Architectural Priorities
 

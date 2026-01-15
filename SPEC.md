@@ -239,6 +239,23 @@ Intent:
   - e.g., use an LLM to configure an expert system or Bayesian classifier, then
     route matching intents to the smaller model.
 
+### 3.12 Intelligence Hub (Multi-Strategy Insights)
+
+The Intelligence Hub extends the core `Intelligence` orchestrator to:
+
+- Accept **multi-modal inputs** (text, images, audio, video, documents, URLs).
+- Split inputs into **segments** with metadata (source, format, context).
+- Apply **multiple strategies per segment** and return scored insights
+  (not just a single prediction).
+- Use `Sensory\Sense` **attention measurements** to determine how shallow or
+  deep to analyze each segment.
+- Aggregate insights into a **gestalt** view that can be consumed by apps,
+  downstream pipelines, or an LLM acting as a coordinator.
+
+The hub is intended to make Automata suitable for "intelligence pipelines"
+where a single input (PDF, video, or website) needs to be split, analyzed
+by multiple strategies, and recombined into structured results.
+
 ### 3.12 Service Layer and Benchmarking
 
 `Service` provides auxiliary services used by strategies and intelligence:
@@ -276,8 +293,14 @@ Automata is intended to support workflows like:
    - Listen to prediction events and adjust approvals/rejections over time.
 
 6. **Evolve the system**
-   - Use game models, genetic algorithms, and ABS/graph‑based memory to evolve
+   - Use game models, genetic algorithms, and ABS/graph-based memory to evolve
      better strategies.
+
+7. **Intelligence Hub workflows**
+   - Ingest a complex input (PDF, URL, or media bundle).
+   - Segment it by type and metadata.
+   - Run multiple strategies per segment, scoring outputs.
+   - Combine results into a gestalt summary for downstream decisions.
 
 ## 5. Implementation Status and Roadmap (High-Level)
 
