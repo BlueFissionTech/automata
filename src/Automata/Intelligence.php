@@ -605,12 +605,22 @@ class Intelligence extends Obj
         arsort($strategyScores);
         $topStrategies = array_slice(array_keys($strategyScores), 0, 3);
 
+        $intentScores = $this->aggregateSignals($segments, 'intent');
+        $structureScores = $this->aggregateSignals($segments, 'structure');
+        $contextScores = $this->aggregateSignals($segments, 'context');
+
         return [
             'segment_count' => count($segments),
             'insight_count' => count($insights),
             'segment_types' => $segmentTypes,
             'strategy_scores' => $strategyScores,
             'top_strategies' => $topStrategies,
+            'intent_scores' => $intentScores,
+            'structure_scores' => $structureScores,
+            'context_scores' => $contextScores,
+            'top_intents' => array_slice(array_keys($intentScores), 0, 3),
+            'top_structures' => array_slice(array_keys($structureScores), 0, 3),
+            'top_context' => array_slice(array_keys($contextScores), 0, 3),
         ];
     }
 
@@ -621,6 +631,102 @@ class Intelligence extends Obj
         }
 
         return array_keys($value) !== range(0, count($value) - 1);
+    }
+
+    private function aggregateSignals(array $segments, string $metaKey): array
+    {
+        $scores = [];
+
+        foreach ($segments as $segment) {
+            if (!isset($segment['meta'][$metaKey])) {
+                continue;
+            }
+
+            $signals = $segment['meta'][$metaKey];
+            if (!is_array($signals)) {
+                $signals = [$signals];
+            }
+
+            foreach ($signals as $signal) {
+                $entries = $this->normalizeSignal($signal);
+                foreach ($entries as $label => $score) {
+                    $label = trim((string)$label);
+                    if ($label === '') {
+                        continue;
+                    }
+                    $scores[$label] = ($scores[$label] ?? 0) + (float)$score;
+                }
+            }
+        }
+
+        arsort($scores);
+
+        return $scores;
+    }
+
+    private function normalizeSignal($signal): array
+    {
+        if ($signal instanceof \BlueFission\Arr) {
+            $signal = $signal->toArray();
+        }
+
+        if (is_array($signal)) {
+            if ($this->isAssociative($signal)) {
+                if (isset($signal['label'])) {
+                    $label = (string)$signal['label'];
+                    $score = $signal['score'] ?? ($signal['weight'] ?? 1);
+                    return [$label => $this->normalizeScore($score, $label)];
+                }
+
+                $entries = [];
+                foreach ($signal as $key => $value) {
+                    if (is_numeric($value)) {
+                        $entries[$key] = (float)$value;
+                    } elseif (is_scalar($value)) {
+                        $label = $this->formatScalarSignal($key, $value);
+                        $entries[$label] = 1.0;
+                    }
+                }
+
+                return $entries;
+            }
+
+            $entries = [];
+            foreach ($signal as $value) {
+                if (is_scalar($value)) {
+                    $entries[(string)$value] = 1.0;
+                } elseif (is_array($value) && $this->isAssociative($value)) {
+                    $entries = array_merge($entries, $this->normalizeSignal($value));
+                }
+            }
+
+            return $entries;
+        }
+
+        if (is_scalar($signal)) {
+            return [(string)$signal => 1.0];
+        }
+
+        return [];
+    }
+
+    private function normalizeScore($score, string $label): float
+    {
+        if (is_numeric($score)) {
+            return (float)$score;
+        }
+
+        if (is_scalar($score) && trim((string)$score) !== '') {
+            return 1.0;
+        }
+
+        return 0.0;
+    }
+
+    private function formatScalarSignal($key, $value): string
+    {
+        $valueText = is_bool($value) ? ($value ? 'true' : 'false') : (string)$value;
+        return (string)$key . ':' . $valueText;
     }
 
     /**
