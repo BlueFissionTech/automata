@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a4610cf490df3d8b9a3def37db69c8b7",
+    "content-hash": "78621b684533d85747d0d8eefaf41f33",
     "packages": [
         {
             "name": "bluefission/develation",
-            "version": "v1.3.4-alpha",
+            "version": "v1.3.5-alpha",
             "source": {
                 "type": "git",
                 "url": "https://github.com/BlueFissionTech/develation.git",
-                "reference": "23686a8380093091c96b271eed5433d3c97eaca1"
+                "reference": "af900edbce7def876c0dee92a3e3ba4f41869bc9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/BlueFissionTech/develation/zipball/23686a8380093091c96b271eed5433d3c97eaca1",
-                "reference": "23686a8380093091c96b271eed5433d3c97eaca1",
+                "url": "https://api.github.com/repos/BlueFissionTech/develation/zipball/af900edbce7def876c0dee92a3e3ba4f41869bc9",
+                "reference": "af900edbce7def876c0dee92a3e3ba4f41869bc9",
                 "shasum": ""
             },
             "require": {
@@ -66,10 +66,10 @@
                 "php"
             ],
             "support": {
-                "source": "https://github.com/BlueFissionTech/develation/tree/v1.3.4-alpha",
+                "source": "https://github.com/BlueFissionTech/develation/tree/v1.3.5-alpha",
                 "issues": "https://github.com/BlueFissionTech/develation/issues"
             },
-            "time": "2026-01-12T23:17:14+00:00"
+            "time": "2026-01-15T04:03:59+00:00"
         },
         {
             "name": "bluefission/simpleclients",
@@ -1600,12 +1600,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/http-client.git",
-                "reference": "c968c4f1480d2b50edf93f91a94cae85d018bcbd"
+                "reference": "c805ba22435bbfb3c03f03ffc9138d98c70f407c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/http-client/zipball/c968c4f1480d2b50edf93f91a94cae85d018bcbd",
-                "reference": "c968c4f1480d2b50edf93f91a94cae85d018bcbd",
+                "url": "https://api.github.com/repos/symfony/http-client/zipball/c805ba22435bbfb3c03f03ffc9138d98c70f407c",
+                "reference": "c805ba22435bbfb3c03f03ffc9138d98c70f407c",
                 "shasum": ""
             },
             "require": {
@@ -1693,7 +1693,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-01-09T12:14:21+00:00"
+            "time": "2026-01-14T09:36:49+00:00"
         },
         {
             "name": "symfony/http-client-contracts",
@@ -2915,12 +2915,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "fc9b0a96b203a6c760d7a997bfaf8b14ccaea715"
+                "reference": "1d230f2fe44be129d0c0e0b2632d056456438177"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/fc9b0a96b203a6c760d7a997bfaf8b14ccaea715",
-                "reference": "fc9b0a96b203a6c760d7a997bfaf8b14ccaea715",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/1d230f2fe44be129d0c0e0b2632d056456438177",
+                "reference": "1d230f2fe44be129d0c0e0b2632d056456438177",
                 "shasum": ""
             },
             "require": {
@@ -3016,7 +3016,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-01-04T06:49:04+00:00"
+            "time": "2026-01-13T15:05:47+00:00"
         },
         {
             "name": "sebastian/cli-parser",
