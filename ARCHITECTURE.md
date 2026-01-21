@@ -74,7 +74,27 @@ Responsibilities:
 - Benchmark training and prediction, returning both outputs and timing.
 - Expose clean, minimal interfaces that do not leak backend details.
 
-### 2.3 Sensory and Collections Layer
+### 2.3 Classification, Initiatives, and Feedback
+
+**Key modules:**
+
+- `Automata\\Classification`
+- `Automata\\Goal` (Initiatives)
+- `Automata\\Feedback`
+
+Responsibilities:
+
+- Provide a **classification gateway** that labels inputs with tags and
+  confidence scores before strategy routing.
+- Manage **initiative trees** with objectives, conditions, and KPIs that
+  drive goal-oriented strategy prioritization.
+- Compare **projections** and **observations** to reward or penalize strategies
+  based on outcomes, using pluggable assessment strategies.
+
+These systems stay decoupled from `Intelligence`/`Engine` so they can be used
+standalone, but integrate through shared `Context`, behaviors, and event hooks.
+
+### 2.4 Sensory and Collections Layer
 
 **Key modules:**
 
@@ -89,7 +109,7 @@ Responsibilities:
   workloads.
 - Maintain ordering, priority, and weighting semantics where needed.
 
-### 2.4 Analysis, Expert, Feature, Game, Genetic, and Graph Layers
+### 2.5 Analysis, Expert, Feature, Game, Genetic, and Graph Layers
 
 **Key folders:**
 
@@ -109,7 +129,7 @@ Responsibilities:
 - Contribute data structures and algorithms that tie directly into memory and
   comprehension.
 
-### 2.5 Memory, ABS, and Comprehension Layer
+### 2.6 Memory, ABS, and Comprehension Layer
 
 **Key folders:**
 
@@ -128,7 +148,7 @@ Responsibilities:
   - recover relevant context,
   - update knowledge graphs as events occur.
 
-### 2.6 Language and LLM Layer
+### 2.7 Language and LLM Layer
 
 **Key folders:**
 
@@ -215,6 +235,26 @@ problems, similar to HTTP controllers for web routes.
 4. A ranked list of strategies is applied per segment; outputs are scored.
 5. Insights are aggregated into a gestalt summary for downstream systems,
    including LLM-driven orchestration.
+
+### 3.6 Classification Gateway + Feedback Loop
+
+1. An input is first passed to `Classification\\Gateway`.
+2. Classifiers emit a `Result` with tags, confidence, and
+   optional tag graph relationships.
+3. `Engine`/`Intelligence` uses those tags to select or weight strategies.
+4. Strategies emit observations, which are compared to projections in the
+   `Feedback\\Assessor`.
+5. The assessor generates positive/negative feedback signals that can adjust
+   strategy weights or initiative progress.
+
+### 3.7 Initiatives and Progress Assessment
+
+1. Initiatives define objectives, conditions, KPIs, and prerequisites.
+2. Each objective can be translated into a `Projection` (expectation) that
+   is queued by the assessor.
+3. Observations from strategies and sensory inputs are matched to projections.
+4. Successful matches roll up progress to parent initiatives; failures can
+   decay priority or weight, and update feedback registries.
 
 ## 4. Module Status and Architectural Priorities
 

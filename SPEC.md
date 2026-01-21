@@ -256,7 +256,7 @@ The hub is intended to make Automata suitable for "intelligence pipelines"
 where a single input (PDF, video, or website) needs to be split, analyzed
 by multiple strategies, and recombined into structured results.
 
-### 3.12 Service Layer and Benchmarking
+### 3.13 Service Layer and Benchmarking
 
 `Service` provides auxiliary services used by strategies and intelligence:
 
@@ -267,6 +267,57 @@ These services support:
 
 - Scoring strategies beyond just accuracy (e.g., latency, cost, stability).
 - Operational insights about which strategies are most efficient.
+
+### 3.14 Classification Gateway
+
+The Classification Gateway adds a first-pass labeling system that:
+
+- Routes inputs to classifiers (distinct from predictive strategies).
+- Produces a **queryable** `Result` object with:
+  - tags/labels + confidence scores,
+  - optional proximity/relationship graph between tags,
+  - context metadata captured during classification.
+- Feeds classification output back into `Engine`/`Intelligence` so that
+  strategies can be selected based on categories and content cues, not just
+  input type.
+
+Classification operates through:
+
+- `Automata\\Classification\\IClassifier` (train/classify interface).
+- `Automata\\Classification\\Gateway` (registry + orchestration).
+- `Automata\\Classification\\Graph` for tag relationships.
+
+### 3.15 Initiatives (Goal System)
+
+The Initiatives system is a Holoscene-style, event-driven toolkit for
+tracking goals (called "initiatives") with:
+
+- Hierarchical structure (initiatives can contain initiatives).
+- Objectives, conditions, KPIs, rewards, prerequisites, tasks, and status.
+- Progress rollups that bubble up through the hierarchy.
+- Criteria with explicit operators, priorities, and tolerance values.
+- Criterion types include `time`, `position`, `item`, and `behavior` (behavior is
+  a macro for state/event/action). A `signal` type that bridges Sensory +
+  Context is planned but deferred until production use cases are clearer.
+
+Initiatives mirror the prior domain model from the Initiative addon but
+replace web-model semantics with intrinsic logic and event hooks.
+
+### 3.16 Feedback, Projections, and Observations
+
+The Feedback system provides:
+
+- `Projection` (expectations/predictions) objects with TTL and priority.
+- `Observation` objects representing measured results.
+- `Assessor` with pluggable strategies to match observations to projections:
+  - time-window matching,
+  - label overlap,
+  - contextual similarity thresholds.
+- Positive/negative feedback signals that can adjust strategy weights or
+  initiative progress.
+
+Feedback objects should be serializable, context-aware, and consumable by
+both runtime systems and training pipelines.
 
 ## 4. Typical Usage Patterns
 
@@ -354,6 +405,29 @@ Short‑term priorities:
      wiring) so examples double as tutorials for library users and validation
      that the APIs are idiomatic.
 
+9. **Classification gateway**
+   - Provide a unified classification gateway with queryable results.
+   - Introduce tag graphs and metadata-aware classification.
+   - Expose events for downstream selection and routing.
+
+10. **Initiatives (goal trees)**
+   - Port initiative domain concepts (initiative, objective, condition, KPI,
+     reward, prerequisite, task, status, types).
+   - Provide hierarchical progress rollups and sibling awareness.
+   - Ensure goals can emit projections for feedback assessment.
+
+11. **Feedback loop**
+   - Implement projection/observation/assessor with multiple matching
+     strategies and TTL handling.
+   - Provide feedback signals and a registry for positive/negative weighting.
+   - Make feedback handlers opt-in for strategies and context objects.
+
+12. **Demos**
+   - Disaster response classification demo (mock dataset first, real dataset
+     later) that exercises classification + feedback.
+   - An agent demo that runs without LLM keys and can optionally use LLM
+     strategies when keys are provided.
+
 Future directions:
 
 - Add pluggable connectors for major cloud AI providers (SageMaker, Bedrock,
@@ -362,6 +436,62 @@ Future directions:
   discover suitable strategies at runtime.
 - Introduce more sophisticated scoring functions that combine accuracy,
   latency, cost, and stability over time.
+
+## 6. Example Specifications
+
+### 6.1 Classification Gateway (Disaster Response)
+
+**Goal:** Classify incoming media metadata and text descriptors into tags such
+as `damage`, `people`, `infrastructure`, `blocked_road`, `flooding`.
+
+**Inputs:**
+- Mock dataset of labeled items (image metadata + short text notes).
+- Features include: mime type, dimensions, file size, color profile, and
+  normalized keyword counts.
+
+**Output:**
+- `Result` with tags and confidence scores.
+- Optional tag graph linking related labels (e.g., `flooding` <-> `road`).
+
+### 6.2 Initiatives (Goal Trees)
+
+**Goal:** Define an initiative tree for disaster response:
+- `Disaster Response` (root)
+  - `Infrastructure Recovery` (child)
+  - `People Safety` (child)
+
+**Criteria:**
+- Objectives (KPIs) like `roads_cleared >= 80%`, `medical_supply >= 60%`.
+- Conditions like `power_grid_status is stable`.
+
+**Output:**
+- Initiative progress rollups.
+- Projections generated from unsatisfied objectives.
+
+### 6.3 Feedback Loop
+
+**Goal:** Assess observations (incoming field reports) against projections.
+
+**Matching Strategies:**
+- Label overlap between observation tags and projection tags.
+- Time-window match for projections with TTL.
+- Context similarity thresholds (region, priority, event).
+
+**Output:**
+- Positive/negative feedback signals.
+- Updated strategy weights or initiative progress.
+
+### 6.4 Overarching Demo (Agent-Ready)
+
+**Goal:** Run the classification + initiative + feedback loop end-to-end.
+
+**Requirements:**
+- Runs without LLM keys using mock classifiers/strategies.
+- Optional LLM-backed strategies activated when keys are provided.
+- Logs assessments and feedback signals for inspection.
+
+**Future extension:**
+- A more complex agent demo that uses feedback to evolve behaviors over time.
 
 This SPEC is intended to be a living document; as Automata evolves, new modules,
 strategies, and integrations should be added here alongside their intended use

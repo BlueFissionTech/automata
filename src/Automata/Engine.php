@@ -3,8 +3,10 @@ namespace BlueFission\Automata;
 
 use BlueFission\Automata\Intelligence;
 use BlueFission\Behavioral\Behaviors\Action;
+use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Automata\Sensory\Sense;
+use BlueFission\DevElation as Dev;
 
 use BlueFission\Data\Queues\Queue as Queue;
 
@@ -54,7 +56,7 @@ class Engine extends Intelligence implements ISphere {
 
 	private $_score = 0;
 	private $_transaction_size;
-	// private $_level;
+	protected $_level;
 
 	private $_is_running = false;
 
@@ -64,7 +66,7 @@ class Engine extends Intelligence implements ISphere {
 	protected $_permissions;
 	protected ?Sense $_sense = null;
 
-	// protected $_inputs;
+	protected $_inputs;
 	protected $_memory;
 	// protected $_outputs;
 
@@ -79,8 +81,14 @@ class Engine extends Intelligence implements ISphere {
 		parent::__construct();
 
 		$this->_services = new OrganizedCollection(); // Redefined to organize
+		$this->_strategies = $this->_strategies ?? new OrganizedCollection();
 
 		$this->_biases = new OrganizedCollection();
+		$this->_inputs = new OrganizedCollection();
+		$this->_permissions = [];
+		$this->_scene = null;
+		$this->_level = 1;
+		$this->_avgtime = 0.0;
 
 		// Not sure if I need these
 		// $this->_scene = new Holoscene();
@@ -97,25 +105,53 @@ class Engine extends Intelligence implements ISphere {
 	}
 
 	public function classify( $input ) {
+		$input = Dev::apply('automata.engine.classify.1', $input);
 		$result = $input;
-		if ( $this->_scene->has($source) ) {
-			$this->_scene->add($source);
-		} else {
-			foreach ( $this->_strategies as $strategy ) {
-				$this->startclock();
-				$strategy->process($input);
-				$this->stopclock();
 
-				$time = $this->time();
-				$result = $strategy->guess();
-				echo $strategy->score()."\n";
-				if ($result) {
-					break;
-				}
+		if ( $this->_scene && method_exists($this->_scene, 'has') ) {
+			if ( !$this->_scene->has($input) && method_exists($this->_scene, 'add') ) {
+				$this->_scene->add($input);
 			}
 		}
 
-		return $result;
+		$strategies = $this->_strategies instanceof OrganizedCollection ? $this->_strategies->toArray() : [];
+		foreach ( $strategies as $name => $meta ) {
+			$strategy = $meta['value'] ?? $meta;
+			if ( !is_object($strategy) ) {
+				continue;
+			}
+
+			$this->startclock();
+			if ( method_exists($strategy, 'process') ) {
+				$strategy->process($input);
+			}
+
+			$guess = null;
+			if ( method_exists($strategy, 'guess') ) {
+				$guess = $strategy->guess();
+			} elseif ( method_exists($strategy, 'predict') ) {
+				$guess = $strategy->predict($input);
+			}
+
+			$this->stopclock();
+
+			if ( $guess !== null ) {
+				$result = $guess;
+			}
+
+			Dev::do('automata.engine.classify.action1', [
+				'strategy' => is_string($name) ? $name : get_class($strategy),
+				'input' => $input,
+				'output' => $result,
+				'executionTime' => $this->time(),
+			]);
+
+			if ( $result ) {
+				break;
+			}
+		}
+
+		return Dev::apply('automata.engine.classify.2', $result);
 	}
 
 	// Method probably not necessary
@@ -129,26 +165,31 @@ class Engine extends Intelligence implements ISphere {
 	}
 
 	protected function startclock() {
-		if ( function_exists('getrusage')) {
-			$this->_starttime = getrusage();
-		} else {
-			$this->_starttime = microtime(true);
-		}
+		$this->_starttime = function_exists('getrusage') ? getrusage() : microtime(true);
 	}
 
 	protected function stopclock() {
-		if ( function_exists('getrusage')) {
+		if ( function_exists('getrusage') && is_array($this->_starttime) ) {
 			$this->_stoptime = getrusage();
-			$this->_totaltime = ($ru["ru_utime.tv_sec"]*1000 + intval($ru["ru_utime.tv_usec"]/1000)) - ($rus["ru_utime.tv_sec"]*1000 + intval($rus["ru_utime.tv_usec"]/1000));
+			$ru = $this->_starttime;
+			$rus = $this->_stoptime;
+			$this->_totaltime = ($rus["ru_utime.tv_sec"]*1000 + intval($rus["ru_utime.tv_usec"]/1000))
+				- ($ru["ru_utime.tv_sec"]*1000 + intval($ru["ru_utime.tv_usec"]/1000));
 		} else {
 			$this->_stoptime = microtime(true);
-			$this->_totaltime = ($time_end - $time_start);
+			$start = is_numeric($this->_starttime) ? $this->_starttime : $this->_stoptime;
+			$this->_totaltime = ($this->_stoptime - $start);
 		}
 
+		if ( !is_numeric($this->_avgtime) || $this->_avgtime <= 0 ) {
+			$this->_avgtime = $this->_totaltime;
+		} else {
+			$this->_avgtime = ($this->_avgtime + $this->_totaltime) / 2;
+		}
 	}
 
 	public function time() {
-		return $this->_totaltime;
+		return $this->_totaltime ?? 0;
 	}
 
 	public function stats() {
@@ -223,33 +264,48 @@ class Engine extends Intelligence implements ISphere {
 
 	public function addProcessor( $name, $strategy )
 	{
-		$strategy = $name.'_strategy';
-		$this->delegate($strategy, $class);
+		if ( !$strategy ) {
+			return $this;
+		}
 
-		$this->_strategies->add($strategy, $strategy);
+		if ( is_string($strategy) && !class_exists($strategy) ) {
+			return $this;
+		}
+
+		$strategyName = $name.'_strategy';
+		$instance = $strategy;
+		if ( is_string($strategy) ) {
+			$instance = new $strategy();
+		}
+		if ( !is_object($instance) ) {
+			return $this;
+		}
+
+		$this->_strategies->add($instance, $strategyName);
 
 		return $this;
 	}
 
 	public function addInput( $name, $processor = null )
 	{
-		$sense = $name.'_sense';
-		$input = $name.'_input';
+		$senseName = $name.'_sense';
+		$inputName = $name.'_input';
 
-		$this
-			->delegate($input, '\BlueFission\Automata\Sensory\Input', $processor )
-			->delegate($sense, '\BlueFission\Automata\Sensory\Sense', $this)
+		$input = new \BlueFission\Automata\Sensory\Input($processor);
+		$input->name($inputName);
 
-			->register($input, 'input', 'scan' )
-			->register($sense, 'DoProcess', 'invoke')
+		$sense = new \BlueFission\Automata\Sensory\Sense($this);
 
-			// ->register($this->name(), 'DoQueueInput', 'queueInput')
-			// ->register($this->name(), 'DoTraining', 'addFrame')
+		$this->_inputs->add($input, $inputName);
+		$this->_inputs->add($sense, $senseName);
 
-			->route($input, $sense, 'OnComplete', 'DoProcess')
-			->route($sense, $this->name(), 'DoEnhance', 'OnEnhance')
-			// ->route($sense, $this->name(), 'OnCapture', 'DoQueueInput')
-		;
+		$input->when(Event::COMPLETE, function ($behavior, $args = null) use ($sense) {
+			$sense->invoke($behavior->context);
+		});
+
+		$sense->when('DoEnhance', function ($behavior, $args = null) {
+			$this->dispatch('OnEnhance', $behavior->context);
+		});
 
 		return $this;
 	}
@@ -266,12 +322,7 @@ class Engine extends Intelligence implements ISphere {
 	}
 
 	public function strategy($name, $class) {
-		$strategy = $name.'_strategy';
-		$this->delegate($strategy, $class);
-
-		$this->_strategies->add($strategy, $strategy);
-
-		return $this;
+		return $this->addProcessor($name, $class);
 	}
 
 	public function __destruct()
