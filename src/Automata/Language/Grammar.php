@@ -4,6 +4,7 @@ namespace BlueFission\Automata\Language;
 use BlueFission\Automata\Language\StemmerLemmatizer;
 use BlueFission\Automata\Collections\OrganizedCollection as Collection;
 use BlueFission\DevElation as Dev;
+use BlueFission\Automata\Language\Token;
 
 class Grammar
 {
@@ -14,6 +15,9 @@ class Grammar
     private $depth;
     private $previous;
     private $stemmer;
+    private bool $statementBoundaries = false;
+    private string $statementBoundaryToken = Token::STATEMENT;
+    private ?string $indentToken = null;
 
     public function __construct( StemmerLemmatizer $stemmer, $rules = null, $commands = null, $tokens = null )
 	{
@@ -46,13 +50,22 @@ class Grammar
 				}
 			}
 		}
-		if ($tokens) {
-			foreach ( $tokens as $term=>$classification ) {
-				foreach ($classification as $class) {
-					$this->addTerm($term, $class);
-				}
-			}
-		}
+        if ($tokens) {
+            foreach ( $tokens as $term=>$classification ) {
+                foreach ($classification as $class) {
+                    $this->addTerm($term, $class);
+                }
+            }
+        }
+    }
+
+    public function enableStatementBoundaries(bool $enabled = true, string $token = null, string $indentToken = null): void
+    {
+        $this->statementBoundaries = $enabled;
+        if ($token !== null) {
+            $this->statementBoundaryToken = $token;
+        }
+        $this->indentToken = $indentToken;
     }
 
     public function addRule($nonterminal, $terminal)
@@ -76,7 +89,7 @@ class Grammar
         $this->tokens[$term][] = $classification;
     }
 
-    public function tokenize($input)
+	public function tokenize($input)
 	{
 	    $classifications = [];
 	    $expected = [];
@@ -103,6 +116,44 @@ class Grammar
 
 	        if ($current === "\n") {
 	            $line++;
+                if ($this->statementBoundaries) {
+                    $output[$j] = [
+                        'classifications' => [$this->statementBoundaryToken],
+                        'token' => $current,
+                        'expects' => $expected,
+                        'match' => $current,
+                        'line' => $line,
+                    ];
+                    $j++;
+
+                    $expected = [];
+                    $next = [];
+                    $segment = '';
+                    $currentSegment = '';
+
+                    if ($this->indentToken) {
+                        $indent = '';
+                        $k = $i + 1;
+                        while ($k < $inputLength && ($tokens[$k] === ' ' || $tokens[$k] === "\t")) {
+                            $indent .= $tokens[$k];
+                            $k++;
+                        }
+
+                        if ($indent !== '') {
+                            $output[$j] = [
+                                'classifications' => [$this->indentToken],
+                                'token' => $indent,
+                                'expects' => $expected,
+                                'match' => $indent,
+                                'line' => $line,
+                            ];
+                            $j++;
+                            $i = $k - 1;
+                        }
+                    }
+
+                    continue;
+                }
 	        }
 
 	        $segment .= $current;
@@ -125,7 +176,7 @@ class Grammar
 	            		$matching = true;
 	            		$currentSegment = $segment;
 
-	            		if (!is_array($classification)) {
+		            	if (!is_array($classification)) {
 		            		$classification = [$classification];
 		            	}
 		                foreach ($classification as $class) {
@@ -139,7 +190,7 @@ class Grammar
 		                		}
 		                	}
 
-		                    if (count($options) < 1 || in_array($class, $options)) {
+		                    if (count($options) < 1 || in_array($class, $options) || $this->classificationMatchesAlias($class, $options)) {
 		                		// echo "working here: $class!";
 		                        $classifications[] = $class;
 		                    }
@@ -147,6 +198,12 @@ class Grammar
 	            	}
 	            }
 	        }
+
+            if (!$matching && ($current === ' ' || $current === "\t" || $current === "\r")) {
+                $segment = '';
+                $currentSegment = '';
+                continue;
+            }
 
 	        if ($count <= 1 && $matching == true) {
 	            	// echo "accepted\n";
@@ -203,6 +260,7 @@ class Grammar
 	                }
 
 	                if (count($classifications)) {
+                        $classifications = $this->expandClassifications($classifications);
 	                    $output[$j] = ['classifications' => $classifications, 'token' => $currentSegment, 'expects' => $expected, 'match' => $term, 'line' => $line];
 	                    $currentSegment = '';
 	                    $j++;
@@ -367,13 +425,68 @@ class Grammar
 	    return null;
 	}
 
-	private function isExpected($classification, $element)
+    private function isExpected($classification, $element)
 	{
 	    if (isset($this->commands[$classification]) && isset($this->commands[$classification]['expects'])) {
 	        return in_array($element, $this->commands[$classification]['expects']);
 	    }
 	    return true;
 	}
+
+    private function classificationMatchesAlias(string $classification, array $options): bool
+    {
+        if (empty($options)) {
+            return false;
+        }
+
+        $aliases = $this->aliasClasses($classification);
+        if (empty($aliases)) {
+            return false;
+        }
+
+        return count(array_intersect($aliases, $options)) > 0;
+    }
+
+    private function expandClassifications(array $classifications): array
+    {
+        $expanded = $classifications;
+        foreach ($classifications as $classification) {
+            $aliases = $this->aliasClasses($classification);
+            if (!empty($aliases)) {
+                $expanded = array_merge($expanded, $aliases);
+            }
+        }
+
+        return array_values(array_unique($expanded));
+    }
+
+    private function aliasClasses(string $classification): array
+    {
+        $aliases = [];
+        $command = $this->commands[$classification] ?? null;
+
+        if (is_array($command) && isset($command['aliasOf'])) {
+            $aliasOf = $command['aliasOf'];
+            if (is_string($aliasOf)) {
+                $aliases[] = $aliasOf;
+            } elseif (is_array($aliasOf)) {
+                $aliases = array_merge($aliases, $aliasOf);
+            }
+        }
+
+        if (is_array($command) && isset($command['soft'])) {
+            $soft = $command['soft'];
+            if ($soft === true) {
+                $aliases[] = Token::SYMBOL;
+            } elseif (is_string($soft)) {
+                $aliases[] = $soft;
+            } elseif (is_array($soft)) {
+                $aliases = array_merge($aliases, $soft);
+            }
+        }
+
+        return array_values(array_unique($aliases));
+    }
 
 	// Add the method to check for illegal structures
     private function isStructureAllowed($previous, $current)

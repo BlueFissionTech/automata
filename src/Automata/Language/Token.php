@@ -18,4 +18,5 @@ class Token {
 	const CONJUNCTION = "T_CONJUNCTION"; // and, but, then
 	const INTERJECTION = "T_INTERJECTION";
 	const PUNCTUATION = "T_PUNCTUATION";
+	const STATEMENT = "T_STATEMENT";
 }
