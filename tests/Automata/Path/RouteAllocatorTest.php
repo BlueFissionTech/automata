@@ -1,11 +1,11 @@
 <?php
 
-namespace BlueFission\Tests\Automata\GraphTheory;
+namespace BlueFission\Tests\Automata\Path;
 
 use PHPUnit\Framework\TestCase;
-use BlueFission\Automata\GraphTheory\Graph;
-use BlueFission\Automata\GraphTheory\Node;
-use BlueFission\Automata\GraphTheory\RouteAllocator;
+use BlueFission\Automata\Path\Graph;
+use BlueFission\Automata\Path\Node;
+use BlueFission\Automata\Path\RouteAllocator;
 
 class RouteAllocatorTest extends TestCase
 {

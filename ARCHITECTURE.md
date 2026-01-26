@@ -74,13 +74,14 @@ Responsibilities:
 - Benchmark training and prediction, returning both outputs and timing.
 - Expose clean, minimal interfaces that do not leak backend details.
 
-### 2.3 Classification, Initiatives, and Feedback
+### 2.3 Classification, Initiatives, Feedback, and Anomaly
 
 **Key modules:**
 
 - `Automata\\Classification`
 - `Automata\\Goal` (Initiatives)
 - `Automata\\Feedback`
+- `Automata\\Anomaly`
 
 Responsibilities:
 
@@ -90,6 +91,8 @@ Responsibilities:
   drive goal-oriented strategy prioritization.
 - Compare **projections** and **observations** to reward or penalize strategies
   based on outcomes, using pluggable assessment strategies.
+- Expose **anomaly detection** primitives (activity, fingerprint, signature)
+  and a multi-detector gateway for fraud or risk scoring.
 
 These systems stay decoupled from `Intelligence`/`Engine` so they can be used
 standalone, but integrate through shared `Context`, behaviors, and event hooks.
@@ -118,7 +121,7 @@ Responsibilities:
 - `Feature` – feature engineering and transformation.
 - `GameTheory` – game models, players, and strategies.
 - `Genetic` – genetic algorithms and fitness‑driven search.
-- `GraphTheory` – graph structures and traversal algorithms.
+- `Path` – graph structures and traversal algorithms.
 
 Responsibilities:
 
@@ -134,7 +137,7 @@ Responsibilities:
 **Key folders:**
 
 - `Memory`
-- (Related: `GraphTheory`, `Comprehension`, Holocene‑related modules)
+- (Related: `Path`, `Comprehension`, Holocene‑related modules)
 
 Responsibilities:
 
@@ -276,7 +279,7 @@ Short‑term architectural focus areas:
   - Stabilize expert system APIs before widespread reuse.
 
 - **Graph, Memory, ABS, Comprehension**
-  - Make sure graph operations exposed by `GraphTheory` are sufficient for
+  - Make sure graph operations exposed by `Path` are sufficient for
     memory and ABS use cases (e.g. nearest‑neighbor search, path queries).
   - Document the contract between Holocene/comprehension modules and memory.
 

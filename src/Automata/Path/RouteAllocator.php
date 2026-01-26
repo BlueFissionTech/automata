@@ -1,6 +1,6 @@
 <?php
 
-namespace BlueFission\Automata\GraphTheory;
+namespace BlueFission\Automata\Path;
 
 use BlueFission\Obj;
 use BlueFission\DevElation as Dev;
@@ -54,10 +54,10 @@ class RouteAllocator extends Obj
     public function allocate(array $assets, array $demands, array $edgeCapacities): array
     {
         // Allow filters/actions to adjust or observe allocation inputs.
-        $assets         = Dev::apply('automata.graphtheory.routeallocator.allocate.1', $assets);
-        $demands        = Dev::apply('automata.graphtheory.routeallocator.allocate.2', $demands);
-        $edgeCapacities = Dev::apply('automata.graphtheory.routeallocator.allocate.3', $edgeCapacities);
-        Dev::do('automata.graphtheory.routeallocator.allocate.action1', [
+        $assets         = Dev::apply('automata.path.routeallocator.allocate.1', $assets);
+        $demands        = Dev::apply('automata.path.routeallocator.allocate.2', $demands);
+        $edgeCapacities = Dev::apply('automata.path.routeallocator.allocate.3', $edgeCapacities);
+        Dev::do('automata.path.routeallocator.allocate.action1', [
             'assets'         => $assets,
             'demands'        => $demands,
             'edgeCapacities' => $edgeCapacities,
@@ -137,8 +137,8 @@ class RouteAllocator extends Obj
             }
         }
 
-        $allocations = Dev::apply('automata.graphtheory.routeallocator.allocate.4', $allocations);
-        Dev::do('automata.graphtheory.routeallocator.allocate.action2', ['allocations' => $allocations]);
+        $allocations = Dev::apply('automata.path.routeallocator.allocate.4', $allocations);
+        Dev::do('automata.path.routeallocator.allocate.action2', ['allocations' => $allocations]);
 
         return $allocations;
     }

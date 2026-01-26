@@ -1,6 +1,6 @@
 <?php
 
-namespace BlueFission\Automata\GraphTheory;
+namespace BlueFission\Automata\Path;
 
 use BlueFission\Obj;
 use BlueFission\Behavioral\Dispatches;

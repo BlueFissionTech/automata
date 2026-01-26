@@ -18,11 +18,11 @@ This is intended to complement LLMs and other models by providing a compact, exp
 - `BlueFission\Automata\Context`
   - Lightweight key–value store for episodic data (features, tags, timestamps, scores, etc.).
 - `BlueFission\Automata\Memory\MemoryNode`
-  - Extends `GraphTheory\Node` and wraps a `Context` instance.
+  - Extends `Path\Node` and wraps a `Context` instance.
   - Provides `reinforce(float $amount)` to strengthen usage.
   - Provides `similarity(Context $other)` for coarse similarity between contexts.
 - `BlueFission\Automata\Memory\Abs2Memory`
-  - Implements `IWorkingMemory` on top of `GraphTheory\Graph` and an `OrganizedCollection`.
+  - Implements `IWorkingMemory` on top of `Path\Graph` and an `OrganizedCollection`.
   - Responsible for adding memories, linking them, recalling by label, association, or similarity.
 - Recall scoring strategies:
   - `CosineSimilarityStrategy`
@@ -50,7 +50,7 @@ This is intended to complement LLMs and other models by providing a compact, exp
 
 ## Graph vs Context
 
-- **Graph side** (via `GraphTheory\Graph`):
+- **Graph side** (via `Path\Graph`):
   - Handles shortest paths and structural relationships between memories.
   - Useful for "how do I get from situation A to situation B via known experiences?"
 - **Context side** (via `Context` and `MemoryNode::similarity`):

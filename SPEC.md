@@ -141,7 +141,7 @@ The ABS system (Absolute/Abstract, ca. 2004) provides:
 
 Memory is closely tied to:
 
-- `GraphTheory` – traversal, pathfinding, similarity, and structural operations.
+- `Path` – traversal, pathfinding, similarity, and structural operations.
 - `Comprehension` and Holocene – higher‑level management and traversal of
   experiences.
 
@@ -217,6 +217,17 @@ The `Analysis` folder is focused on **classification**:
 - Current classifiers are opinionated; the goal is to add more generic,
   reusable classifiers with clear interfaces.
 - Support for building ensembles from multiple classifiers.
+
+### 3.11 Anomaly and Behavioral Risk
+
+The `Anomaly` module provides a toolkit for fraud and anomaly detection:
+
+- Multi-detector gateway that can score activity/fingerprint inputs.
+- Strategy wrappers around classical ML (random forest, logistic regression,
+  k‑means) with optional external backends (XGBoost, isolation forest).
+- Activity + fingerprint + signature primitives for behavioral biometrics,
+  device/location heuristics, and context-driven scoring.
+  - Signatures support heuristic matching against fingerprints.
 
 The `DecisionTree` folder:
 
@@ -378,7 +389,7 @@ Short‑term priorities:
      documented examples.
 
 5. **Graph, memory, ABS, and comprehension**
-   - Ensure `GraphTheory` provides the traversal and manipulation features that
+   - Ensure `Path` provides the traversal and manipulation features that
      `Memory` and ABS depend on.
    - Document and test the working-memory semantics of ABS and its relationship
      to Holocene/comprehension systems.
@@ -422,7 +433,13 @@ Short‑term priorities:
    - Provide feedback signals and a registry for positive/negative weighting.
    - Make feedback handlers opt-in for strategies and context objects.
 
-12. **Demos**
+12. **Anomaly detection toolkit**
+   - Provide a multi-detector anomaly gateway with activity/fingerprint
+     workflows and context-aware scoring.
+   - Add example scripts for fraud-style flows (device/location fingerprints,
+     behavior deltas) and baseline tests for detectors.
+
+13. **Demos**
    - Disaster response classification demo (mock dataset first, real dataset
      later) that exercises classification + feedback.
    - An agent demo that runs without LLM keys and can optionally use LLM
@@ -436,6 +453,8 @@ Future directions:
   discover suitable strategies at runtime.
 - Introduce more sophisticated scoring functions that combine accuracy,
   latency, cost, and stability over time.
+- Decouple php-ml behind model interfaces/wrappers and allow alternative ML
+  backends (Rubix, optional Python bridges) without changing Automata APIs.
 
 ## 6. Example Specifications
 

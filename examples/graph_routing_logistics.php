@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use BlueFission\Automata\GraphTheory\Graph;
-use BlueFission\Automata\GraphTheory\Node;
-use BlueFission\Automata\GraphTheory\RoutePlanner;
+use BlueFission\Automata\Path\Graph;
+use BlueFission\Automata\Path\Node;
+use BlueFission\Automata\Path\RoutePlanner;
 
 /**
  * Graph routing example in the disaster logistics domain.
