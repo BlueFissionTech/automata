@@ -6,6 +6,37 @@ use BlueFission\Automata\Classification\Gateway;
 use BlueFission\Automata\Classification\IClassifier;
 use BlueFission\Automata\Classification\Result;
 use BlueFission\Automata\Context;
+use BlueFission\Cli\Args;
+use BlueFission\Cli\Args\OptionDefinition;
+
+function parseOptions(array $args): array
+{
+    $parser = new Args();
+    $parser->addOptions([
+        new OptionDefinition('limit', [
+            'type' => 'int',
+            'default' => 5,
+            'description' => 'Number of rows to sample.',
+        ]),
+        new OptionDefinition('verbose', [
+            'short' => ['v'],
+            'type' => 'bool',
+            'default' => false,
+            'description' => 'Print text and tags.',
+        ]),
+    ]);
+    $parser->parse($args);
+    $options = $parser->options();
+    if (!empty($options['help'])) {
+        echo $parser->usage() . PHP_EOL;
+        exit(0);
+    }
+
+    return [
+        'limit' => max(1, (int)($options['limit'] ?? 5)),
+        'verbose' => (bool)($options['verbose'] ?? false),
+    ];
+}
 
 class CrisisLabelClassifier implements IClassifier
 {
@@ -108,6 +139,8 @@ $gateway->setContext(new Context());
 $gateway->registerClassifier(new CrisisLabelClassifier(), 'labels');
 $gateway->registerClassifier(new CrisisTextClassifier(), 'text');
 
+$options = parseOptions($argv ?? []);
+
 $handle = fopen($datasetPath, 'r');
 if (!$handle) {
     echo "Unable to open dataset.\n";
@@ -115,7 +148,7 @@ if (!$handle) {
 }
 
 $header = fgetcsv($handle, 0, "\t");
-$limit = 5;
+$limit = $options['limit'];
 $count = 0;
 
 while (($row = fgetcsv($handle, 0, "\t")) !== false && $count < $limit) {
@@ -129,7 +162,17 @@ while (($row = fgetcsv($handle, 0, "\t")) !== false && $count < $limit) {
     ]);
 
     echo "Tweet {$item['tweet_id']} label={$item['label']}\n";
-    print_r($result->top(5));
+    if ($options['verbose']) {
+        $text = (string)($item['tweet_text'] ?? '');
+        echo "  text: " . substr($text, 0, 140) . "\n";
+        foreach ($result->top(5) as $tag) {
+            $label = $tag['label'] ?? '';
+            $score = isset($tag['score']) ? round((float)$tag['score'], 2) : 0.0;
+            echo "  tag {$label} score={$score}\n";
+        }
+    } else {
+        print_r($result->top(5));
+    }
     echo "\n";
     $count++;
 }

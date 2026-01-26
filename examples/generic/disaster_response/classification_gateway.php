@@ -6,6 +6,56 @@ use BlueFission\Automata\Classification\Gateway;
 use BlueFission\Automata\Classification\IClassifier;
 use BlueFission\Automata\Classification\Result;
 use BlueFission\Automata\Context;
+use BlueFission\Cli\Args;
+use BlueFission\Cli\Args\OptionDefinition;
+use BlueFission\Cli\Util\Ansi;
+use BlueFission\Cli\Util\Tty;
+
+function parseOptions(array $args): array
+{
+    $parser = new Args();
+    $parser->addOptions([
+        new OptionDefinition('verbose', [
+            'short' => ['v'],
+            'type' => 'bool',
+            'default' => false,
+            'description' => 'Print detailed tag output.',
+        ]),
+        new OptionDefinition('color', [
+            'type' => 'bool',
+            'default' => true,
+            'description' => 'Enable ANSI colors.',
+        ]),
+        new OptionDefinition('limit', [
+            'type' => 'int',
+            'description' => 'Limit the number of mock samples.',
+        ]),
+    ]);
+    $parser->parse($args);
+    $options = $parser->options();
+    if (!empty($options['help'])) {
+        echo $parser->usage() . PHP_EOL;
+        exit(0);
+    }
+
+    $limit = array_key_exists('limit', $options) ? max(1, (int)$options['limit']) : null;
+    $color = (bool)($options['color'] ?? true) && Tty::isTty() && Ansi::supportsColors();
+
+    return [
+        'verbose' => (bool)($options['verbose'] ?? false),
+        'color' => $color,
+        'limit' => $limit,
+    ];
+}
+
+function colorize(string $text, string $color = null, array $styles = [], bool $enabled = true): string
+{
+    if (!$enabled) {
+        return $text;
+    }
+
+    return Ansi::colorize($text, $color, $styles, true);
+}
 
 class MetadataClassifier implements IClassifier
 {
@@ -105,12 +155,19 @@ class TextClassifier implements IClassifier
     }
 }
 
+$options = parseOptions($argv ?? []);
+$color = $options['color'];
 $dataset = require __DIR__ . '/mock_dataset.php';
+$limit = $options['limit'];
 
 $gateway = new Gateway();
 $gateway->setContext(new Context());
 $gateway->registerClassifier(new MetadataClassifier(), 'metadata');
 $gateway->registerClassifier(new TextClassifier(), 'text');
+
+if ($limit !== null) {
+    $dataset = array_slice($dataset, 0, $limit);
+}
 
 foreach ($dataset as $item) {
     $result = $gateway->classify($item, [
@@ -119,7 +176,18 @@ foreach ($dataset as $item) {
 
     $result->graph()->relate('damage', 'infrastructure', 0.6);
 
-    echo "Item: {$item['id']}\n";
-    print_r($result->top(5));
-    echo "\n";
+    if ($options['verbose']) {
+        $title = colorize('Item ' . ($item['id'] ?? 'unknown'), 'cyan', ['bold'], $color);
+        echo $title . ' | region=' . ($item['region'] ?? 'unknown') . "\n";
+        foreach ($result->top(5) as $tag) {
+            $label = $tag['label'] ?? '';
+            $score = isset($tag['score']) ? round((float)$tag['score'], 2) : 0.0;
+            echo '  - ' . colorize($label, 'yellow', ['bold'], $color) . ' score=' . $score . "\n";
+        }
+        echo "\n";
+    } else {
+        echo "Item: {$item['id']}\n";
+        print_r($result->top(5));
+        echo "\n";
+    }
 }

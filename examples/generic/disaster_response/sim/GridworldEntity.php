@@ -133,6 +133,7 @@ class GridworldEntity implements ISimulatable
         $worldState['progress'] = $this->progress;
         $worldState['feedback'] = $this->feedbackScores();
         $worldState['agent'] = $position->toArray();
+        $worldState['grid_snapshot'] = $this->snapshotGrid();
     }
 
     private function performAction(string $action, Cell $cell): bool
@@ -241,5 +242,36 @@ class GridworldEntity implements ISimulatable
         }
 
         return $scores;
+    }
+
+    private function snapshotGrid(): array
+    {
+        $cells = [];
+        for ($y = 0; $y < $this->grid->height(); $y++) {
+            for ($x = 0; $x < $this->grid->width(); $x++) {
+                $position = new Position($x, $y);
+                $cell = $this->grid->cell($position);
+                if (!$cell) {
+                    continue;
+                }
+
+                $cells[] = [
+                    'x' => $x,
+                    'y' => $y,
+                    'type' => $cell->type(),
+                    'blocked' => $cell->isBlocked(),
+                    'damaged' => $cell->isDamaged(),
+                    'people' => $cell->people(),
+                    'supplies' => $cell->supplies(),
+                ];
+            }
+        }
+
+        return [
+            'width' => $this->grid->width(),
+            'height' => $this->grid->height(),
+            'cells' => $cells,
+            'agent' => $this->player->position()->toArray(),
+        ];
     }
 }

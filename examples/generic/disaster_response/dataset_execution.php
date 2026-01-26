@@ -6,6 +6,8 @@ use BlueFission\Automata\Classification\Gateway;
 use BlueFission\Automata\Classification\IClassifier;
 use BlueFission\Automata\Classification\Result;
 use BlueFission\Automata\Context;
+use BlueFission\Cli\Args;
+use BlueFission\Cli\Args\OptionDefinition;
 
 class KeywordClassifier implements IClassifier
 {
@@ -82,27 +84,52 @@ function extractFeatures(string $text): array
     ];
 }
 
-function parseArgs(array $args): array
+function parseOptions(array $args): array
 {
-    $options = [
-        'limit' => 25,
-        'use_mock' => false,
-        'dataset' => 'crisismmd',
-    ];
-
-    foreach ($args as $arg) {
-        if (strpos($arg, '--limit=') === 0) {
-            $options['limit'] = max(1, (int)substr($arg, 8));
-        }
-        if ($arg === '--use-mock') {
-            $options['use_mock'] = true;
-        }
-        if (strpos($arg, '--dataset=') === 0) {
-            $options['dataset'] = strtolower(substr($arg, 10));
-        }
+    $parser = new Args();
+    $parser->addOptions([
+        new OptionDefinition('limit', [
+            'type' => 'int',
+            'default' => 25,
+            'description' => 'Limit dataset records.',
+        ]),
+        new OptionDefinition('use-mock', [
+            'type' => 'bool',
+            'default' => false,
+            'description' => 'Force mock dataset usage.',
+            'aliases' => ['use_mock'],
+        ]),
+        new OptionDefinition('dataset', [
+            'type' => 'string',
+            'default' => 'crisismmd',
+            'description' => 'Dataset identifier to use.',
+        ]),
+        new OptionDefinition('verbose', [
+            'short' => ['v'],
+            'type' => 'bool',
+            'default' => false,
+            'description' => 'Print sample rows.',
+        ]),
+        new OptionDefinition('samples', [
+            'type' => 'int',
+            'default' => 3,
+            'description' => 'Number of samples to print in verbose mode.',
+        ]),
+    ]);
+    $parser->parse($args);
+    $options = $parser->options();
+    if (!empty($options['help'])) {
+        echo $parser->usage() . PHP_EOL;
+        exit(0);
     }
 
-    return $options;
+    return [
+        'limit' => max(1, (int)($options['limit'] ?? 25)),
+        'use_mock' => (bool)($options['use-mock'] ?? $options['use_mock'] ?? false),
+        'dataset' => strtolower((string)($options['dataset'] ?? 'crisismmd')),
+        'verbose' => (bool)($options['verbose'] ?? false),
+        'samples' => max(1, (int)($options['samples'] ?? 3)),
+    ];
 }
 
 function loadCrisisMmd(string $path, int $limit): array
@@ -143,7 +170,7 @@ function loadCrisisMmd(string $path, int $limit): array
     return $rows;
 }
 
-$options = parseArgs($argv ?? []);
+$options = parseOptions($argv ?? []);
 $repoRoot = dirname(__DIR__, 3);
 $datasetsRoot = dirname($repoRoot) . DIRECTORY_SEPARATOR . 'datasets';
 
@@ -189,6 +216,7 @@ $gateway->registerClassifier(new KeywordClassifier($rules), 'keyword');
 $tagCounts = [];
 $labelCounts = [];
 $featureStats = [];
+$samples = [];
 
 foreach ($items as $item) {
     $features = extractFeatures($item['text']);
@@ -208,6 +236,16 @@ foreach ($items as $item) {
     $result = $gateway->classify(['text' => $item['text']], ['context' => new Context()]);
     foreach ($result->tags() as $tag => $info) {
         $tagCounts[$tag] = ($tagCounts[$tag] ?? 0) + 1;
+    }
+
+    if ($options['verbose'] && count($samples) < $options['samples']) {
+        $samples[] = [
+            'id' => $item['id'] ?? '',
+            'label' => $label,
+            'text' => substr((string)$item['text'], 0, 140),
+            'features' => $features,
+            'tags' => $result->top(5),
+        ];
     }
 }
 
@@ -230,5 +268,20 @@ $output = [
     'tag_distribution' => $tagCounts,
     'feature_normalization' => $normalization,
 ];
+
+if ($options['verbose']) {
+    echo "Dataset={$datasetName} status={$status} count=" . count($items) . "\n";
+    foreach ($samples as $sample) {
+        echo "Sample {$sample['id']} label={$sample['label']}\n";
+        echo "  text: {$sample['text']}\n";
+        echo '  features: ' . json_encode($sample['features']) . "\n";
+        foreach ($sample['tags'] as $tag) {
+            $label = $tag['label'] ?? '';
+            $score = isset($tag['score']) ? round((float)$tag['score'], 2) : 0.0;
+            echo "  tag {$label} score={$score}\n";
+        }
+        echo "\n";
+    }
+}
 
 echo json_encode($output, JSON_PRETTY_PRINT);
