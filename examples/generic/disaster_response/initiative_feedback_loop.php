@@ -14,6 +14,24 @@ use BlueFission\Automata\Feedback\FeedbackRegistry;
 use BlueFission\Automata\Feedback\Strategies\LabelOverlapStrategy;
 use BlueFission\Automata\Feedback\Strategies\TimeWindowMatchStrategy;
 use BlueFission\Automata\Feedback\Strategies\ContextSimilarityStrategy;
+use BlueFission\Cli\Args;
+use BlueFission\Cli\Args\OptionDefinition;
+
+$parser = new Args();
+$parser->addOptions([
+    new OptionDefinition('verbose', [
+        'short' => ['v'],
+        'type' => 'bool',
+        'default' => false,
+        'description' => 'Print projection details.',
+    ]),
+]);
+$parser->parse($argv ?? []);
+$options = $parser->options();
+if (!empty($options['help'])) {
+    echo $parser->usage() . PHP_EOL;
+    exit(0);
+}
 
 $initiative = new Initiative(['name' => 'Disaster Response', 'ttl' => 120]);
 
@@ -53,6 +71,16 @@ $observations = [
     ]),
 ];
 
+if ($options['verbose']) {
+    echo "Initiative: " . $initiative->field('name') . "\n";
+    foreach ($projections as $projection) {
+        $tags = implode(',', $projection->tags());
+        $context = $projection->context()->all();
+        echo "Projection tags={$tags} ttl=" . $projection->field('ttl') . " ctx=" . json_encode($context) . "\n";
+    }
+    echo "\n";
+}
+
 foreach ($projections as $projection) {
     foreach ($observations as $observation) {
         $assessment = $assessor->assess($projection, $observation);
@@ -61,7 +89,13 @@ foreach ($projections as $projection) {
             : FeedbackSignal::negative(0.1);
 
         $registry->apply('initiative:' . $initiative->field('name'), $signal);
-        echo "Assessment {$assessment->strategy()} score={$assessment->score()}\n";
+        if ($options['verbose']) {
+            $tags = implode(',', $observation->tags());
+            $projectionTags = implode(',', $projection->tags());
+            echo "Observation tags={$tags} vs Projection tags={$projectionTags} => {$assessment->strategy()} score={$assessment->score()}\n";
+        } else {
+            echo "Assessment {$assessment->strategy()} score={$assessment->score()}\n";
+        }
     }
 }
 
