@@ -2,8 +2,8 @@
 
 namespace BlueFission\Automata\Memory;
 
-use BlueFission\Automata\GraphTheory\Node as GraphNode;
 use BlueFission\Automata\Context;
+use BlueFission\Automata\Path\Node as GraphNode;
 use BlueFission\DevElation as Dev;
 
 class MemoryNode extends GraphNode
@@ -12,9 +12,11 @@ class MemoryNode extends GraphNode
 
     public function __construct(string $name, array $edges = [], ?Context $context = null)
     {
-        parent::__construct($name, $edges);
         $this->context = $context ?? new Context();
         $this->context = Dev::apply('automata.memory.memorynode.__construct.1', $this->context);
+
+        parent::__construct($name, $this->context, $edges);
+
         Dev::do('automata.memory.memorynode.__construct.action1', ['name' => $name, 'context' => $this->context]);
     }
 
@@ -26,6 +28,7 @@ class MemoryNode extends GraphNode
     public function setContext(Context $context): void
     {
         $this->context = $context;
+        $this->data = $context;
     }
 
     /**

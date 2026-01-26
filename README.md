@@ -10,7 +10,8 @@ The `bluefission/automata` library is a comprehensive PHP framework designed to 
 - **Game Theory**: Analyze competitive environments according to the choices of decision-makers for strategic planning and simulations.
 - **Scenario Modeling**: Inspired by NetLogo, it supports agent-based models for simulating interactions and processes within complex systems.
 - **Genetic Algorithms**: Implement evolutionary algorithms that mimic natural selection for solving optimization problems.
-- **Graph Theory**: Manage, analyze, and manipulate structures represented graphically including networks of nodes and edges.
+- **Path & Graphs**: Manage, analyze, and manipulate structures represented graphically including networks of nodes and edges.
+- **Anomaly Detection**: Score behavioral activity, fingerprints, and context to flag unusual or risky patterns.
 - **Natural Language Processing (NLP)**: Tools for text parsing, analysis, and understanding, enabling the library to process and interpret human language.
 - **Large Language Models (LLM)**: Facilitate prompting and generating responses using large pre-trained models, integrating with tools like GPT for advanced text generation.
 - **Feature Engineering**: Provides robust tools for transforming raw data into features that better represent the underlying processes to predictive models.

@@ -3,8 +3,8 @@
 namespace BlueFission\Automata\Memory;
 
 use BlueFission\Automata\Collections\OrganizedCollection;
-use BlueFission\Automata\GraphTheory\Graph;
 use BlueFission\Automata\Context;
+use BlueFission\Automata\Path\Graph;
 use BlueFission\DevElation as Dev;
 
 /**
@@ -46,7 +46,7 @@ class Abs2Memory extends Graph implements IWorkingMemory
 
         $this->_memoryNodes->add($node, $label);
 
-        // Keep Graph::_nodes and Graph::_graph updated via the public API.
+        // Keep Graph nodes/edges updated via the public API.
         $this->addNode($node);
     }
 
@@ -59,21 +59,14 @@ class Abs2Memory extends Graph implements IWorkingMemory
 
     public function associate(string $name1, string $name2, float $weight = 1.0): void
     {
-        $node1 = $this->getMemory($name1);
-        $node2 = $this->getMemory($name2);
+        $node1 = $this->ensureMemoryNode($name1);
+        $node2 = $this->ensureMemoryNode($name2);
 
         if (!$node1 || !$node2) {
             return;
         }
 
-        $edges1 = $node1->getEdges();
-        $edges2 = $node2->getEdges();
-
-        $edges1[$name2] = $weight;
-        $edges2[$name1] = $weight;
-
-        $this->storeNode(new MemoryNode($name1, $edges1, $node1->getContext()));
-        $this->storeNode(new MemoryNode($name2, $edges2, $node2->getContext()));
+        $this->connect($name1, $name2, ['weight' => $weight], false);
     }
 
     public function reinforcePath(string $start, string $end): array
@@ -200,13 +193,21 @@ class Abs2Memory extends Graph implements IWorkingMemory
             $this->_memoryNodes->remove($name);
         }
 
-        // Remove from the underlying graph and node registry, if present.
-        if (isset($this->_graph[$name])) {
-            $this->_graph->delete($name);
+        $nodes = $this->nodes();
+        if (isset($nodes[$name])) {
+            unset($nodes[$name]);
+            $this->nodes = $nodes;
         }
 
-        if (isset($this->_nodes[$name])) {
-            $this->_nodes->delete($name);
+        $edges = $this->edges;
+        if (is_array($edges)) {
+            unset($edges[$name]);
+            foreach ($edges as $from => $links) {
+                if (is_array($links) && array_key_exists($name, $links)) {
+                    unset($edges[$from][$name]);
+                }
+            }
+            $this->edges = $edges;
         }
     }
 
@@ -220,5 +221,17 @@ class Abs2Memory extends Graph implements IWorkingMemory
         }
 
         return $out;
+    }
+
+    protected function ensureMemoryNode(string $label): ?MemoryNode
+    {
+        $node = $this->getMemory($label);
+        if ($node instanceof MemoryNode) {
+            return $node;
+        }
+
+        $node = new MemoryNode($label, [], new Context());
+        $this->storeNode($node);
+        return $node;
     }
 }

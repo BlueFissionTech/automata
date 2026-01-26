@@ -1,32 +1,32 @@
-# Automata GraphTheory & Routing Overview
+# Automata Path & Routing Overview
 
 ## Purpose
 
-The `Automata\GraphTheory` namespace contains minimal but extensible tools for
+The `Automata\Path` namespace contains minimal but extensible tools for
 graph-based routing and flow planning. It is used here to model disaster
 logistics routes (hubs, bridges, highways, hospitals) but is not limited to
 that domain.
 
 ## Key Classes
 
-- `BlueFission\Automata\GraphTheory\Graph`
-  - Represents a directed graph as an adjacency map: `nodeName => [neighbor =>
-    edgeAttributes]`.
-  - Uses `BlueFission\Arr` for internal storage.
+- `BlueFission\Automata\Path\Graph`
+  - Thin wrapper around `BlueFission\Data\Graph\Graph`.
+  - Uses a node + edge map where edges hold attribute arrays.
   - Exposes:
     - `addNode(Node $node)` to register a node and its outgoing edges.
-    - `shortestPath(string $start, string $end, callable $fitness): array`
-      - Dijkstra-style search where the fitness function maps edge attributes
-        to a scalar cost (e.g., `time + risk * weight`).
+    - `connect($from, $to, $attributes = [], $directed = null)` to wire edges
+      (set `$directed = false` for undirected links).
+    - `shortestPath(string $start, string $end, ?callable $fitness = null): array`
+      - Dijkstra-style search; the fitness function maps edge attributes to
+        a scalar cost (e.g., `time + risk * weight`).
       - Returns an ordered list of node names from `start` to `end`, or an
         empty array if no route exists.
     - `getEdgeAttributes(string $from, string $to): ?array` to retrieve edge
       metadata.
 
 - `Node`
-  - Lightweight container for:
-    - Node name.
-    - Outgoing edges and their attributes.
+  - Wrapper for `BlueFission\Data\Graph\Node`.
+  - Holds node id, optional data payload, and outgoing edges/attributes.
 
 - `Route`
   - Extends `Obj`.
@@ -43,13 +43,13 @@ that domain.
 
 ## Tests
 
-- `tests/Automata/GraphTheory/GraphRoutingTest.php`
+- `tests/Automata/Path/GraphRoutingTest.php`
   - Validates `shortestPath()` on a small graph:
     - Safest route is chosen under a risk-heavy fitness function.
     - Blocking edges (e.g., marking a highway as blocked) forces rerouting.
     - Attempts to route to disconnected nodes return an empty path.
 
-- `tests/Automata/GraphTheory/RoutePlannerTest.php`
+- `tests/Automata/Path/RoutePlannerTest.php`
   - Ensures `RoutePlanner`:
     - Returns a `Route` with expected path and positive cost when a route
       exists.

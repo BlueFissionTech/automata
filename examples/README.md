@@ -19,5 +19,11 @@ To run an example:
 php examples/collections_basic.php
 ```
 
+Notable examples:
+
+- `examples/anomaly_gateway_basic.php` – multi-detector anomaly scoring on an activity.
+- `examples/anomaly_logistics_requests.php` – KNN-based anomaly scoring over logistics requests.
+- `examples/graph_routing_logistics.php` – route planning with fitness-based costs.
+
 Additional examples will be added as modules are fleshed out and tested.
 
