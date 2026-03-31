@@ -37,6 +37,7 @@ class FillIn implements IDispatcher
     protected $llm;
     protected $template;
     protected $parser;
+    protected ?LLMGenerator $generator = null;
     protected array $tools = [];
     protected array $vars = [];
     protected array $includePaths = [];
@@ -74,16 +75,20 @@ class FillIn implements IDispatcher
         PreparerRegistry::registerDefaults();
         PreparerRegistry::register(new LLMPreparer($this), [EvalElement::class]);
 
-        $generator = new LLMGenerator();
-        $generator->setDriver($this->llm);
-        $generator->setProfileResolver(fn (string $profile, Element $element): array => $this->resolveProfile($profile, $element));
-        GeneratorRegistry::set($generator);
+        $this->generator = new LLMGenerator();
+        $this->generator->setDriver($this->llm);
+        $this->generator->setProfileResolver(fn (string $profile, Element $element): array => $this->resolveProfile($profile, $element));
+        GeneratorRegistry::set($this->generator);
 
         $this->parser = new Parser($prompt);
-        $generator->registerEchoes($this->parser);
+        $this->generator->registerEchoes($this->parser);
         $this->parser->setVariables($this->vars);
         $this->parser->setIncludePaths($this->includePaths);
-        $this->echo($this->parser, [Event::STARTED, Event::SENT, Event::ERROR, Event::RECEIVED, Event::COMPLETE]);
+        foreach ([Event::STARTED, Event::SENT, Event::ERROR, Event::RECEIVED, Event::COMPLETE] as $behavior) {
+            $this->parser->when($behavior, function ($event, $meta = null) use ($behavior) {
+                $this->dispatch($behavior, $meta);
+            });
+        }
         $this->template = $prompt;
     }
 
@@ -124,6 +129,21 @@ class FillIn implements IDispatcher
     public function getLLM()
     {
         return $this->llm;
+    }
+
+    public function generator(): ?LLMGenerator
+    {
+        return $this->generator;
+    }
+
+    public function usageLedger(): array
+    {
+        return $this->generator ? $this->generator->usageLedger() : [];
+    }
+
+    public function usageTotals(): array
+    {
+        return $this->generator ? $this->generator->usageTotals() : [];
     }
 
     public function resolveProfile(string $profile, ?Element $element = null): array
@@ -182,6 +202,9 @@ class FillIn implements IDispatcher
     public function run(array $config = []): array
     {
         $this->dispatch(Event::STARTED, new Meta(when: State::RUNNING, src: $this));
+        if ($this->generator) {
+            $this->generator->resetUsage();
+        }
 
         $this->output = $this->parser->render();
 
@@ -191,7 +214,9 @@ class FillIn implements IDispatcher
         //  - Support streaming or chunked execution when prompts exceed limits.
 
         $this->dispatch(Event::COMPLETE, new Meta(when: State::RUNNING, data: [
-            'output' => $this->output
+            'output' => $this->output,
+            'usage' => $this->usageTotals(),
+            'output_token_estimate' => $this->estimateTokens($this->output),
         ], src: $this));
 
         return $this->parser->root()->getAllVariables();
@@ -285,5 +310,16 @@ class FillIn implements IDispatcher
         $filesystem->read();
 
         return (string)$filesystem->contents();
+    }
+
+    protected function estimateTokens(string $text): int
+    {
+        $text = Str::trim($text);
+        if ($text === '') {
+            return 0;
+        }
+
+        preg_match_all('/\S+/u', $text, $matches);
+        return max(count($matches[0] ?? []), (int)ceil(Str::len($text) / 4));
     }
 }
