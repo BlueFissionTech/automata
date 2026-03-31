@@ -34,4 +34,14 @@ class PromptElement extends EvalElement implements IExecutableElement, IRenderab
 
         return $this->description;
     }
+
+    public function render(): string
+    {
+        $silent = $this->getAttribute('silent');
+        if ($silent === 'true' || $silent === true) {
+            return '';
+        }
+
+        return (string)$this->value;
+    }
 }

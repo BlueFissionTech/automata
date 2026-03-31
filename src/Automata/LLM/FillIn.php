@@ -9,16 +9,24 @@ use BlueFission\Parsing\Registry\TagRegistry;
 use BlueFission\Parsing\Registry\RendererRegistry;
 use BlueFission\Parsing\Registry\ExecutorRegistry;
 use BlueFission\Parsing\Registry\PreparerRegistry;
+use BlueFission\Parsing\Registry\GeneratorRegistry;
 use BlueFission\Parsing\Contracts\IRenderableElement;
 use BlueFission\Parsing\Contracts\IExecutableElement;
 use BlueFission\Parsing\Element;
+use BlueFission\Parsing\TagDefinition;
 use BlueFission\Automata\Parsing\Elements\PromptElement;
+use BlueFission\Automata\Parsing\Generators\LLMGenerator;
 use BlueFission\Automata\Parsing\Preparers\LLMPreparer;
 use BlueFission\Automata\Parsing\Preparers\ToolPreparer;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\State;
 use BlueFission\Behavioral\Behaviors\Meta;
+use BlueFission\Data\FileSystem;
 use BlueFission\Obj;
+use BlueFission\Arr;
+use BlueFission\Str;
+use BlueFission\Val;
+use RuntimeException;
 
 class FillIn implements IDispatcher
 {
@@ -31,6 +39,9 @@ class FillIn implements IDispatcher
     protected $parser;
     protected array $tools = [];
     protected array $vars = [];
+    protected array $includePaths = [];
+    protected array $profilePaths = [];
+    protected array $profileOverrides = [];
     protected string $output = '';
     /**
      * Optional soft token budget for the rendered prompt, expressed as
@@ -51,13 +62,27 @@ class FillIn implements IDispatcher
     public function setPrompt(string $prompt): void
     {
         TagRegistry::registerDefaults();
+        TagRegistry::register(new TagDefinition(
+            name: 'eval',
+            pattern: '{open}=(.*?)(?:->(\\w+))?(?:\\s+silent=[\'\"]?(true|false)[\'\"]?)?{close}',
+            attributes: ['*'],
+            interface: IRenderableElement::class,
+            class: PromptElement::class
+        ));
         RendererRegistry::registerDefaults();
         ExecutorRegistry::registerDefaults();
         PreparerRegistry::registerDefaults();
         PreparerRegistry::register(new LLMPreparer($this), [EvalElement::class]);
 
+        $generator = new LLMGenerator();
+        $generator->setDriver($this->llm);
+        $generator->setProfileResolver(fn (string $profile, Element $element): array => $this->resolveProfile($profile, $element));
+        GeneratorRegistry::set($generator);
+
         $this->parser = new Parser($prompt);
+        $generator->registerEchoes($this->parser);
         $this->parser->setVariables($this->vars);
+        $this->parser->setIncludePaths($this->includePaths);
         $this->echo($this->parser, [Event::STARTED, Event::SENT, Event::ERROR, Event::RECEIVED, Event::COMPLETE]);
         $this->template = $prompt;
     }
@@ -73,9 +98,70 @@ class FillIn implements IDispatcher
         $this->tools[$name] = $tool;
     }
 
+    public function setIncludePaths(array $paths): void
+    {
+        $this->includePaths = $paths;
+        if ($this->parser) {
+            $this->parser->setIncludePaths($paths);
+        }
+    }
+
+    public function setProfilePaths(array $paths): void
+    {
+        $this->profilePaths = $paths;
+    }
+
+    public function registerProfileOverride(string $name, mixed $profile): void
+    {
+        $this->profileOverrides[$name] = $profile;
+    }
+
+    public function registerProfile(string $name, mixed $profile): void
+    {
+        $this->registerProfileOverride($name, $profile);
+    }
+
     public function getLLM()
     {
         return $this->llm;
+    }
+
+    public function resolveProfile(string $profile, ?Element $element = null): array
+    {
+        $profile = Str::trim($profile);
+        if ($profile === '') {
+            throw new RuntimeException('Profile attribute was provided but no profile name or path was given.');
+        }
+
+        $definition = $this->profileOverrides[$profile] ?? null;
+        if (is_callable($definition)) {
+            $definition = $definition($profile, $element, $this);
+        }
+
+        $resolved = [
+            'name' => $profile,
+            'driver' => $this->llm,
+            'prompt' => '',
+            'path' => null,
+        ];
+
+        if ($definition !== null) {
+            $resolved = $this->mergeProfileDefinition($resolved, $definition, $profile);
+        } else {
+            $resolved['path'] = $this->resolveProfilePath($profile);
+        }
+
+        if ($resolved['path']) {
+            $resolved['prompt'] = $resolved['prompt'] !== ''
+                ? $resolved['prompt']
+                : $this->readProfileContents($resolved['path']);
+        }
+
+        if ($resolved['prompt'] === '' && $resolved['driver'] === $this->llm && $definition === null) {
+            throw new RuntimeException("Unable to resolve generation profile '{$profile}'.");
+        }
+
+        return $resolved;
     }
 
     /**
@@ -114,5 +200,90 @@ class FillIn implements IDispatcher
     public function output(): string
     {
         return $this->output;
+    }
+
+    protected function mergeProfileDefinition(array $resolved, mixed $definition, string $profile): array
+    {
+        if (Arr::is($definition)) {
+            if (isset($definition['driver']) && Val::is($definition['driver']) && method_exists($definition['driver'], 'generate')) {
+                $resolved['driver'] = $definition['driver'];
+            }
+
+            if (isset($definition['prompt']) && Val::isNotNull($definition['prompt'])) {
+                $resolved['prompt'] = (string)$definition['prompt'];
+            }
+
+            if (isset($definition['path']) && Val::isNotNull($definition['path'])) {
+                $resolved['path'] = $this->resolveProfilePath((string)$definition['path']);
+            }
+
+            return $resolved;
+        }
+
+        if (Val::is($definition) && method_exists($definition, 'generate')) {
+            $resolved['driver'] = $definition;
+            return $resolved;
+        }
+
+        if (Str::is($definition)) {
+            $resolved['path'] = $this->resolveProfilePath($definition, false);
+            if (!$resolved['path']) {
+                $resolved['prompt'] = $definition;
+            }
+            return $resolved;
+        }
+
+        throw new RuntimeException("Invalid profile override registered for '{$profile}'.");
+    }
+
+    protected function resolveProfilePath(string $profile, bool $failIfMissing = true): ?string
+    {
+        $candidates = [];
+        $profile = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $profile);
+
+        if ($this->isAbsolutePath($profile)) {
+            $candidates[] = $profile;
+        } else {
+            $searchPaths = array_merge($this->profilePaths, $this->includePaths);
+            foreach ($searchPaths as $base) {
+                $base = rtrim((string)$base, '\\/');
+                if ($base === '') {
+                    continue;
+                }
+                $candidates[] = $base . DIRECTORY_SEPARATOR . $profile;
+            }
+
+            $candidates[] = $profile;
+        }
+
+        foreach ($candidates as $candidate) {
+            $filesystem = new FileSystem($candidate);
+            if ($filesystem->exists($candidate)) {
+                return rtrim((string)$filesystem->path(), '\\/') . DIRECTORY_SEPARATOR . basename($candidate);
+            }
+        }
+
+        if ($failIfMissing) {
+            throw new RuntimeException("Unable to resolve profile file '{$profile}'.");
+        }
+
+        return null;
+    }
+
+    protected function isAbsolutePath(string $path): bool
+    {
+        if ($path === '') {
+            return false;
+        }
+
+        return (bool)preg_match('/^[A-Za-z]:[\\\\\\/]/', $path) || Str::pos($path, DIRECTORY_SEPARATOR) === 0;
+    }
+
+    protected function readProfileContents(string $path): string
+    {
+        $filesystem = new FileSystem($path);
+        $filesystem->read();
+
+        return (string)$filesystem->contents();
     }
 }
