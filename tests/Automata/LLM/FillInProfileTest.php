@@ -232,4 +232,37 @@ class FillInProfileTest extends TestCase
         $this->assertCount(1, $client->prompts);
         $this->assertSame('', $client->prompts[0]);
     }
+
+    public function testGenerationAttributesSupportScopedInterpolationForThreadIds(): void
+    {
+        $client = new RecordingClient('threaded');
+        $fillIn = new FillIn(
+            $client,
+            '{=content thread="book:[[book.slug|slug]]:chapter:[[chapter|pad:2]]:section:[[section.slug|slug]]" session="session:[[book.slug|slug]]:[[chapter|pad:2]]"}'
+        );
+        $fillIn->setVariables([
+            'book' => ['slug' => 'Field Notes on Response'],
+            'chapter' => 3,
+            'section' => ['slug' => 'Initial Damage Survey'],
+        ]);
+
+        $sent = [];
+        $fillIn->when(Event::SENT, function ($behavior, $meta) use (&$sent) {
+            $sent[] = $meta;
+        });
+
+        $fillIn->run();
+
+        $this->assertNotEmpty($sent);
+        $data = $sent[0]->data;
+
+        $this->assertSame(
+            'book:field-notes-on-response:chapter:03:section:initial-damage-survey',
+            $data['thread']
+        );
+        $this->assertSame(
+            'session:field-notes-on-response:03',
+            $data['session']
+        );
+    }
 }
