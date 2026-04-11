@@ -2,12 +2,27 @@
 
 namespace BlueFission\Automata\MonteCarlo;
 
-class TreeSearch
+use BlueFission\Behavioral\Configurable;
+use BlueFission\Behavioral\IConfigurable;
+use BlueFission\Behavioral\IDispatcher;
+
+class TreeSearch implements IConfigurable, IDispatcher
 {
-    private int $iterations;
-    private float $explorationConstant;
-    private int $rolloutDepth;
-    private ?int $seed;
+    use Configurable {
+        Configurable::__construct as private __configConstruct;
+    }
+
+    public const EVENT_SEARCH_STARTED = 'automata.montecarlo.treesearch.started';
+    public const EVENT_NODE_EXPANDED = 'automata.montecarlo.treesearch.node_expanded';
+    public const EVENT_ITERATION_COMPLETED = 'automata.montecarlo.treesearch.iteration_completed';
+    public const EVENT_SEARCH_COMPLETED = 'automata.montecarlo.treesearch.completed';
+
+    protected array $_config = [
+        'iterations' => 100,
+        'exploration_constant' => 1.41421356237,
+        'rollout_depth' => 10,
+        'seed' => null,
+    ];
 
     public function __construct(
         int $iterations = 100,
@@ -23,10 +38,12 @@ class TreeSearch
             throw new \InvalidArgumentException('Rollout depth must be zero or greater.');
         }
 
-        $this->iterations = $iterations;
-        $this->explorationConstant = $explorationConstant;
-        $this->rolloutDepth = $rolloutDepth;
-        $this->seed = $seed;
+        $this->__configConstruct([
+            'iterations' => $iterations,
+            'exploration_constant' => $explorationConstant,
+            'rollout_depth' => $rolloutDepth,
+            'seed' => $seed,
+        ]);
     }
 
     public function search(
@@ -36,10 +53,17 @@ class TreeSearch
         callable $isTerminal,
         callable $reward
     ): TreeSearchResult {
-        $random = new RandomSource($this->seed);
+        $random = new RandomSource($this->seed());
         $root = new TreeSearchNode($initialState, null, null, array_values($legalActions($initialState)));
 
-        for ($iteration = 0; $iteration < $this->iterations; $iteration++) {
+        $this->dispatch(self::EVENT_SEARCH_STARTED, [
+            'initial_state' => $initialState,
+            'iterations' => $this->iterations(),
+            'exploration_constant' => $this->explorationConstant(),
+            'rollout_depth' => $this->rolloutDepth(),
+        ]);
+
+        for ($iteration = 0; $iteration < $this->iterations(); $iteration++) {
             $node = $root;
             $state = $initialState;
 
@@ -58,11 +82,17 @@ class TreeSearch
                 $child = new TreeSearchNode($state, $node, $action, array_values($legalActions($state)));
                 $node->addChild($child);
                 $node = $child;
+
+                $this->dispatch(self::EVENT_NODE_EXPANDED, [
+                    'iteration' => $iteration,
+                    'action' => $action,
+                    'state' => $state,
+                ]);
             }
 
             $simulationState = $state;
             $depth = 0;
-            while (!$isTerminal($simulationState) && $depth < $this->rolloutDepth) {
+            while (!$isTerminal($simulationState) && $depth < $this->rolloutDepth()) {
                 $actions = array_values($legalActions($simulationState));
                 if (empty($actions)) {
                     break;
@@ -79,9 +109,41 @@ class TreeSearch
                 $node->record($score);
                 $node = $node->getParent();
             }
+
+            $this->dispatch(self::EVENT_ITERATION_COMPLETED, [
+                'iteration' => $iteration,
+                'score' => $score,
+                'simulation_state' => $simulationState,
+            ]);
         }
 
-        return new TreeSearchResult($root);
+        $result = new TreeSearchResult($root);
+
+        $this->dispatch(self::EVENT_SEARCH_COMPLETED, $result->toArray());
+
+        return $result;
+    }
+
+    public function iterations(): int
+    {
+        return (int)$this->config('iterations');
+    }
+
+    public function explorationConstant(): float
+    {
+        return (float)$this->config('exploration_constant');
+    }
+
+    public function rolloutDepth(): int
+    {
+        return (int)$this->config('rollout_depth');
+    }
+
+    public function seed(): ?int
+    {
+        $seed = $this->config('seed');
+
+        return $seed === null ? null : (int)$seed;
     }
 
     private function selectChild(TreeSearchNode $node): TreeSearchNode
@@ -96,7 +158,7 @@ class TreeSearch
             }
 
             $score = $child->getMeanReward()
-                + $this->explorationConstant * sqrt(log($parentVisits) / $child->getVisits());
+                + $this->explorationConstant() * sqrt(log($parentVisits) / $child->getVisits());
 
             if ($score > $bestScore) {
                 $bestScore = $score;

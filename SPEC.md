@@ -274,6 +274,17 @@ Core expectations:
   with a configurable exploration/exploitation balance.
 - The subsystem should remain simple enough to serve as a planning primitive
   for logistics, dispatch, and other decision-heavy examples.
+- The subsystem should follow DevElation-style behavior/config patterns so
+  rollout engines can be observed, budgeted, and composed into larger
+  intelligence loops.
+
+Worldview dependency:
+
+- Higher-order abstractions for `Proto`, `Position`, `Blueprint`, and `Agent`
+  should live upstream in Develation and be consumable here once stabilized.
+- Automata should treat those as worldview primitives that shape data typing,
+  feature extraction, simulation state, and JenSS-facing semantics without
+  hard-coding one domain model.
 
 ### 3.11 Analysis, Classification, and Decision Trees
 
