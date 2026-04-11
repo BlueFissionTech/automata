@@ -250,7 +250,32 @@ It is a natural complement to:
 - Strategy selection (evolving ensembles).
 - Hyperparameter search for other models.
 
-### 3.10 Analysis, Classification, and Decision Trees
+### 3.10 Monte Carlo Search and Tree Search
+
+The `MonteCarlo` module provides:
+
+- Budgeted stochastic evaluation of candidate actions or states.
+- Deterministic seeded rollouts for reproducible tests and examples.
+- Tree search over sequential decisions using Monte Carlo Tree Search (MCTS).
+
+Goals:
+
+- Make it easy to evaluate competing actions when the environment is noisy or
+  partially simulated.
+- Reuse the same rollout primitives for direct action ranking and for MCTS.
+- Support callback-driven integration with game, simulation, path, and
+  strategy-oriented modules without forcing a single state representation.
+
+Core expectations:
+
+- Monte Carlo search should report visits, total reward, mean reward, and best
+  observed reward for each candidate action.
+- MCTS should implement selection, expansion, simulation, and backpropagation
+  with a configurable exploration/exploitation balance.
+- The subsystem should remain simple enough to serve as a planning primitive
+  for logistics, dispatch, and other decision-heavy examples.
+
+### 3.11 Analysis, Classification, and Decision Trees
 
 The `Analysis` folder is focused on **classification**:
 
@@ -258,7 +283,7 @@ The `Analysis` folder is focused on **classification**:
   reusable classifiers with clear interfaces.
 - Support for building ensembles from multiple classifiers.
 
-### 3.11 Anomaly and Behavioral Risk
+### 3.12 Anomaly and Behavioral Risk
 
 The `Anomaly` module provides a toolkit for fraud and anomaly detection:
 
@@ -276,7 +301,7 @@ The `DecisionTree` folder:
 - Should provide a canonical, well‑tested implementation of decision trees in
   the library.
 
-### 3.11 LLM and External Model Integration
+### 3.13 LLM and External Model Integration
 
 The `LLM` module integrates:
 
@@ -290,7 +315,7 @@ Intent:
   - e.g., use an LLM to configure an expert system or Bayesian classifier, then
     route matching intents to the smaller model.
 
-### 3.12 Intelligence Hub (Multi-Strategy Insights)
+### 3.14 Intelligence Hub (Multi-Strategy Insights)
 
 The Intelligence Hub extends the core `Intelligence` orchestrator to:
 
