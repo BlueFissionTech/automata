@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/bootstrap.php';
+automata_example_require('Automata/Path/RouteAllocator.php');
 
+use BlueFission\Func;
 use BlueFission\Automata\Path\Graph;
 use BlueFission\Automata\Path\Node;
 use BlueFission\Automata\Path\RouteAllocator;
@@ -18,7 +20,8 @@ use BlueFission\Automata\Path\RouteAllocator;
  *   and via Highway-Loop (lower risk, higher capacity).
  *
  * We allocate flow while respecting edge capacities and
- * preferring safer routes.
+ * preferring safer routes, with a fitness hook that can
+ * see the asset and demand context.
  */
 
 function buildLogisticsGraph(): Graph
@@ -50,7 +53,7 @@ function buildLogisticsGraph(): Graph
 
 $graph = buildLogisticsGraph();
 
-$fitness = function (array $edge): float {
+$fitness = new Func(function (array $edge, array $asset, array $demand): float {
     if (!empty($edge['blocked'])) {
         return (float)(PHP_INT_MAX / 4);
     }
@@ -58,8 +61,11 @@ $fitness = function (array $edge): float {
     $time = $edge['time'] ?? 0;
     $risk = $edge['risk'] ?? 0;
 
-    return (float)($time + $risk * 20);
-};
+    $urgencyPenalty = (($demand['priority'] ?? 0) >= 10 && $time > 25) ? 10.0 : 0.0;
+    $capacityBias = (($asset['capacity'] ?? 0.0) >= 4.0) ? -5.0 : 0.0;
+
+    return (float)($time + $risk * 20 + $urgencyPenalty + $capacityBias);
+});
 
 $allocator = new RouteAllocator($graph, $fitness);
 
@@ -82,6 +88,7 @@ $edgeCapacities = [
 $allocations = $allocator->allocate($assets, $demands, $edgeCapacities);
 
 echo "=== Graph Route Allocation Logistics Example ===\n\n";
+echo "Fitness hook considers: edge risk/time, demand priority, and asset capacity.\n\n";
 
 foreach ($allocations as $alloc) {
     $assetId = $alloc['asset_id'];

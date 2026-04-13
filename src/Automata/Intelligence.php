@@ -2,9 +2,14 @@
 
 namespace BlueFission\Automata;
 
+use BlueFission\Arr;
 use BlueFission\Obj;
+use BlueFission\Func;
+use BlueFission\Num;
+use BlueFission\Str;
 use BlueFission\DevElation as Dev;
 use BlueFission\DevElation;
+use BlueFission\Automata\Support\Evaluates;
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Automata\Sensory\Input;
 use BlueFission\Automata\Strategy\IStrategy;
@@ -24,6 +29,7 @@ use BlueFission\Behavioral\Behaviors\Behavior;
 class Intelligence extends Obj
 {
     use Dispatches;
+    use Evaluates;
 
     protected OrganizedCollection $_strategies; // Collection of strategies with weights
     protected float $_minThreshold; // Minimum accuracy threshold for a strategy
@@ -85,7 +91,7 @@ class Intelligence extends Obj
             'weight' => null,
         ];
 
-        $profile = array_merge($defaults, $profile);
+        $profile = $this->mergeMap($defaults, $profile);
 
         $this->registerStrategy($strategy, $name);
         $this->_strategyProfiles[$name] = $profile;
@@ -97,13 +103,15 @@ class Intelligence extends Obj
     }
 
     /**
-     * Register an intent analyzer (callable or IAnalyzer implementation).
+     * Register an intent analyzer (Func/callable or IAnalyzer implementation).
      *
-     * @param callable|IAnalyzer $analyzer
+     * @param Func|callable|IAnalyzer $analyzer
      */
     public function registerIntentAnalyzer($analyzer): void
     {
-        $this->_intentAnalyzers[] = $analyzer;
+        $this->_intentAnalyzers[] = $analyzer instanceof Func || $analyzer instanceof IAnalyzer
+            ? $analyzer
+            : $this->asFunc($analyzer);
     }
 
     /**
@@ -111,9 +119,9 @@ class Intelligence extends Obj
      *
      * @param callable $classifier
      */
-    public function registerStructureClassifier(callable $classifier): void
+    public function registerStructureClassifier(Func|callable $classifier): void
     {
-        $this->_structureClassifiers[] = $classifier;
+        $this->_structureClassifiers[] = $this->asFunc($classifier);
     }
 
     /**
@@ -121,9 +129,9 @@ class Intelligence extends Obj
      *
      * @param callable $provider
      */
-    public function registerContextProvider(callable $provider): void
+    public function registerContextProvider(Func|callable $provider): void
     {
-        $this->_contextProviders[] = $provider;
+        $this->_contextProviders[] = $this->asFunc($provider);
     }
 
     /**
@@ -307,9 +315,9 @@ class Intelligence extends Obj
      *
      * @param callable $listener The listener function
      */
-    public function onPrediction(callable $listener)
+    public function onPrediction(Func|callable $listener)
     {
-        $this->behavior(self::PREDICTION_EVENT, $listener);
+        $this->behavior(self::PREDICTION_EVENT, $listener instanceof Func ? $listener : new Func($listener));
     }
 
     /**
@@ -326,7 +334,7 @@ class Intelligence extends Obj
 
         foreach ($segments as $segment) {
             $segmentInsights = $this->analyzeSegment($segment, $options);
-            $insights = array_merge($insights, $segmentInsights);
+            $insights = $this->appendList($insights, $segmentInsights);
         }
 
         $gestalt = $this->buildGestalt($segments, $insights);
@@ -354,7 +362,7 @@ class Intelligence extends Obj
         $strategies = $this->resolveStrategiesForType($segment['type']);
         $budget = $this->resolveStrategyBudget(count($strategies), $options);
 
-        $selected = array_slice($strategies, 0, $budget);
+        $selected = Arr::slice($strategies, 0, $budget);
         $insights = [];
 
         foreach ($selected as $strategyMeta) {
@@ -432,19 +440,19 @@ class Intelligence extends Obj
 
         if (isset($options['strategy_budget'])) {
             $budget = (int)$options['strategy_budget'];
-            return max(1, min($strategyCount, $budget));
+            return Num::max(1, Num::min($strategyCount, $budget));
         }
 
         if (isset($options['attention_score'])) {
             $score = (float)$options['attention_score'];
-            $score = max(0.0, min(1.0, $score));
-            $budget = (int)max(1, ceil($score * $strategyCount));
+            $score = Num::max(0.0, Num::min(1.0, $score));
+            $budget = (int)Num::max(1, ceil($score * $strategyCount));
 
             if (isset($options['max_strategy_budget'])) {
-                $budget = min($budget, (int)$options['max_strategy_budget']);
+                $budget = Num::min($budget, (int)$options['max_strategy_budget']);
             }
             if (isset($options['min_strategy_budget'])) {
-                $budget = max($budget, (int)$options['min_strategy_budget']);
+                $budget = Num::max($budget, (int)$options['min_strategy_budget']);
             }
 
             return $budget;
@@ -455,8 +463,8 @@ class Intelligence extends Obj
 
     private function segmentInput($input, array $options): array
     {
-        if (isset($options['segmenter']) && is_callable($options['segmenter'])) {
-            $segments = call_user_func($options['segmenter'], $input, $options);
+        if (isset($options['segmenter']) && ($options['segmenter'] instanceof Func || is_callable($options['segmenter']))) {
+            $segments = $this->invokeFunc($options['segmenter'], [$input, $options, $this]);
             return $this->normalizeSegments($segments, $options);
         }
 
@@ -472,7 +480,7 @@ class Intelligence extends Obj
         if (is_array($input)) {
             if ($this->isAssociative($input) && isset($input['segments']) && is_array($input['segments'])) {
                 $items = $input['segments'];
-                $baseMeta = array_merge($baseMeta, $input['meta'] ?? []);
+                $baseMeta = $this->mergeMap($baseMeta, $input['meta'] ?? []);
             } elseif ($this->isAssociative($input) && (array_key_exists('payload', $input) || array_key_exists('type', $input))) {
                 $items = [$input];
             } else {
@@ -490,14 +498,14 @@ class Intelligence extends Obj
             if (is_array($item) && (array_key_exists('payload', $item) || array_key_exists('type', $item))) {
                 $payload = $item['payload'] ?? ($item['content'] ?? $item);
                 $type = $item['type'] ?? null;
-                $meta = array_merge($meta, $item['meta'] ?? []);
+                $meta = $this->mergeMap($meta, $item['meta'] ?? []);
             }
 
             $type = $type ?: ($this->getType($payload) ?? InputType::TEXT);
 
-            if (isset($options['segment_meta']) && is_callable($options['segment_meta'])) {
-                $extraMeta = (array)call_user_func($options['segment_meta'], $payload, $type, $index, $meta);
-                $meta = array_merge($meta, $extraMeta);
+            if (isset($options['segment_meta']) && ($options['segment_meta'] instanceof Func || is_callable($options['segment_meta']))) {
+                $extraMeta = (array)$this->invokeFunc($options['segment_meta'], [$payload, $type, $index, $meta, $this]);
+                $meta = $this->mergeMap($meta, $extraMeta);
             }
 
             $meta = $this->applyClassifiers($payload, $type, $meta, $options);
@@ -519,8 +527,8 @@ class Intelligence extends Obj
         $intents = $options['intents'] ?? $this->_intents;
 
         $intentSignals = [];
-        if (isset($options['intent_classifier']) && is_callable($options['intent_classifier'])) {
-            $intentSignals[] = call_user_func($options['intent_classifier'], $payload, $type, $meta, $context, $intents);
+        if (isset($options['intent_classifier']) && ($options['intent_classifier'] instanceof Func || is_callable($options['intent_classifier']))) {
+            $intentSignals[] = $this->invokeFunc($options['intent_classifier'], [$payload, $type, $meta, $context, $intents, $this]);
         }
 
         foreach ($this->_intentAnalyzers as $analyzer) {
@@ -532,22 +540,22 @@ class Intelligence extends Obj
         }
 
         $structureSignals = [];
-        if (isset($options['structure_classifier']) && is_callable($options['structure_classifier'])) {
-            $structureSignals[] = call_user_func($options['structure_classifier'], $payload, $type, $meta);
+        if (isset($options['structure_classifier']) && ($options['structure_classifier'] instanceof Func || is_callable($options['structure_classifier']))) {
+            $structureSignals[] = $this->invokeFunc($options['structure_classifier'], [$payload, $type, $meta, $context, $this]);
         }
         foreach ($this->_structureClassifiers as $classifier) {
-            $structureSignals[] = call_user_func($classifier, $payload, $type, $meta);
+            $structureSignals[] = $this->invokeFunc($classifier, [$payload, $type, $meta, $context, $this]);
         }
         if (!empty($structureSignals)) {
             $meta['structure'] = $structureSignals;
         }
 
         $contextSignals = [];
-        if (isset($options['context_provider']) && is_callable($options['context_provider'])) {
-            $contextSignals[] = call_user_func($options['context_provider'], $payload, $type, $meta);
+        if (isset($options['context_provider']) && ($options['context_provider'] instanceof Func || is_callable($options['context_provider']))) {
+            $contextSignals[] = $this->invokeFunc($options['context_provider'], [$payload, $type, $meta, $context, $this]);
         }
         foreach ($this->_contextProviders as $provider) {
-            $contextSignals[] = call_user_func($provider, $payload, $type, $meta);
+            $contextSignals[] = $this->invokeFunc($provider, [$payload, $type, $meta, $context, $this]);
         }
         if (!empty($contextSignals)) {
             $meta['context'] = $contextSignals;
@@ -562,8 +570,8 @@ class Intelligence extends Obj
             return $analyzer->analyze((string)$payload, $context, $intents);
         }
 
-        if (is_callable($analyzer)) {
-            return call_user_func($analyzer, $payload, $context, $intents);
+        if ($analyzer instanceof Func || is_callable($analyzer)) {
+            return $this->invokeFunc($analyzer, [$payload, $context, $intents, $this]);
         }
 
         return null;
@@ -603,7 +611,7 @@ class Intelligence extends Obj
         }
 
         arsort($strategyScores);
-        $topStrategies = array_slice(array_keys($strategyScores), 0, 3);
+        $topStrategies = $this->topKeys($strategyScores, 3);
 
         $intentScores = $this->aggregateSignals($segments, 'intent');
         $structureScores = $this->aggregateSignals($segments, 'structure');
@@ -618,9 +626,9 @@ class Intelligence extends Obj
             'intent_scores' => $intentScores,
             'structure_scores' => $structureScores,
             'context_scores' => $contextScores,
-            'top_intents' => array_slice(array_keys($intentScores), 0, 3),
-            'top_structures' => array_slice(array_keys($structureScores), 0, 3),
-            'top_context' => array_slice(array_keys($contextScores), 0, 3),
+            'top_intents' => $this->topKeys($intentScores, 3),
+            'top_structures' => $this->topKeys($structureScores, 3),
+            'top_context' => $this->topKeys($contextScores, 3),
         ];
     }
 
@@ -630,7 +638,7 @@ class Intelligence extends Obj
             return false;
         }
 
-        return array_keys($value) !== range(0, count($value) - 1);
+        return Arr::keys($value) !== range(0, count($value) - 1);
     }
 
     private function aggregateSignals(array $segments, string $metaKey): array
@@ -650,7 +658,7 @@ class Intelligence extends Obj
             foreach ($signals as $signal) {
                 $entries = $this->normalizeSignal($signal);
                 foreach ($entries as $label => $score) {
-                    $label = trim((string)$label);
+                    $label = Str::trim((string)$label);
                     if ($label === '') {
                         continue;
                     }
@@ -680,7 +688,7 @@ class Intelligence extends Obj
 
                 $entries = [];
                 foreach ($signal as $key => $value) {
-                    if (is_numeric($value)) {
+                    if (Num::isValid($value)) {
                         $entries[$key] = (float)$value;
                     } elseif (is_scalar($value)) {
                         $label = $this->formatScalarSignal($key, $value);
@@ -696,7 +704,7 @@ class Intelligence extends Obj
                 if (is_scalar($value)) {
                     $entries[(string)$value] = 1.0;
                 } elseif (is_array($value) && $this->isAssociative($value)) {
-                    $entries = array_merge($entries, $this->normalizeSignal($value));
+                    $entries = $this->mergeMap($entries, $this->normalizeSignal($value));
                 }
             }
 
@@ -712,11 +720,11 @@ class Intelligence extends Obj
 
     private function normalizeScore($score, string $label): float
     {
-        if (is_numeric($score)) {
+        if (Num::isValid($score)) {
             return (float)$score;
         }
 
-        if (is_scalar($score) && trim((string)$score) !== '') {
+        if (is_scalar($score) && Str::trim((string)$score) !== '') {
             return 1.0;
         }
 
@@ -738,6 +746,37 @@ class Intelligence extends Obj
      */
     protected function calculateScore(float $accuracy, float $executionTime): float
     {
-        return $accuracy / (1 + $executionTime);
+        return Num::divide($accuracy, Num::add(1, $executionTime));
+    }
+
+    private function mergeMap(array $base, array ...$segments): array
+    {
+        $merged = new Arr($base);
+
+        foreach ($segments as $segment) {
+            foreach ($segment as $key => $value) {
+                $merged[$key] = $value;
+            }
+        }
+
+        return $merged->toArray();
+    }
+
+    private function appendList(array $base, array ...$segments): array
+    {
+        $merged = new Arr($base);
+
+        foreach ($segments as $segment) {
+            foreach ($segment as $value) {
+                $merged->push($value);
+            }
+        }
+
+        return $merged->toArray();
+    }
+
+    private function topKeys(array $values, int $limit): array
+    {
+        return Arr::slice(Arr::keys($values), 0, $limit);
     }
 }

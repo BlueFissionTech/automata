@@ -5,6 +5,7 @@ namespace BlueFission\Tests\Automata\Simulation;
 use PHPUnit\Framework\TestCase;
 use BlueFission\Automata\Simulation\Simulation;
 use BlueFission\Automata\Simulation\ISimulatable;
+use BlueFission\Obj;
 
 class CounterEntity implements ISimulatable
 {
@@ -28,6 +29,22 @@ class SimulationTest extends TestCase
         $final = end($log);
         $this->assertSame(5, $final['counter']);
         $this->assertSame(4, $final['tick']);
+    }
+
+    public function testSimulationCanAdvanceObjectBackedState(): void
+    {
+        $state = new class extends Obj {
+        };
+        $state->assign(['counter' => 0]);
+
+        $sim = new Simulation(3);
+        $sim->addEntity(new CounterEntity());
+
+        $log = $sim->run($state);
+
+        $this->assertCount(3, $log);
+        $this->assertSame(3, $state->field('counter'));
+        $this->assertSame(2, $state->field('tick'));
     }
 }
 

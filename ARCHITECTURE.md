@@ -57,6 +57,40 @@ The Intelligence Hub builds on `Automata\Intelligence` by:
 - Aggregating outputs into structured insights plus a gestalt summary
   suitable for an application or LLM coordinator.
 
+### 2.1.1 Carrier-First Adapter Layer
+
+Automata's worldview-facing abstractions should follow Develation's actual
+"single signature" architecture:
+
+- `Val` / `Arr` provide value and structured-state carriers.
+- `Obj` provides a common object carrier over an internal `$_data` bag.
+- `Data` / `IData` provide the same carrier semantics plus read/write/delete
+  lifecycle for store-backed state.
+
+Automata should not collapse these into one concrete worldview class. Instead,
+it should layer small adapters over the carrier types and let utilities depend
+on those adapters only where it is functionally useful.
+
+Current adapter layer:
+
+- `Automata\Adapters\CarrierAdapter` wraps `Obj`.
+- `Automata\Adapters\StateAdapter` wraps array/`Arr`/`Obj`/`IData` state.
+- `Automata\Adapters\StoreAdapter` wraps `IData`.
+
+Current evaluator surface:
+
+- `Automata\Support\Evaluates` normalizes `Func`-backed invocation and
+  `Num`-backed score coercion for modules that expose configurable
+  assessors/fitness hooks.
+- `Path`, `DecisionTree`, `Genetic`, `Feedback`, `Intelligence`, and `Engine`
+  are the first consumers of that evaluator surface.
+- This keeps extension points aligned with Develation primitives instead of
+  inventing parallel callback and scoring conventions inside Automata.
+
+This keeps shared signatures stable while preserving different internal
+mechanics across runtime objects, stores, simulations, and comprehension
+systems.
+
 ### 2.2 Strategy Layer
 
 **Key modules:**
@@ -131,6 +165,17 @@ Responsibilities:
   simulation.
 - Contribute data structures and algorithms that tie directly into memory and
   comprehension.
+
+These modules should consume carrier-backed adapters selectively rather than
+inherit a shared worldview implementation. For example:
+
+- `Simulation` can accept adapter-backed state without becoming a `Domain`.
+- `DecisionTree` accepts injected `Func` assessors over carrier-backed state.
+- `Path` accepts state-aware `Func` fitness/assessment hooks without depending
+  on `Simulation` or `Comprehension`.
+- `Genetic`, `Feedback`, `Intelligence`, and `Engine` now reuse the same
+  `Func`/`Num`/`Arr`/`Str` conventions for mutation, scoring, classification,
+  and runtime budgeting.
 
 ### 2.6 Memory, ABS, and Comprehension Layer
 

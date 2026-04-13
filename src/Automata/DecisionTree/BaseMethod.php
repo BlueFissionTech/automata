@@ -2,6 +2,8 @@
 
 namespace BlueFission\Automata\DecisionTree;
 
+use BlueFission\Automata\Adapters\StateAdapter;
+use BlueFission\Func;
 use BlueFission\Obj;
 use BlueFission\Behavioral\Dispatches;
 use BlueFission\Behavioral\Behaviors\Event;
@@ -20,6 +22,9 @@ use BlueFission\Behavioral\Behaviors\Event;
 abstract class BaseMethod extends Obj implements IMethod
 {
     use Dispatches;
+
+    protected ?StateAdapter $stateAdapter = null;
+    protected ?Func $assessor = null;
 
     /**
      * Traverse the tree starting from the given root node.
@@ -47,7 +52,10 @@ abstract class BaseMethod extends Obj implements IMethod
      */
     protected function visitNode(INode $node): void
     {
-        $this->dispatch(new Event('decision_tree.node_visited', ['node' => $node]));
+        $this->dispatch(new Event('decision_tree.node_visited', [
+            'node' => $node,
+            'state' => $this->stateAdapter?->snapshot() ?? [],
+        ]));
     }
 
     /**
@@ -63,6 +71,35 @@ abstract class BaseMethod extends Obj implements IMethod
      */
     protected function decisionSelected(INode $node): void
     {
-        $this->dispatch(new Event('decision_tree.decision_selected', ['node' => $node]));
+        $this->dispatch(new Event('decision_tree.decision_selected', [
+            'node' => $node,
+            'state' => $this->stateAdapter?->snapshot() ?? [],
+        ]));
+    }
+
+    public function setState(mixed $state): static
+    {
+        $this->stateAdapter = StateAdapter::wrap($state);
+
+        return $this;
+    }
+
+    public function state(): ?StateAdapter
+    {
+        return $this->stateAdapter;
+    }
+
+    public function setAssessor(Func|callable $assessor): static
+    {
+        $this->assessor = $assessor instanceof Func ? $assessor : new Func($assessor);
+
+        return $this;
+    }
+
+    protected function evaluateNode(INode $node): float|int
+    {
+        $state = $this->stateAdapter?->snapshot() ?? [];
+
+        return $node->evaluate($state, $this->assessor);
     }
 }

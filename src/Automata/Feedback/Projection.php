@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\Feedback;
 
 use BlueFission\DevElation as Dev;
+use BlueFission\Num;
 
 class Projection extends FeedbackItem
 {
@@ -20,7 +21,7 @@ class Projection extends FeedbackItem
     public function expiresAt(): float
     {
         $expiresAt = $this->field('expires_at');
-        return is_numeric($expiresAt) ? (float)$expiresAt : 0.0;
+        return Num::isValid($expiresAt) ? (float)$expiresAt : 0.0;
     }
 
     public function isExpired(float $now = null): bool

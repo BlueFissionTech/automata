@@ -36,7 +36,7 @@ class DepthFirstTraceMethod extends BaseMethod
         // Each stack element: [node, pathToParent]
         $stack = new Arr([[$root, []]]);
         $bestNode = $root;
-        $bestScore = $root->evaluate();
+        $bestScore = $this->evaluateNode($root);
         $this->trace = [$root];
 
         while ($stack->isNotEmpty()) {
@@ -52,16 +52,20 @@ class DepthFirstTraceMethod extends BaseMethod
 
             $this->visitNode($currentNode);
 
-            $score = $currentNode->evaluate();
+            $score = $this->evaluateNode($currentNode);
             if ($score > $bestScore) {
                 $bestNode = $currentNode;
                 $bestScore = $score;
-                $this->trace = array_merge($pathToParent, [$currentNode]);
+                $trace = new Arr($pathToParent);
+                $trace->push($currentNode);
+                $this->trace = $trace->toArray();
             }
 
             $children = $currentNode->getChildren();
             if (!empty($children)) {
-                $newPath = array_merge($pathToParent, [$currentNode]);
+                $newPathBag = new Arr($pathToParent);
+                $newPathBag->push($currentNode);
+                $newPath = $newPathBag->toArray();
                 foreach ($children as $child) {
                     $stack->push([$child, $newPath]);
                 }

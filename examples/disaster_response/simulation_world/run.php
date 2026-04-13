@@ -3,10 +3,13 @@
 declare(strict_types=1);
 
 use BlueFission\DevElation;
+use BlueFission\Num;
+use BlueFission\Obj;
 use BlueFission\Automata\Simulation\Simulation;
 use BlueFission\Automata\Simulation\ISimulatable;
 
-require __DIR__ . '/../../../vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
+automata_example_require('Automata/Simulation/Simulation.php');
 
 $seed = 123;
 foreach ($argv as $arg) {
@@ -31,9 +34,9 @@ class RoadConditionEntity implements ISimulatable
         $index = $worldState['road_condition_index'] ?? 1.0;
 
         if ($tick < 5) {
-            $index += 0.5;
+            $index = Num::add($index, 0.5);
         } elseif ($tick >= 10) {
-            $index = max(0.0, $index - 0.5);
+            $index = Num::max(0.0, Num::sub($index, 0.5));
         }
 
         $worldState['road_condition_index'] = $index;
@@ -47,7 +50,7 @@ class DemandEntity implements ISimulatable
         $base = $worldState['demand_level'] ?? 0.0;
         $increment = ($tick < 8) ? 5.0 : 2.0;
 
-        $worldState['demand_level'] = $base + $increment;
+        $worldState['demand_level'] = Num::add($base, $increment);
     }
 }
 
@@ -56,16 +59,19 @@ $sim   = new Simulation($ticks);
 $sim->addEntity(new RoadConditionEntity());
 $sim->addEntity(new DemandEntity());
 
-$initial = [
+$state = new class extends Obj {
+};
+$state->assign([
     'road_condition_index' => 1.0,
-    'demand_level'         => 0.0,
-];
+    'demand_level' => 0.0,
+]);
 
-$log = $sim->run($initial);
+$log = $sim->run($state);
 
 echo json_encode([
     'seed' => $seed,
     'ticks' => $ticks,
     'timeline' => $log,
+    'final_state' => $state->toArray(),
 ], JSON_PRETTY_PRINT) . PHP_EOL;
 
