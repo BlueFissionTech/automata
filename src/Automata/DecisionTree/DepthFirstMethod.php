@@ -18,7 +18,7 @@ class DepthFirstMethod extends BaseMethod {
         // Use Arr as a LIFO stack for depth-first traversal.
         $stack = new Arr([$root]);
         $bestNode = $root;
-        $bestScore = $root->evaluate();
+        $bestScore = $this->evaluateNode($root);
 
         while ($stack->isNotEmpty()) {
             // Pop the last-pushed node to explore as deep as possible.
@@ -29,7 +29,7 @@ class DepthFirstMethod extends BaseMethod {
 
             $this->visitNode($currentNode);
 
-            $score = $currentNode->evaluate();
+            $score = $this->evaluateNode($currentNode);
             if ($score > $bestScore) {
                 $bestNode = $currentNode;
                 $bestScore = $score;

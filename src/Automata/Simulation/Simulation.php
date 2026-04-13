@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Simulation;
 
+use BlueFission\Automata\Adapters\StateAdapter;
 use BlueFission\Arr;
 use BlueFission\DevElation as Dev;
 
@@ -46,21 +47,21 @@ class Simulation
     /**
      * Run the simulation from an initial world state.
      *
-     * @param array $initialState
+     * @param mixed $initialState
      * @return array<int,array> Per-tick snapshots of the world state.
      */
-    public function run(array $initialState = []): array
+    public function run(mixed $initialState = []): array
     {
         $initialState = Dev::apply('automata.simulation.simulation.run.1', $initialState);
         Dev::do('automata.simulation.simulation.run.action1', ['initialState' => $initialState]);
 
-        $world = new Arr($initialState);
+        $world = StateAdapter::wrap($initialState);
         $log   = [];
 
         $entities = $this->_entities->val();
 
         for ($tick = 0; $tick < $this->_ticks; $tick++) {
-            $state = $world->val();
+            $state = $world->snapshot();
 
             foreach ($entities as $entity) {
                 if ($entity instanceof ISimulatable) {
@@ -69,9 +70,11 @@ class Simulation
             }
 
             $state['tick'] = $tick;
-            $world->val($state);
+            $world->merge($state);
             $log[] = $state;
         }
+
+        $world->sync();
 
         $log = Dev::apply('automata.simulation.simulation.run.2', $log);
         Dev::do('automata.simulation.simulation.run.action2', ['log' => $log]);

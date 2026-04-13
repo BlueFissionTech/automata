@@ -5,6 +5,7 @@ namespace BlueFission\Automata\Feedback;
 use BlueFission\Obj;
 use BlueFission\Automata\Context;
 use BlueFission\DevElation as Dev;
+use BlueFission\Num;
 
 abstract class FeedbackItem extends Obj
 {
@@ -44,6 +45,6 @@ abstract class FeedbackItem extends Obj
     public function timestamp(): float
     {
         $timestamp = $this->field('timestamp');
-        return is_numeric($timestamp) ? (float)$timestamp : 0.0;
+        return Num::isValid($timestamp) ? (float)$timestamp : 0.0;
     }
 }

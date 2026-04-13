@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/bootstrap.php';
+automata_example_require('Automata/Path/RoutePlanner.php');
 
+use BlueFission\Func;
+use BlueFission\Obj;
 use BlueFission\Automata\Path\Graph;
 use BlueFission\Automata\Path\Node;
 use BlueFission\Automata\Path\RoutePlanner;
@@ -15,8 +18,9 @@ use BlueFission\Automata\Path\RoutePlanner;
  * - Hub-1 needs to reach Hospital-A.
  * - Two routes exist: via Bridge-1 (faster but high risk) and via Highway-Loop
  *   (slower but safer).
- * - We compute best routes under a time + risk fitness function and then
- *   simulate blocked edges to demonstrate rerouting.
+ * - We compute best routes under a time + risk fitness function.
+ * - We then apply a state-aware assessor that penalizes risky edges more
+ *   aggressively during rain-sensitive medical runs.
  */
 
 function buildLogisticsGraph(bool $blockHighway = false): Graph
@@ -58,23 +62,55 @@ function buildLogisticsGraph(bool $blockHighway = false): Graph
     return $graph;
 }
 
-$fitness = function (array $edge): int {
+$worldState = new class extends Obj {
+};
+$worldState->assign([
+    'weather' => 'rain',
+    'mission' => 'medical',
+]);
+
+$fitness = new Func(function (array $edge): int {
     if (!empty($edge['blocked'])) {
-        return PHP_INT_MAX / 4;
+        return intdiv(PHP_INT_MAX, 4);
     }
 
     $time = $edge['time'] ?? 0;
     $risk = $edge['risk'] ?? 0;
 
     return $time + $risk * 20;
-};
+});
+
+$assessor = new Func(function (array $edge, array $state, array $context): int {
+    if (!empty($edge['blocked'])) {
+        return intdiv(PHP_INT_MAX, 4);
+    }
+
+    $time = $edge['time'] ?? 0;
+    $risk = $edge['risk'] ?? 0;
+    $score = $time + $risk * 20;
+
+    if (($state['weather'] ?? null) === 'rain' && $risk >= 4) {
+        $score += 25;
+    }
+
+    if (($context['priority'] ?? null) === 'life_safety' && $time > 25) {
+        $score += 10;
+    }
+
+    return $score;
+});
 
 echo "=== Graph Routing Logistics Example ===\n\n";
+echo "World state:\n";
+echo "- weather: " . $worldState->field('weather') . "\n";
+echo "- mission: " . $worldState->field('mission') . "\n\n";
 
 echo "Baseline world (no blocked edges):\n";
 $graph = buildLogisticsGraph(false);
-$planner = new RoutePlanner($graph, $fitness);
-$route = $planner->plan('Hub-1', 'Hospital-A');
+$planner = new RoutePlanner($graph, $fitness, $worldState, $assessor);
+$route = $planner->plan('Hub-1', 'Hospital-A', [
+    'priority' => 'life_safety',
+]);
 
 if ($route) {
     echo "- Planned path: " . implode(' -> ', $route->getPath()) . "\n";
@@ -85,8 +121,10 @@ if ($route) {
 
 echo "World with highway route blocked:\n";
 $graphBlocked = buildLogisticsGraph(true);
-$plannerBlocked = new RoutePlanner($graphBlocked, $fitness);
-$routeBlocked = $plannerBlocked->plan('Hub-1', 'Hospital-A');
+$plannerBlocked = new RoutePlanner($graphBlocked, $fitness, $worldState, $assessor);
+$routeBlocked = $plannerBlocked->plan('Hub-1', 'Hospital-A', [
+    'priority' => 'life_safety',
+]);
 
 if ($routeBlocked) {
     echo "- Planned path: " . implode(' -> ', $routeBlocked->getPath()) . "\n";

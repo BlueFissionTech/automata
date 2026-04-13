@@ -2,6 +2,9 @@
 
 namespace BlueFission\Automata\Path;
 
+use BlueFission\Automata\Support\Evaluates;
+use BlueFission\Func;
+use BlueFission\Num;
 use BlueFission\Obj;
 use BlueFission\DevElation as Dev;
 use BlueFission\Behavioral\Dispatches;
@@ -25,21 +28,21 @@ use BlueFission\Behavioral\Behaviors\Event;
 class RouteAllocator extends Obj
 {
     use Dispatches;
+    use Evaluates;
 
     protected Graph $graph;
 
-    /** @var callable */
-    protected $fitness;
+    protected Func $fitness;
 
     /**
      * @param Graph    $graph
-     * @param callable $fitness function(array $edgeAttributes): int|float
+     * @param callable|Func $fitness function(array $edgeAttributes): int|float
      */
-    public function __construct(Graph $graph, callable $fitness)
+    public function __construct(Graph $graph, Func|callable $fitness)
     {
         parent::__construct();
         $this->graph = $graph;
-        $this->fitness = $fitness;
+        $this->fitness = $this->asFunc($fitness);
     }
 
     /**
@@ -63,7 +66,6 @@ class RouteAllocator extends Obj
             'edgeCapacities' => $edgeCapacities,
         ]);
 
-        $fitness = $this->fitness;
         $allocations = [];
         $used = []; // edgeKey => usedAmount
 
@@ -92,7 +94,9 @@ class RouteAllocator extends Obj
                     continue;
                 }
 
-                $path = $this->graph->shortestPath($start, $end, $fitness);
+                $path = $this->graph->shortestPath($start, $end, fn ($edge) => $this->numericValue(
+                    $this->invokeFunc($this->fitness, [$edge, $asset, $demand, $this])
+                ));
                 if (empty($path)) {
                     continue;
                 }
@@ -103,7 +107,7 @@ class RouteAllocator extends Obj
                     continue;
                 }
 
-                $amount = min($remainingDemand, $remainingAsset, $residual);
+                $amount = Num::min(Num::min($remainingDemand, $remainingAsset), $residual);
                 if ($amount <= 0.0) {
                     continue;
                 }
@@ -161,7 +165,7 @@ class RouteAllocator extends Obj
 
             $capacity = (float)($edgeCapacities[$key] ?? 0.0);
             $already = (float)($used[$key] ?? 0.0);
-            $residual = max(0.0, $capacity - $already);
+            $residual = Num::max(0.0, $capacity - $already);
 
             if ($minResidual === null || $residual < $minResidual) {
                 $minResidual = $residual;

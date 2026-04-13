@@ -16,7 +16,7 @@ class BreadthFirstMethod extends BaseMethod
     {
         $queue = new Arr([$root]);
         $bestNode = $root;
-        $bestScore = $root->evaluate();
+        $bestScore = $this->evaluateNode($root);
 
         while ($queue->isNotEmpty()) {
             $currentNode = $queue->_shift();
@@ -26,7 +26,7 @@ class BreadthFirstMethod extends BaseMethod
 
             $this->visitNode($currentNode);
 
-            $score = $currentNode->evaluate();
+            $score = $this->evaluateNode($currentNode);
             if ($score > $bestScore) {
                 $bestNode = $currentNode;
                 $bestScore = $score;

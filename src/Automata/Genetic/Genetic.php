@@ -2,6 +2,7 @@
 namespace BlueFission\Automata\Genetic;
 
 use BlueFission\Behavioral\Configurable;
+use BlueFission\Num;
 
 trait Genetic
 {
@@ -43,8 +44,8 @@ trait Genetic
 
     protected function mutateValue($value, $pressure)
     {
-        if (is_numeric($value)) {
-            $value += $pressure * $this->_mutationRate;
+        if (Num::isValid($value)) {
+            $value = Num::add($value, $pressure * $this->_mutationRate);
         } elseif (is_bool($value)) {
             $value = mt_rand() / mt_getrandmax() < $this->_mutationRate ? !$value : $value;
         } elseif (is_string($value)) {

@@ -31,7 +31,7 @@ class LeafOnlyBestMethod extends BaseMethod
             $isLeaf = empty($children);
 
             if ($isLeaf) {
-                $score = $currentNode->evaluate();
+                $score = $this->evaluateNode($currentNode);
                 if ($bestScore === null || $score > $bestScore) {
                     $bestNode = $currentNode;
                     $bestScore = $score;

@@ -1,6 +1,8 @@
 <?php
 namespace BlueFission\Automata;
 
+use BlueFission\Func;
+use BlueFission\Num;
 use BlueFission\Automata\Intelligence;
 use BlueFission\Behavioral\Behaviors\Action;
 use BlueFission\Behavioral\Behaviors\Event;
@@ -160,7 +162,7 @@ class Engine extends Intelligence implements ISphere {
 	// }
 
 	public function getTransactionSize() {
-		$this->_transaction_size = pow(self::TRANSACTION_BASE_SIZE * $this->_level, self::TRANSACTION_MULTIPLIER);
+		$this->_transaction_size = Num::pow(self::TRANSACTION_BASE_SIZE * $this->_level, self::TRANSACTION_MULTIPLIER);
 		return $this->_transaction_size;
 	}
 
@@ -177,14 +179,14 @@ class Engine extends Intelligence implements ISphere {
 				- ($ru["ru_utime.tv_sec"]*1000 + intval($ru["ru_utime.tv_usec"]/1000));
 		} else {
 			$this->_stoptime = microtime(true);
-			$start = is_numeric($this->_starttime) ? $this->_starttime : $this->_stoptime;
+			$start = Num::isValid($this->_starttime) ? $this->_starttime : $this->_stoptime;
 			$this->_totaltime = ($this->_stoptime - $start);
 		}
 
-		if ( !is_numeric($this->_avgtime) || $this->_avgtime <= 0 ) {
+		if ( !Num::isValid($this->_avgtime) || $this->_avgtime <= 0 ) {
 			$this->_avgtime = $this->_totaltime;
 		} else {
-			$this->_avgtime = ($this->_avgtime + $this->_totaltime) / 2;
+			$this->_avgtime = Num::divide(Num::add($this->_avgtime, $this->_totaltime), 2);
 		}
 	}
 
@@ -299,13 +301,13 @@ class Engine extends Intelligence implements ISphere {
 		$this->_inputs->add($input, $inputName);
 		$this->_inputs->add($sense, $senseName);
 
-		$input->when(Event::COMPLETE, function ($behavior, $args = null) use ($sense) {
+		$input->when(Event::COMPLETE, new Func(function ($behavior, $args = null) use ($sense) {
 			$sense->invoke($behavior->context);
-		});
+		}));
 
-		$sense->when('DoEnhance', function ($behavior, $args = null) {
+		$sense->when('DoEnhance', new Func(function ($behavior, $args = null) {
 			$this->dispatch('OnEnhance', $behavior->context);
-		});
+		}));
 
 		return $this;
 	}

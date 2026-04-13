@@ -2,9 +2,11 @@
 
 namespace BlueFission\Automata\Feedback\Strategies;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Feedback\IAssessmentStrategy;
 use BlueFission\Automata\Feedback\Projection;
 use BlueFission\Automata\Feedback\Observation;
+use BlueFission\Num;
 
 class LabelOverlapStrategy implements IAssessmentStrategy
 {
@@ -17,8 +19,8 @@ class LabelOverlapStrategy implements IAssessmentStrategy
             return 0.0;
         }
 
-        $overlap = array_intersect($projectionTags, $observationTags);
-        $score = count($overlap) / max(1, count($projectionTags));
+        $overlap = Arr::intersect($projectionTags, $observationTags);
+        $score = count($overlap) / Num::max(1, count($projectionTags));
 
         return (float)$score;
     }

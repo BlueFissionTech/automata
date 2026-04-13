@@ -2,8 +2,15 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/bootstrap.php';
+automata_example_require(
+    'Automata/DecisionTree/INode.php',
+    'Automata/DecisionTree/BaseMethod.php',
+    'Automata/DecisionTree/Node.php',
+    'Automata/DecisionTree/DepthFirstTraceMethod.php'
+);
 
+use BlueFission\Func;
 use BlueFission\Automata\DecisionTree\DecisionTree;
 use BlueFission\Automata\DecisionTree\Node;
 use BlueFission\Automata\DecisionTree\DepthFirstTraceMethod;
@@ -14,12 +21,13 @@ use BlueFission\Automata\DecisionTree\DepthFirstTraceMethod;
  * This example builds a small policy tree for handling
  * incoming requests and demonstrates how to obtain both
  * a decision and an explanation trace using
- * DepthFirstTraceMethod.
+ * DepthFirstTraceMethod with shared runtime state plus
+ * an injected assessor.
  */
 
-$eval = function (array $value, array $children): float {
+$eval = new Func(function (array $value): float {
     return (float)($value['score'] ?? 0.0);
-};
+});
 
 $root = new Node([
     'id' => 'root',
@@ -67,10 +75,41 @@ $evacCritical->addChild($escalateAir);
 $tree = new DecisionTree();
 $tree->setRoot($root);
 
-$method = new DepthFirstTraceMethod();
+$method = (new DepthFirstTraceMethod())
+    ->setState([
+        'resources' => [
+            'airlift_ready' => false,
+            'ground_units' => 3,
+        ],
+        'request' => [
+            'severity' => 'critical',
+            'people_at_risk' => 42,
+        ],
+    ])
+    ->setAssessor(new Func(function (array $value, array $children, array $state): float {
+        $score = (float)($value['score'] ?? 0.0);
+
+        if (($value['decision'] ?? null) === 'escalate_to_airlift' && !($state['resources']['airlift_ready'] ?? false)) {
+            $score -= 5.0;
+        }
+
+        if (($value['decision'] ?? null) === 'accept_ground_dispatch' && ($state['resources']['ground_units'] ?? 0) > 0) {
+            $score += 2.0;
+        }
+
+        if (($state['request']['severity'] ?? null) === 'critical' && str_contains((string)($value['decision'] ?? ''), 'dispatch')) {
+            $score += 1.0;
+        }
+
+        return $score;
+    }));
 $decision = $tree->decide($method);
 
 echo "=== Dispatch Policy Decision Tree Example ===\n\n";
+echo "Method state:\n";
+echo "- airlift_ready: false\n";
+echo "- ground_units: 3\n";
+echo "- request severity: critical\n\n";
 
 echo "Decision: " . ($decision['decision'] ?? 'unknown') . "\n\n";
 

@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\Genetic;
 
 use BlueFission\DevElation as Dev;
+use BlueFission\Num;
 
 /**
  * Simple numeric mutation operator that nudges scalar fields by a small random delta.
@@ -28,9 +29,9 @@ class RandomMutation extends Mutation
 
         foreach ($fields as $key => $value) {
             $roll = mt_rand() / mt_getrandmax();
-            if ($roll < $this->_mutationRate && is_numeric($value)) {
+            if ($roll < $this->_mutationRate && Num::isValid($value)) {
                 $delta = (mt_rand() / mt_getrandmax() * 2.0) - 1.0;
-                $individual->field($key, $value + $delta);
+                $individual->field($key, Num::add($value, $delta));
             }
         }
 

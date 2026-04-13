@@ -56,6 +56,38 @@ not a replacement for its collections or behavior system. When there is overlap
 (e.g., collections), Automata’s versions are tailored for heavy AI use and large
 data sets.
 
+### 2.1 Carrier Signature and Adapters
+
+Develation's practical "single signature" is carrier-based:
+
+- `Val` / `Arr` for values and structured state
+- `Obj` for object-backed state via `field()` / `assign()` / `toArray()`
+- `Data` / `IData` for store-backed state with `read()` / `write()` /
+  `contents()`
+
+Automata should build on that carrier signature rather than forcing unrelated
+utilities into one worldview superclass. The preferred pattern is:
+
+- use prototype traits only on carriers that actually benefit from them
+- use adapters when a utility only needs a normalized state/object/store surface
+- keep mechanics injectable so utilities share data shape, not internal logic
+
+Initial adapter layer in Automata:
+
+- `CarrierAdapter` for `Obj`
+- `StateAdapter` for array/`Arr`/`Obj`/`IData`
+- `StoreAdapter` for `IData`
+
+Evaluation and orchestration seams that previously depended on raw PHP
+callables and ad hoc scalar helpers should prefer Develation-native surfaces
+when practical:
+
+- `Func` for strategy hooks, assessors, classifiers, providers, and fitness
+  callbacks
+- `Num` for score normalization, budgets, mutation math, and timing math
+- `Arr` / `Collection` for carrier-aligned list and map transforms
+- `Str` for normalization of labels and identifiers
+
 ## 3. Core Concepts
 
 ### 3.1 Intelligence Engine
@@ -195,6 +227,14 @@ Goals:
   - legal actions,
   - payoffs and utilities.
 - Enable agents (human or automated) to experiment with strategies and payoffs.
+
+Simulation should be able to run against carrier-backed state without implying
+that simulation is the canonical domain implementation. Runtime state may come
+from plain arrays, `Arr`, `Obj`, or `IData` via adapters.
+
+Decision, pathing, genetic, feedback, and intelligence utilities should follow
+the same pattern: consume adapter-backed state and DevElation-native evaluator
+objects without requiring one canonical domain implementation.
 
 ### 3.9 Genetic Algorithms
 
@@ -455,6 +495,8 @@ Future directions:
   latency, cost, and stability over time.
 - Decouple php-ml behind model interfaces/wrappers and allow alternative ML
   backends (Rubix, optional Python bridges) without changing Automata APIs.
+- Add injected assessors and adapter-aware utility hooks for modules that
+  benefit from worldview state without forcing broad cross-module coupling.
 
 ## 6. Example Specifications
 

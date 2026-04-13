@@ -2,9 +2,14 @@
 namespace BlueFission\Automata\Genetic;
 
 use BlueFission\Arr;
+use BlueFission\Automata\Support\Evaluates;
 use BlueFission\DevElation as Dev;
+use BlueFission\Func;
+use BlueFission\Num;
 
 class Population {
+    use Evaluates;
+
     private $_individuals;
 
     public function __construct(array $individuals = []) {
@@ -19,26 +24,30 @@ class Population {
      * Uses Arr::val() to avoid relying on offsetSet([]) semantics,
      * which can be problematic with certain internal configurations.
      */
-    public function initialize(int $size, callable $initializer): void {
+    public function initialize(int $size, Func|callable $initializer): void {
         $current = $this->_individuals->val();
+        $initializer = $this->asFunc($initializer);
 
-        for ($i = 0; $i < $size; $i++) {
-            $current[] = $initializer();
+        for ($i = 0; $i < $size; $i = Num::increment($i)) {
+            $current[] = $this->invokeFunc($initializer, [$i, $current, $this]);
         }
 
         $this->_individuals->val($current);
         Dev::do('automata.genetic.population.initialize.action1', ['initialized' => $this->_individuals->val()]);
     }
 
-    public function mutate(callable $mutator): void {
+    public function mutate(Func|callable $mutator): void {
+        $mutator = $this->asFunc($mutator);
+
         foreach ($this->_individuals as $individual) {
-            $mutator($individual);
+            $this->invokeFunc($mutator, [$individual, $this]);
         }
         Dev::do('automata.genetic.population.mutate.action1', ['mutated' => $this->_individuals->val()]);
     }
 
-    public function selection(callable $selector): self {
-        $newIndividuals = $selector($this->_individuals->val());
+    public function selection(Func|callable $selector): self {
+        $selector = $this->asFunc($selector);
+        $newIndividuals = $this->invokeFunc($selector, [$this->_individuals->val(), $this]);
         $newIndividuals = Dev::apply('automata.genetic.population.selection.1', $newIndividuals);
         Dev::do('automata.genetic.population.selection.action1', ['selected' => $newIndividuals]);
         return new self($newIndividuals);

@@ -4,6 +4,7 @@ namespace BlueFission\Automata\Feedback;
 
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\DevElation as Dev;
+use BlueFission\Num;
 
 class FeedbackRegistry
 {
@@ -27,6 +28,6 @@ class FeedbackRegistry
     public function score(string $subject): float
     {
         $value = $this->_signals->weight($subject);
-        return is_numeric($value) ? (float)$value : 0.0;
+        return Num::isValid($value) ? (float)$value : 0.0;
     }
 }

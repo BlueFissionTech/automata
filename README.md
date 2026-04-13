@@ -18,6 +18,8 @@ The `bluefission/automata` library is a comprehensive PHP framework designed to 
 - **Data Science**: Basic machine learning functionalities alongside data manipulation, preparation, and visualization tools.
 - **Input Management**: Sophisticated input type detection and handling, ensuring that data flows seamlessly through processing pipelines.
 - **Modular Connectivity**: Connect module outputs to other module inputs, creating flexible and dynamic pipeline chains for complex data processing tasks.
+- **Carrier-Backed Adapters**: Normalize runtime state over Develation `Arr`, `Obj`, and `IData` carriers without forcing unrelated modules into one implementation.
+- **Develation-Native Evaluation Seams**: Core orchestration modules now accept DevElation `Func` evaluators and prefer `Num`, `Arr`, and `Str` helpers for shared numeric, collection, and string handling where that materially improves interoperability.
 
 ## Using GOFAI and Modern ML Techniques
 

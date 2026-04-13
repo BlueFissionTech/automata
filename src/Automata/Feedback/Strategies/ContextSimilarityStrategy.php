@@ -2,9 +2,11 @@
 
 namespace BlueFission\Automata\Feedback\Strategies;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Feedback\IAssessmentStrategy;
 use BlueFission\Automata\Feedback\Projection;
 use BlueFission\Automata\Feedback\Observation;
+use BlueFission\Num;
 
 class ContextSimilarityStrategy implements IAssessmentStrategy
 {
@@ -17,7 +19,7 @@ class ContextSimilarityStrategy implements IAssessmentStrategy
             return 0.0;
         }
 
-        $sharedKeys = array_intersect(array_keys($projectionContext), array_keys($observationContext));
+        $sharedKeys = Arr::intersect(Arr::keys($projectionContext), Arr::keys($observationContext));
         if (empty($sharedKeys)) {
             return 0.0;
         }
@@ -29,7 +31,7 @@ class ContextSimilarityStrategy implements IAssessmentStrategy
             }
         }
 
-        return $matches / max(1, count($sharedKeys));
+        return $matches / Num::max(1, count($sharedKeys));
     }
 
     public function name(): string
