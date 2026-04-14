@@ -2,6 +2,8 @@
 
 namespace BlueFission\Automata\MonteCarlo;
 
+use BlueFission\Num;
+
 class ActionStatistics
 {
     private $action;
@@ -17,8 +19,8 @@ class ActionStatistics
     public function record(float $reward): void
     {
         $this->visits++;
-        $this->totalReward += $reward;
-        $this->bestReward = max($this->bestReward, $reward);
+        $this->totalReward = (float)Num::add($this->totalReward, $reward);
+        $this->bestReward = (float)Num::max($this->bestReward, $reward);
     }
 
     public function getAction()
@@ -42,7 +44,7 @@ class ActionStatistics
             return 0.0;
         }
 
-        return $this->totalReward / $this->visits;
+        return (float)Num::divide($this->totalReward, $this->visits);
     }
 
     public function getBestReward(): float

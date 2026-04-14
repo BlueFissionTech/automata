@@ -2,15 +2,20 @@
 
 namespace BlueFission\Automata\MonteCarlo;
 
+use BlueFission\Arr;
 use BlueFission\Behavioral\Configurable;
 use BlueFission\Behavioral\IConfigurable;
 use BlueFission\Behavioral\IDispatcher;
+use BlueFission\Collections\Collection;
+use BlueFission\Func;
+use BlueFission\Automata\Support\Evaluates;
 
 class Search implements IConfigurable, IDispatcher
 {
     use Configurable {
         Configurable::__construct as private __configConstruct;
     }
+    use Evaluates;
 
     public const EVENT_SEARCH_STARTED = 'automata.montecarlo.search.started';
     public const EVENT_ROLLOUT_COMPLETED = 'automata.montecarlo.search.rollout_completed';
@@ -33,9 +38,9 @@ class Search implements IConfigurable, IDispatcher
         ]);
     }
 
-    public function evaluate(array $actions, callable $rollout): SearchResult
+    public function evaluate(array $actions, Func|callable $rollout): SearchResult
     {
-        if (empty($actions)) {
+        if (Arr::size($actions) === 0) {
             throw new \InvalidArgumentException('At least one action is required.');
         }
 
@@ -51,11 +56,16 @@ class Search implements IConfigurable, IDispatcher
             $statistics[$this->actionKey($action)] = new ActionStatistics($action);
         }
 
+        $actionCount = Arr::size($actions);
+
         for ($iteration = 0; $iteration < $this->iterations(); $iteration++) {
-            $action = $actions[$iteration % count($actions)];
+            $action = $actions[$iteration % $actionCount];
             $key = $this->actionKey($action);
             $visit = $statistics[$key]->getVisits() + 1;
-            $reward = (float)$rollout($action, $random, $iteration, $visit);
+            $reward = (float)$this->numericValue(
+                $this->invokeFunc($rollout, [$action, $random, $iteration, $visit, $this]),
+                0.0
+            );
 
             $statistics[$key]->record($reward);
 
@@ -67,8 +77,7 @@ class Search implements IConfigurable, IDispatcher
             ]);
         }
 
-        $ranked = array_values($statistics);
-        usort($ranked, function (ActionStatistics $left, ActionStatistics $right): int {
+        $ranked = (new Collection(array_values($statistics)))->sort(function (ActionStatistics $left, ActionStatistics $right): int {
             $meanOrder = $right->getMeanReward() <=> $left->getMeanReward();
             if ($meanOrder !== 0) {
                 return $meanOrder;
@@ -80,7 +89,7 @@ class Search implements IConfigurable, IDispatcher
             }
 
             return $right->getBestReward() <=> $left->getBestReward();
-        });
+        })->toArray();
 
         $result = new SearchResult($ranked);
 

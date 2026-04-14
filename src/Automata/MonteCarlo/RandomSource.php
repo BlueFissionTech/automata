@@ -2,6 +2,9 @@
 
 namespace BlueFission\Automata\MonteCarlo;
 
+use BlueFission\Arr;
+use BlueFission\Num;
+
 class RandomSource
 {
     private int $state;
@@ -29,15 +32,18 @@ class RandomSource
             return $min;
         }
 
-        return $min + (int)floor($this->nextFloat() * (($max - $min) + 1));
+        $span = (float)Num::add(Num::sub($max, $min), 1);
+        $offset = (int)Num::int(Num::multiply($this->nextFloat(), $span));
+
+        return (int)Num::add($min, $offset);
     }
 
     public function pick(array $items)
     {
-        if (empty($items)) {
+        if (Arr::size($items) === 0) {
             throw new \InvalidArgumentException('Cannot pick from an empty array.');
         }
 
-        return $items[$this->nextInt(0, count($items) - 1)];
+        return $items[$this->nextInt(0, Arr::size($items) - 1)];
     }
 }

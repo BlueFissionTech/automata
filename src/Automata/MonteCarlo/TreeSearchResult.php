@@ -2,6 +2,9 @@
 
 namespace BlueFission\Automata\MonteCarlo;
 
+use BlueFission\Arr;
+use BlueFission\Collections\Collection;
+
 class TreeSearchResult
 {
     private TreeSearchNode $root;
@@ -20,18 +23,18 @@ class TreeSearchResult
     {
         $children = $this->root->getChildren();
 
-        if (empty($children)) {
+        if (Arr::size($children) === 0) {
             return null;
         }
 
-        usort($children, function (TreeSearchNode $left, TreeSearchNode $right): int {
+        $children = (new Collection($children))->sort(function (TreeSearchNode $left, TreeSearchNode $right): int {
             $visitOrder = $right->getVisits() <=> $left->getVisits();
             if ($visitOrder !== 0) {
                 return $visitOrder;
             }
 
             return $right->getMeanReward() <=> $left->getMeanReward();
-        });
+        })->toArray();
 
         return $children[0]->getAction();
     }

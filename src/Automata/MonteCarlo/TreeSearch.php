@@ -2,15 +2,20 @@
 
 namespace BlueFission\Automata\MonteCarlo;
 
+use BlueFission\Arr;
 use BlueFission\Behavioral\Configurable;
 use BlueFission\Behavioral\IConfigurable;
 use BlueFission\Behavioral\IDispatcher;
+use BlueFission\Func;
+use BlueFission\Num;
+use BlueFission\Automata\Support\Evaluates;
 
 class TreeSearch implements IConfigurable, IDispatcher
 {
     use Configurable {
         Configurable::__construct as private __configConstruct;
     }
+    use Evaluates;
 
     public const EVENT_SEARCH_STARTED = 'automata.montecarlo.treesearch.started';
     public const EVENT_NODE_EXPANDED = 'automata.montecarlo.treesearch.node_expanded';
@@ -48,13 +53,18 @@ class TreeSearch implements IConfigurable, IDispatcher
 
     public function search(
         $initialState,
-        callable $legalActions,
-        callable $transition,
-        callable $isTerminal,
-        callable $reward
+        Func|callable $legalActions,
+        Func|callable $transition,
+        Func|callable $isTerminal,
+        Func|callable $reward
     ): TreeSearchResult {
         $random = new RandomSource($this->seed());
-        $root = new TreeSearchNode($initialState, null, null, array_values($legalActions($initialState)));
+        $root = new TreeSearchNode(
+            $initialState,
+            null,
+            null,
+            array_values(Arr::toArray($this->invokeFunc($legalActions, [$initialState, null, $this])))
+        );
 
         $this->dispatch(self::EVENT_SEARCH_STARTED, [
             'initial_state' => $initialState,
@@ -68,18 +78,23 @@ class TreeSearch implements IConfigurable, IDispatcher
             $state = $initialState;
 
             while (
-                !$isTerminal($state)
+                !(bool)$this->invokeFunc($isTerminal, [$state, $node, $this])
                 && !$node->hasUntriedActions()
-                && !empty($node->getChildren())
+                && Arr::size($node->getChildren()) > 0
             ) {
                 $node = $this->selectChild($node);
                 $state = $node->getState();
             }
 
-            if (!$isTerminal($state) && $node->hasUntriedActions()) {
+            if (!(bool)$this->invokeFunc($isTerminal, [$state, $node, $this]) && $node->hasUntriedActions()) {
                 $action = $node->takeUntriedAction($random);
-                $state = $transition($state, $action, $random);
-                $child = new TreeSearchNode($state, $node, $action, array_values($legalActions($state)));
+                $state = $this->invokeFunc($transition, [$state, $action, $random, $node, $this]);
+                $child = new TreeSearchNode(
+                    $state,
+                    $node,
+                    $action,
+                    array_values(Arr::toArray($this->invokeFunc($legalActions, [$state, $node, $this])))
+                );
                 $node->addChild($child);
                 $node = $child;
 
@@ -92,18 +107,24 @@ class TreeSearch implements IConfigurable, IDispatcher
 
             $simulationState = $state;
             $depth = 0;
-            while (!$isTerminal($simulationState) && $depth < $this->rolloutDepth()) {
-                $actions = array_values($legalActions($simulationState));
-                if (empty($actions)) {
+            while (!(bool)$this->invokeFunc($isTerminal, [$simulationState, $node, $this]) && $depth < $this->rolloutDepth()) {
+                $actions = array_values(Arr::toArray($this->invokeFunc($legalActions, [$simulationState, $node, $this])));
+                if (Arr::size($actions) === 0) {
                     break;
                 }
 
                 $simulationAction = $random->pick($actions);
-                $simulationState = $transition($simulationState, $simulationAction, $random);
+                $simulationState = $this->invokeFunc(
+                    $transition,
+                    [$simulationState, $simulationAction, $random, $node, $this]
+                );
                 $depth++;
             }
 
-            $score = (float)$reward($simulationState);
+            $score = (float)$this->numericValue(
+                $this->invokeFunc($reward, [$simulationState, $node, $this]),
+                0.0
+            );
 
             while ($node !== null) {
                 $node->record($score);
@@ -150,15 +171,23 @@ class TreeSearch implements IConfigurable, IDispatcher
     {
         $bestChild = null;
         $bestScore = -INF;
-        $parentVisits = max(1, $node->getVisits());
+        $parentVisits = (int)Num::max(1, $node->getVisits());
 
         foreach ($node->getChildren() as $child) {
             if ($child->getVisits() === 0) {
                 return $child;
             }
 
-            $score = $child->getMeanReward()
-                + $this->explorationConstant() * sqrt(log($parentVisits) / $child->getVisits());
+            $exploration = (float)Num::multiply(
+                $this->explorationConstant(),
+                Num::sqrt(
+                    Num::divide(
+                        Num::log($parentVisits),
+                        $child->getVisits()
+                    )
+                )
+            );
+            $score = (float)Num::add($child->getMeanReward(), $exploration);
 
             if ($score > $bestScore) {
                 $bestScore = $score;

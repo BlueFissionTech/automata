@@ -2,6 +2,9 @@
 
 namespace BlueFission\Automata\MonteCarlo;
 
+use BlueFission\Arr;
+use BlueFission\Collections\Collection;
+
 class SearchResult
 {
     /**
@@ -31,7 +34,7 @@ class SearchResult
 
     public function getBestStatistics(): ?ActionStatistics
     {
-        if (empty($this->statistics)) {
+        if (Arr::size($this->statistics) === 0) {
             return null;
         }
 
@@ -40,8 +43,8 @@ class SearchResult
 
     public function toArray(): array
     {
-        return array_map(function (ActionStatistics $statistics): array {
+        return (new Collection($this->statistics))->map(function (ActionStatistics $statistics): array {
             return $statistics->toArray();
-        }, $this->statistics);
+        })->toArray();
     }
 }

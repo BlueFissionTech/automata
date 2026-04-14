@@ -2,6 +2,10 @@
 
 namespace BlueFission\Automata\MonteCarlo;
 
+use BlueFission\Arr;
+use BlueFission\Collections\Collection;
+use BlueFission\Num;
+
 class TreeSearchNode
 {
     private $state;
@@ -17,7 +21,7 @@ class TreeSearchNode
         $this->state = $state;
         $this->parent = $parent;
         $this->action = $action;
-        $this->untriedActions = array_values($untriedActions);
+        $this->untriedActions = array_values(Arr::toArray($untriedActions));
     }
 
     public function getState()
@@ -50,12 +54,12 @@ class TreeSearchNode
 
     public function hasUntriedActions(): bool
     {
-        return !empty($this->untriedActions);
+        return Arr::size($this->untriedActions) > 0;
     }
 
     public function takeUntriedAction(RandomSource $random)
     {
-        $index = $random->nextInt(0, count($this->untriedActions) - 1);
+        $index = $random->nextInt(0, Arr::size($this->untriedActions) - 1);
         $action = $this->untriedActions[$index];
         array_splice($this->untriedActions, $index, 1);
 
@@ -65,7 +69,7 @@ class TreeSearchNode
     public function record(float $reward): void
     {
         $this->visits++;
-        $this->totalReward += $reward;
+        $this->totalReward = (float)Num::add($this->totalReward, $reward);
     }
 
     public function getVisits(): int
@@ -84,7 +88,7 @@ class TreeSearchNode
             return 0.0;
         }
 
-        return $this->totalReward / $this->visits;
+        return (float)Num::divide($this->totalReward, $this->visits);
     }
 
     public function toArray(): array
@@ -95,9 +99,9 @@ class TreeSearchNode
             'visits' => $this->visits,
             'total_reward' => $this->totalReward,
             'mean_reward' => $this->getMeanReward(),
-            'children' => array_map(function (self $child): array {
+            'children' => (new Collection($this->children))->map(function (self $child): array {
                 return $child->toArray();
-            }, $this->children),
+            })->toArray(),
         ];
     }
 }
