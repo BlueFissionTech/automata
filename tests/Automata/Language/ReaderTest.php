@@ -105,6 +105,8 @@ class ReaderTest extends TestCase
         $scene = $sceneEntry['value'] ?? null;
 
         $this->assertNotNull($scene);
+        $this->assertSame('scene', $holoscene->members()['episode_language_reader']['kind']);
+        $this->assertNotEmpty($holoscene->members()['episode_language_reader']['data']['relations']);
 
         $frames = $scene->frames();
         $this->assertNotEmpty($frames);

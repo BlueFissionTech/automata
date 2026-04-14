@@ -64,8 +64,8 @@ class Holoscene extends Obj
 	{
 		$scene = Dev::apply('comprehension.holoscene.push_scene', $scene);
 		$this->_holo->add($scene, $key);
-		$this->addMember($scene, $key);
-		$this->record('scene_pushed', ['key' => $key]);
+		$this->addMember($this->sceneSnapshotValue($scene), $key);
+		$this->record('scene_pushed', ['key' => $key, 'scene' => $this->sceneSnapshotValue($scene)]);
 		Dev::do('comprehension.holoscene.pushed', ['key' => $key, 'scene' => $scene]);
 	}
 
@@ -117,5 +117,26 @@ class Holoscene extends Obj
 		$this->summary($summary);
 
 		return $summary;
+	}
+
+	private function sceneSnapshotValue(mixed $scene): mixed
+	{
+		if (is_object($scene) && method_exists($scene, 'snapshot')) {
+			return $scene->snapshot();
+		}
+
+		if (is_object($scene) && method_exists($scene, 'toArray')) {
+			return $scene->toArray();
+		}
+
+		if (is_object($scene) && (method_exists($scene, 'data') || method_exists($scene, 'stats'))) {
+			return [
+				'kind' => 'scene',
+				'data' => method_exists($scene, 'data') ? $scene->data() : [],
+				'stats' => method_exists($scene, 'stats') ? $scene->stats() : [],
+			];
+		}
+
+		return $this->prototypeSnapshotValue($scene);
 	}
 }
