@@ -19,6 +19,11 @@ To run an example:
 php examples/collections_basic.php
 ```
 
+Media pipeline examples:
+
+- `examples/media_pipeline_intelligence.php` – media ingestion + text pipeline feeding Intelligence.
+- `examples/media_pipeline_engine.php` – media ingestion + text pipeline feeding Engine attention.
+
 Notable examples:
 
 - `examples/anomaly_gateway_basic.php` – multi-detector anomaly scoring on an activity.
@@ -31,8 +36,6 @@ Notable examples:
 - `examples/carrier_adapters_basic.php` – direct `CarrierAdapter` and `StateAdapter` usage over DevElation carriers.
 - `examples/jenss_agent_adapter.php` – interpreter-friendly agent state using the prototype-backed `Player`.
 - `examples/graph_routing_logistics.php` – route planning with fitness-based costs.
-- `examples/media_pipeline_intelligence.php` – media ingestion + text pipeline feeding Intelligence.
-- `examples/media_pipeline_engine.php` – media ingestion + text pipeline feeding Engine attention.
 - `examples/monte_carlo_route_planning.php` – budgeted Monte Carlo action ranking over uncertain route outcomes.
 - `examples/monte_carlo_tree_search_dispatch.php` – MCTS planning over a small sequential dispatch decision tree.
 
