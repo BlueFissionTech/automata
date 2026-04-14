@@ -31,3 +31,36 @@ The example prints JSON showing:
 
 - file-backed profile output and prompt
 - named override output and prompt
+
+Long-form generation attributes can also compose stable thread/session identifiers directly from scoped vars.
+
+Example:
+
+```txt
+{=content
+  profile="editorial"
+  label="Chapter [[chapter|pad:2]] / [[section.title]]"
+  thread="book:[[book.slug|slug]]:chapter:[[chapter|pad:2]]:section:[[section.slug|slug]]"
+  session="draft:[[book.slug|slug]]:[[chapter|pad:2]]"
+  context_strategy="windowed-prefix"
+  max_context_tokens="1200"
+}
+```
+
+Supported interpolation shape:
+
+- `[[path.to.value]]`
+- `[[path.to.value|slug]]`
+- `[[chapter|pad:2]]`
+- `[[section.slug|default:untitled|slug]]`
+
+`[[...]]` is the preferred form for generation attributes because it does not collide with the surrounding template tag braces.
+
+Supported filters:
+
+- `slug`
+- `lower`
+- `upper`
+- `trim`
+- `pad:length[:character[:left|right]]`
+- `default:value`

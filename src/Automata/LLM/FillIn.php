@@ -24,6 +24,7 @@ use BlueFission\Behavioral\Behaviors\Meta;
 use BlueFission\Data\FileSystem;
 use BlueFission\Obj;
 use BlueFission\Arr;
+use BlueFission\Num;
 use BlueFission\Str;
 use BlueFission\Val;
 use RuntimeException;
@@ -269,7 +270,7 @@ class FillIn implements IDispatcher
         if ($this->isAbsolutePath($profile)) {
             $candidates[] = $profile;
         } else {
-            $searchPaths = array_merge($this->profilePaths, $this->includePaths);
+            $searchPaths = Arr::merge($this->profilePaths, $this->includePaths);
             foreach ($searchPaths as $base) {
                 $base = rtrim((string)$base, '\\/');
                 if ($base === '') {
@@ -320,6 +321,6 @@ class FillIn implements IDispatcher
         }
 
         preg_match_all('/\S+/u', $text, $matches);
-        return max(count($matches[0] ?? []), (int)ceil(Str::len($text) / 4));
+        return (int)Num::max(Arr::size($matches[0] ?? []), (int)ceil(Str::len($text) / 4));
     }
 }

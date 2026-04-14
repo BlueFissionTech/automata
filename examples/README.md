@@ -19,6 +19,11 @@ To run an example:
 php examples/collections_basic.php
 ```
 
+Media pipeline examples:
+
+- `examples/media_pipeline_intelligence.php` – media ingestion + text pipeline feeding Intelligence.
+- `examples/media_pipeline_engine.php` – media ingestion + text pipeline feeding Engine attention.
+
 Notable examples:
 
 - `examples/anomaly_gateway_basic.php` – multi-detector anomaly scoring on an activity.

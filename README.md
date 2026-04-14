@@ -14,6 +14,7 @@ The `bluefission/automata` library is a comprehensive PHP framework designed to 
 - **Monte Carlo Tree Search (MCTS)**: Explore sequential decisions with UCT-style selection, simulation, and backpropagation.
 - **Path & Graphs**: Manage, analyze, and manipulate structures represented graphically including networks of nodes and edges.
 - **Anomaly Detection**: Score behavioral activity, fingerprints, and context to flag unusual or risky patterns.
+- **Media Ingestion**: Normalize text, image, audio, video, document, and URL inputs into consistent pipelines.
 - **Natural Language Processing (NLP)**: Tools for text parsing, analysis, and understanding, enabling the library to process and interpret human language.
 - **Large Language Models (LLM)**: Facilitate prompting and generating responses using large pre-trained models, integrating with tools like GPT for advanced text generation.
 - **Feature Engineering**: Provides robust tools for transforming raw data into features that better represent the underlying processes to predictive models.

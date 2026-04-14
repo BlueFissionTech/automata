@@ -406,6 +406,19 @@ The Feedback system provides:
 Feedback objects should be serializable, context-aware, and consumable by
 both runtime systems and training pipelines.
 
+### 3.17 Media Ingestion and Processing
+
+The Media module provides ingestion and processing utilities for:
+
+- Text, image, audio, video, document, and URL inputs.
+- File paths, stream handles, and raw content.
+- Normalization, entity extraction, heuristics, and feature engineering.
+- Pipelines that feed structured segments into `Intelligence`/`Engine`.
+
+Media is designed to stay lightweight and dependency-free by default.
+Advanced capabilities (OCR, ASR, frame extraction) are injected via hooks or
+external adapters rather than hard dependencies.
+
 ## 4. Typical Usage Patterns
 
 Automata is intended to support workflows like:
@@ -515,7 +528,12 @@ Short‑term priorities:
    - Add example scripts for fraud-style flows (device/location fingerprints,
      behavior deltas) and baseline tests for detectors.
 
-13. **Demos**
+13. **Media ingestion and processing**
+   - Add ingestion gateways and media pipelines for text, image, audio, video.
+   - Document pipeline extension points for OCR/ASR/frame analysis.
+   - Provide examples wired into Intelligence for multi-modal inputs.
+
+14. **Demos**
    - Disaster response classification demo (mock dataset first, real dataset
      later) that exercises classification + feedback.
    - An agent demo that runs without LLM keys and can optionally use LLM
