@@ -102,12 +102,14 @@ standalone, but integrate through shared `Context`, behaviors, and event hooks.
 **Key modules:**
 
 - `Automata\Sensory` (Input and related classes)
+- `Automata\Media` (ingestion + processing pipelines)
 - Core data structures: `Deq`, `Dict`, `List`, `Pile`, `Pri`, `Vec`
 - `Automata\Collections` (e.g., `OrganizedCollection`)
 
 Responsibilities:
 
 - Ingest raw signals and normalize them for strategies.
+- Normalize file and stream inputs into MediaItems and pipeline results.
 - Provide efficient, AI‑focused data containers for large and/or streaming
   workloads.
 - Maintain ordering, priority, and weighting semantics where needed.
@@ -232,11 +234,12 @@ problems, similar to HTTP controllers for web routes.
 ### 3.5 Intelligence Hub: Multi-Modal Insight Pipeline
 
 1. A host app submits a complex input (PDF, URL, video, or mixed media bundle).
-2. The hub segments the input into slices (text, image, audio, video) and
+2. Media ingestion pipelines normalize file/stream inputs into typed items.
+3. The hub segments the input into slices (text, image, audio, video) and
    attaches metadata like source, format, and provenance.
-3. `Sensory\Sense` evaluates attention and novelty to determine depth/budget.
-4. A ranked list of strategies is applied per segment; outputs are scored.
-5. Insights are aggregated into a gestalt summary for downstream systems,
+4. `Sensory\Sense` evaluates attention and novelty to determine depth/budget.
+5. A ranked list of strategies is applied per segment; outputs are scored.
+6. Insights are aggregated into a gestalt summary for downstream systems,
    including LLM-driven orchestration.
 
 ### 3.6 Classification Gateway + Feedback Loop

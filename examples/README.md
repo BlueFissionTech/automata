@@ -24,6 +24,8 @@ Notable examples:
 - `examples/anomaly_gateway_basic.php` – multi-detector anomaly scoring on an activity.
 - `examples/anomaly_logistics_requests.php` – KNN-based anomaly scoring over logistics requests.
 - `examples/graph_routing_logistics.php` – route planning with fitness-based costs.
+- `examples/media_pipeline_intelligence.php` – media ingestion + text pipeline feeding Intelligence.
+- `examples/media_pipeline_engine.php` – media ingestion + text pipeline feeding Engine attention.
 
 Additional examples will be added as modules are fleshed out and tested.
 
