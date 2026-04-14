@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Media\Processing\Image;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Context;
 use BlueFission\Automata\Media\MediaItem;
 use BlueFission\Automata\Media\Processing\Pipeline;
@@ -22,7 +23,7 @@ class ImagePipeline extends Pipeline
     {
         $result = parent::process($item, $context, $options);
 
-        if (empty($result->segments())) {
+        if (Arr::size($result->segments()) === 0) {
             $result->addSegment($item->type() ?? 'image', $item->path() ?? 'image', [
                 'features' => $result->features(),
                 'entities' => $result->entities(),

@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Media\Processing\Video;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Context;
 use BlueFission\Automata\Media\MediaItem;
 use BlueFission\Automata\Media\Processing\Pipeline;
@@ -20,7 +21,7 @@ class VideoPipeline extends Pipeline
     {
         $result = parent::process($item, $context, $options);
 
-        if (empty($result->segments())) {
+        if (Arr::size($result->segments()) === 0) {
             $result->addSegment($item->type() ?? 'video', $item->path() ?? 'video', [
                 'features' => $result->features(),
             ]);

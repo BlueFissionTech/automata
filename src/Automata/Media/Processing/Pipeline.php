@@ -2,11 +2,13 @@
 
 namespace BlueFission\Automata\Media\Processing;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Context;
 use BlueFission\Automata\Media\MediaItem;
 use BlueFission\Collections\Collection;
 use BlueFission\DevElation as Dev;
 use BlueFission\Automata\Media\Processing\HandlerRegistry;
+use BlueFission\Func;
 
 class Pipeline
 {
@@ -58,14 +60,15 @@ class Pipeline
             if ($processor instanceof IProcessor) {
                 $result = $processor->process($item, $context, $result, $options);
             } elseif (is_callable($processor)) {
-                $output = call_user_func($processor, $item, $context, $result, $options);
+                $callable = $processor instanceof Func ? $processor : new Func($processor);
+                $output = $callable->call($item, $context, $result, $options);
                 if ($output instanceof Result) {
                     $result = $output;
                 }
             }
         }
 
-        if (empty($result->segments())) {
+        if (Arr::size($result->segments()) === 0) {
             $payload = $item->content();
             $meta = $result->meta();
             $result->addSegment($item->type() ?? 'text', $payload, $meta);
@@ -82,7 +85,8 @@ class Pipeline
             if ($processor instanceof ITrainable) {
                 $processor->train($samples, $labels, $options);
             } elseif (is_callable($processor)) {
-                call_user_func($processor, $samples, $labels, $options);
+                $callable = $processor instanceof Func ? $processor : new Func($processor);
+                $callable->call($samples, $labels, $options);
             }
         }
     }

@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Media\Ingestion;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Automata\InputTypeDetector;
 use BlueFission\Automata\Media\MediaItem;
@@ -26,7 +27,7 @@ class Gateway
             'weight' => null,
         ];
 
-        $profile = array_merge($defaults, $profile);
+        $profile = Arr::merge($defaults, $profile);
 
         $this->_ingestors->add($ingestor, $name);
         $this->_profiles[$name] = $profile;
@@ -53,7 +54,7 @@ class Gateway
             $profile = $this->_profiles[$name] ?? [];
             $types = $profile['types'] ?? [];
 
-            if (!empty($types) && $typeHint && !in_array($typeHint, $types, true)) {
+            if (Arr::size($types) > 0 && $typeHint && !Arr::hasValue($types, $typeHint, true)) {
                 continue;
             }
 

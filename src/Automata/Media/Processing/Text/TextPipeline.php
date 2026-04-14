@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Media\Processing\Text;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Media\MediaItem;
 use BlueFission\Automata\Media\Processing\Pipeline;
 use BlueFission\Automata\Media\Processing\Result;
@@ -23,7 +24,7 @@ class TextPipeline extends Pipeline
     {
         $result = parent::process($item, $context, $options);
 
-        if (empty($result->segments())) {
+        if (Arr::size($result->segments()) === 0) {
             $normalized = $result->meta()['normalized_text'] ?? $item->content();
             $result->addSegment($item->type() ?? 'text', $normalized, [
                 'features' => $result->features(),

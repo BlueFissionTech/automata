@@ -4,6 +4,7 @@ namespace BlueFission\Automata\Media\Processing;
 
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\DevElation as Dev;
+use BlueFission\Str;
 
 class HandlerRegistry
 {
@@ -11,7 +12,7 @@ class HandlerRegistry
 
     public function register(string $capability, $handler, ?string $name = null, ?float $weight = null): void
     {
-        $capability = strtolower(trim($capability));
+        $capability = Str::lower(Str::trim($capability));
         if ($capability === '') {
             return;
         }
@@ -39,7 +40,7 @@ class HandlerRegistry
 
     public function resolve(string $capability)
     {
-        $capability = strtolower(trim($capability));
+        $capability = Str::lower(Str::trim($capability));
         $collection = $this->_handlers[$capability] ?? null;
         if (!$collection instanceof OrganizedCollection) {
             return null;
@@ -57,7 +58,7 @@ class HandlerRegistry
 
     public function resolveAll(string $capability): array
     {
-        $capability = strtolower(trim($capability));
+        $capability = Str::lower(Str::trim($capability));
         $collection = $this->_handlers[$capability] ?? null;
         if (!$collection instanceof OrganizedCollection) {
             return [];

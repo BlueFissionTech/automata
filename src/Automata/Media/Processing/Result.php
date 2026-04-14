@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Media\Processing;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Context;
 use BlueFission\DevElation as Dev;
 
@@ -66,7 +67,7 @@ class Result
         }
 
         if (is_array($value)) {
-            $this->entities[$label] = array_values(array_unique(array_merge($this->entities[$label], $value)));
+            $this->entities[$label] = array_values(Arr::unique(Arr::merge($this->entities[$label], $value)));
         } else {
             $this->entities[$label][] = $value;
         }
@@ -112,7 +113,7 @@ class Result
 
     public function toSegments(): array
     {
-        if (!empty($this->segments)) {
+        if (Arr::size($this->segments) > 0) {
             return $this->segments;
         }
 
