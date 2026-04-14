@@ -146,7 +146,7 @@ Responsibilities:
   workloads.
 - Maintain ordering, priority, and weighting semantics where needed.
 
-### 2.5 Analysis, Expert, Feature, Game, Genetic, and Graph Layers
+### 2.5 Analysis, Expert, Feature, Game, Genetic, Monte Carlo, and Graph Layers
 
 **Key folders:**
 
@@ -155,6 +155,7 @@ Responsibilities:
 - `Feature` – feature engineering and transformation.
 - `GameTheory` – game models, players, and strategies.
 - `Genetic` – genetic algorithms and fitness‑driven search.
+- `MonteCarlo` – stochastic rollout search and MCTS planners.
 - `Path` – graph structures and traversal algorithms.
 
 Responsibilities:
@@ -176,6 +177,26 @@ inherit a shared worldview implementation. For example:
 - `Genetic`, `Feedback`, `Intelligence`, and `Engine` now reuse the same
   `Func`/`Num`/`Arr`/`Str` conventions for mutation, scoring, classification,
   and runtime budgeting.
+The Monte Carlo layer specifically provides:
+
+- Callback-driven rollout search for noisy action evaluation.
+- A reusable deterministic random source for reproducible simulation budgets.
+- MCTS over user-defined state/action transitions, enabling sequential planning
+  without coupling the library to one environment model.
+
+The Monte Carlo layer specifically provides:
+
+- Callback-driven rollout search for noisy action evaluation.
+- A reusable deterministic random source for reproducible simulation budgets.
+- MCTS over user-defined state/action transitions, enabling sequential planning
+  without coupling the library to one environment model.
+- DevElation-style configuration and event hooks so search loops can participate
+  in larger orchestration, observability, and adaptive-attention flows.
+
+This layer is also expected to compose later with upstream Develation
+`prototypes/` traits for worldview primitives such as `Proto`, `Position`,
+`Blueprint`, and `Agent`, rather than defining those concepts independently in
+Automata.
 
 ### 2.6 Memory, ABS, and Comprehension Layer
 

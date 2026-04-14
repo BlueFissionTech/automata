@@ -30,6 +30,9 @@ Notable examples:
 - `examples/entity_condition_worldview.php` – worldview-oriented `Entity` and `Condition` snapshot/explain contracts.
 - `examples/carrier_adapters_basic.php` – direct `CarrierAdapter` and `StateAdapter` usage over DevElation carriers.
 - `examples/jenss_agent_adapter.php` – interpreter-friendly agent state using the prototype-backed `Player`.
+- `examples/graph_routing_logistics.php` – route planning with fitness-based costs.
+- `examples/monte_carlo_route_planning.php` – budgeted Monte Carlo action ranking over uncertain route outcomes.
+- `examples/monte_carlo_tree_search_dispatch.php` – MCTS planning over a small sequential dispatch decision tree.
 
 Additional examples will be added as modules are fleshed out and tested.
 

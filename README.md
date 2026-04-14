@@ -10,6 +10,8 @@ The `bluefission/automata` library is a comprehensive PHP framework designed to 
 - **Game Theory**: Analyze competitive environments according to the choices of decision-makers for strategic planning and simulations.
 - **Scenario Modeling**: Inspired by NetLogo, it supports agent-based models for simulating interactions and processes within complex systems.
 - **Genetic Algorithms**: Implement evolutionary algorithms that mimic natural selection for solving optimization problems.
+- **Monte Carlo Search**: Rank candidate actions under uncertainty using repeated seeded rollouts and per-action reward statistics.
+- **Monte Carlo Tree Search (MCTS)**: Explore sequential decisions with UCT-style selection, simulation, and backpropagation.
 - **Path & Graphs**: Manage, analyze, and manipulate structures represented graphically including networks of nodes and edges.
 - **Anomaly Detection**: Score behavioral activity, fingerprints, and context to flag unusual or risky patterns.
 - **Natural Language Processing (NLP)**: Tools for text parsing, analysis, and understanding, enabling the library to process and interpret human language.
@@ -33,6 +35,13 @@ To get started with `bluefission/automata`, clone the repository and include it 
 
 ```bash
 git clone https://github.com/bluefission/automata.git
+```
+
+Monte Carlo examples:
+
+```bash
+php examples/monte_carlo_route_planning.php
+php examples/monte_carlo_tree_search_dispatch.php
 ```
 
 ## Contributing

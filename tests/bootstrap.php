@@ -1,5 +1,16 @@
 <?php
 
+$autoloadCandidates = [
+    dirname(__DIR__) . '/vendor/autoload.php',
+    dirname(__DIR__, 3) . '/vendor/autoload.php',
+];
+
+foreach ($autoloadCandidates as $candidate) {
+    if (is_file($candidate)) {
+        require $candidate;
+        break;
+    }
+}
 spl_autoload_register(function (string $class): void {
     $prefix = 'BlueFission\\';
     if (strpos($class, $prefix) !== 0) {
@@ -14,15 +25,3 @@ spl_autoload_register(function (string $class): void {
         require_once $candidate;
     }
 }, true, true);
-
-$autoloadCandidates = [
-    dirname(__DIR__) . '/vendor/autoload.php',
-    dirname(__DIR__, 3) . '/vendor/autoload.php',
-];
-
-foreach ($autoloadCandidates as $candidate) {
-    if (is_file($candidate)) {
-        require $candidate;
-        break;
-    }
-}
