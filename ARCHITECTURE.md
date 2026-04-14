@@ -219,6 +219,12 @@ Responsibilities:
   - recover relevant context,
   - update knowledge graphs as events occur.
 
+World-model carriers such as `Comprehension\Holoscene` should prefer
+DevElation prototype traits where shared domain/member/state semantics improve
+interoperability. Semantic carriers such as `Language\Statement` should adopt
+prototype traits selectively where conditions, relations, and position metadata
+meaningfully improve downstream comprehension and narration flows.
+
 ### 2.7 Language and LLM Layer
 
 **Key folders:**

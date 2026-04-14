@@ -1,6 +1,7 @@
 <?php
 namespace BlueFission\Automata\Comprehension;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Context;
 use BlueFission\Automata\Memory\IWorkingMemory;
 use BlueFission\Automata\Memory\IRecallScoringStrategy;
@@ -11,6 +12,8 @@ class Scene
 	private array $_frames = [];
 	private array $_stack = [];
 	private array $_groups = [];
+	private array $_relations = [];
+	private array $_frameEdges = [];
 
 	private float $_group_tolerance = 100;
 	private float $_variance_tolerance = 100;
@@ -21,6 +24,8 @@ class Scene
 	private array $_temporalEdges = [];
 
 	private IWorkingMemory $_memory;
+	private ?int $_startedAt = null;
+	private ?int $_endedAt = null;
 
 	public function __construct(IWorkingMemory $memory)
 	{
@@ -29,12 +34,21 @@ class Scene
 
 	public function addFrame(Frame $frame): void
 	{
-		if (count($this->_frames) >= $this->_buffer_size) {
+		if (Arr::size($this->_frames) >= $this->_buffer_size) {
 			array_shift($this->_frames); // Remove oldest frame
 		}
+
+		$frameIndex = Arr::size($this->_frames);
+		$timestamp = time();
+		if ($this->_startedAt === null) {
+			$this->_startedAt = $timestamp;
+		}
+
 		$this->_frames[] = $frame;
+		$this->_endedAt = $timestamp;
 
 		$entities = $frame->extract();
+		$this->trackFrameRelations($entities, $frameIndex, $timestamp);
 		$this->processEntities($entities);
 	}
 
@@ -62,7 +76,7 @@ class Scene
 	    $clusters = $this->clusterEntities($contextMap);
 
 	    foreach ($clusters as $clusterLabel => $contextGroup) {
-	        if (count($contextGroup) === 1) {
+	        if (Arr::size($contextGroup) === 1) {
 	            // Original logic: treat as a single memory
 	            $context = current($contextGroup);
 	            $this->_memory->addMemory($clusterLabel, $context);
@@ -130,7 +144,7 @@ class Scene
 	    $normA = 0.0;
 	    $normB = 0.0;
 
-	    $length = min(count($vec1), count($vec2));
+	    $length = min(Arr::size($vec1), Arr::size($vec2));
 	    for ($i = 0; $i < $length; $i++) {
 	        $dot += $vec1[$i] * $vec2[$i];
 	        $normA += $vec1[$i] ** 2;
@@ -144,7 +158,9 @@ class Scene
 
 	protected function generateGroupLabel(array $contexts): string
 	{
-		$labels = array_map(fn($ctx) => $ctx->get('label'), $contexts);
+		$labels = (new Collection($contexts))
+			->map(fn($ctx) => $ctx->get('label'))
+			->contents();
 		sort($labels);
 		return 'group_' . md5(implode('_', $labels));
 	}
@@ -164,8 +180,8 @@ class Scene
 	        $vectors[$label] = $this->hashContextVector($context);
 	    }
 
-	    $labels = array_keys($vectors);
-	    $count = count($labels);
+	    $labels = Arr::keys($vectors);
+	    $count = Arr::size($labels);
 
 	    for ($i = 0; $i < $count; $i++) {
 	        $labelA = $labels[$i];
@@ -201,7 +217,8 @@ class Scene
 	    $hashes = [];
 
 	    foreach ($data as $key => $value) {
-	        $scalar = is_scalar($value) ? (string)$value : json_encode($value);
+	        $normalized = $this->snapshotValue($value);
+	        $scalar = is_scalar($normalized) ? (string)$normalized : json_encode($normalized);
 	        $hashes[] = crc32((string)$key . ':' . $scalar) * 0.0000000001;
 	    }
 
@@ -226,11 +243,122 @@ class Scene
 
 	public function stats() 
 	{
-		return [];
+		return [
+			'frame_count' => Arr::size($this->_frames),
+			'group_count' => Arr::size($this->_groups),
+			'relation_count' => Arr::size($this->_relations),
+			'temporal_edge_count' => Arr::size($this->_frameEdges),
+			'started_at' => $this->_startedAt,
+			'ended_at' => $this->_endedAt,
+		];
 	}
 
 	public function data() 
 	{
-		return [];
+		$frames = [];
+		foreach ($this->_frames as $frame) {
+			$frames[] = $frame->extract();
+		}
+
+		$groups = [];
+		foreach ($this->_groups as $label => $contexts) {
+			$groups[$label] = [];
+			foreach ($contexts as $context) {
+				$groups[$label][] = $this->snapshotContext($context);
+			}
+		}
+
+		return [
+			'frames' => $frames,
+			'groups' => $groups,
+			'relations' => $this->_relations,
+			'temporal_edges' => $this->_frameEdges,
+		];
+	}
+
+	public function snapshot(): array
+	{
+		return [
+			'kind' => 'scene',
+			'stats' => $this->stats(),
+			'data' => $this->data(),
+		];
+	}
+
+	private function trackFrameRelations(array $entities, int $frameIndex, int $timestamp): void
+	{
+		if ($frameIndex > 0) {
+			$this->_frameEdges[] = [
+				'from' => $frameIndex - 1,
+				'to' => $frameIndex,
+				'timestamp' => $timestamp,
+			];
+		}
+
+		$subject = $entities['subject']['value'] ?? null;
+		$behavior = $entities['behavior']['value'] ?? null;
+		$object = $entities['object']['value'] ?? null;
+
+		if ($subject === null && $behavior === null && $object === null) {
+			return;
+		}
+
+		$this->_relations[] = [
+			'frame' => $frameIndex,
+			'timestamp' => $timestamp,
+			'subject' => $this->snapshotValue($subject),
+			'behavior' => $this->snapshotValue($behavior),
+			'object' => $this->snapshotValue($object),
+		];
+	}
+
+	private function snapshotContext(Context $context): array
+	{
+		$data = [];
+		foreach ($context->all() as $key => $value) {
+			$data[$key] = $this->snapshotValue($value);
+		}
+
+		return [
+			'data' => $data,
+			'tags' => $context->tags(),
+			'normalizations' => $context->normalizations(),
+		];
+	}
+
+	private function snapshotValue(mixed $value): mixed
+	{
+		if (Arr::is($value)) {
+			$normalized = [];
+			foreach (Arr::toArray($value) as $key => $item) {
+				$normalized[$key] = $this->snapshotValue($item);
+			}
+
+			return $normalized;
+		}
+
+		if ($value instanceof Context) {
+			return $this->snapshotContext($value);
+		}
+
+		if (is_object($value)) {
+			if (method_exists($value, 'snapshot')) {
+				return $value->snapshot();
+			}
+
+			if (method_exists($value, 'toArray')) {
+				return $value->toArray();
+			}
+
+			if (method_exists($value, 'all')) {
+				return $value->all();
+			}
+
+			if (method_exists($value, '__toString')) {
+				return (string)$value;
+			}
+		}
+
+		return $value;
 	}
 }

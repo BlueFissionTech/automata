@@ -38,6 +38,12 @@ class HolosceneTest extends TestCase
 
         $this->assertSame($sceneA, $assessment['episode_a']['value']);
         $this->assertSame($sceneB, $assessment['episode_b']['value']);
+        $this->assertSame('holoscene', $holoscene->domainName());
+        $this->assertCount(2, $holoscene->members());
+        $this->assertSame(2, $holoscene->snapshot()['sceneCount']);
+        $this->assertIsArray($holoscene->members()['episode_a']);
+        $this->assertSame('scene', $holoscene->members()['episode_a']['kind']);
+        $this->assertSame(['summary' => 'test'], $holoscene->members()['episode_a']['data']);
     }
 }
 
