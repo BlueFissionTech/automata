@@ -3,6 +3,7 @@ namespace BlueFission\Automata\Language;
 
 use BlueFission\Arr;
 use BlueFission\Collections\Collection;
+use BlueFission\Flag;
 use BlueFission\Num;
 use BlueFission\Obj;
 use BlueFission\Prototypes\HasConditions;
@@ -59,7 +60,7 @@ class Statement extends Obj {
 	public function __construct()
 	{
 		parent::__construct();
-		$this->protoId('statement_' . uniqid());
+		$this->protoId('statement_' . Str::uuid4());
 		$this->kind('statement');
 		$this->syncPrototypeState();
 	}
@@ -198,7 +199,7 @@ class Statement extends Obj {
 		$position = $this->field('position');
 		$this->prototypeSet('coordinates', [], 'automata.language.statement.coordinates_reset');
 
-		if (is_array($position)) {
+		if (Arr::is($position)) {
 			foreach ($position as $dimension => $value) {
 				$this->defineDimension((string)$dimension);
 				$this->coordinate((string)$dimension, $value);
@@ -243,15 +244,15 @@ class Statement extends Obj {
 
 	private function isSatisfiedFieldValue(mixed $value): bool
 	{
-		if (is_array($value)) {
+		if (Arr::is($value)) {
 			return Arr::size($value) > 0;
 		}
 
-		if (is_bool($value)) {
-			return $value;
+		if (Flag::isTrue($value) || Flag::isFalse($value)) {
+			return Flag::isTrue($value);
 		}
 
-		if (is_numeric($value)) {
+		if (Num::is($value)) {
 			return true;
 		}
 

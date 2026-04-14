@@ -51,7 +51,7 @@ class Holoscene extends Obj
 		$this->protoId($name);
 		$this->domainName($name);
 		$this->summary("domain[{$name}]");
-        Dev::do('comprehension.holoscene.construct', ['collection' => $this->_holo]);
+		Dev::do('comprehension.holoscene.construct', ['collection' => $this->_holo]);
 	}
 
 	/**
@@ -62,11 +62,11 @@ class Holoscene extends Obj
 	 */
 	public function push(string $key, $scene): void
 	{
-        $scene = Dev::apply('comprehension.holoscene.push_scene', $scene);
+		$scene = Dev::apply('comprehension.holoscene.push_scene', $scene);
 		$this->_holo->add($scene, $key);
 		$this->addMember($scene, $key);
 		$this->record('scene_pushed', ['key' => $key]);
-        Dev::do('comprehension.holoscene.pushed', ['key' => $key, 'scene' => $scene]);
+		Dev::do('comprehension.holoscene.pushed', ['key' => $key, 'scene' => $scene]);
 	}
 
 	/**
@@ -78,16 +78,16 @@ class Holoscene extends Obj
 	 */
 	public function review(): void
 	{
-        Dev::do('comprehension.holoscene.review_start', ['collection' => $this->_holo]);
+		Dev::do('comprehension.holoscene.review_start', ['collection' => $this->_holo]);
 		$this->_assessment = $this->_holo->contents();
 		$this->domainState('assessment', $this->_assessment);
 		$this->measure('scene_count', Arr::size($this->_assessment));
-        Dev::do('comprehension.holoscene.reviewed', ['assessment' => $this->_assessment]);
+		Dev::do('comprehension.holoscene.reviewed', ['assessment' => $this->_assessment]);
 	}
 
 	public function assessment(): array
 	{
-        return Dev::apply('comprehension.holoscene.assessment', $this->_assessment);
+		return Dev::apply('comprehension.holoscene.assessment', $this->_assessment);
 	}
 
 	public function snapshot(): array
