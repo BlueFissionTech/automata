@@ -2,7 +2,7 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.5/phpunit.xsd" bootstrap="tests/bootstrap.php" colors="true">
   <testsuites>
     <testsuite name="BlueFission Automata Test Suite">
-      <directory suffix=".php">./tests/</directory>
+      <directory suffix="Test.php">./tests/</directory>
     </testsuite>
   </testsuites>
   <source>

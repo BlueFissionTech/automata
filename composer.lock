@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "bluefission/develation",
-            "version": "v1.3.10-alpha",
+            "version": "v1.3.29-alpha",
             "source": {
                 "type": "git",
                 "url": "https://github.com/BlueFissionTech/develation.git",
-                "reference": "451992c49fe74cc3d391f23293fdded3f69b1d33"
+                "reference": "b94000e3d1b01e3e682de1ca4e4b41e916280733"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/BlueFissionTech/develation/zipball/451992c49fe74cc3d391f23293fdded3f69b1d33",
-                "reference": "451992c49fe74cc3d391f23293fdded3f69b1d33",
+                "url": "https://api.github.com/repos/BlueFissionTech/develation/zipball/b94000e3d1b01e3e682de1ca4e4b41e916280733",
+                "reference": "b94000e3d1b01e3e682de1ca4e4b41e916280733",
                 "shasum": ""
             },
             "require": {
@@ -66,10 +66,10 @@
                 "php"
             ],
             "support": {
-                "source": "https://github.com/BlueFissionTech/develation/tree/v1.3.10-alpha",
+                "source": "https://github.com/BlueFissionTech/develation/tree/v1.3.29-alpha",
                 "issues": "https://github.com/BlueFissionTech/develation/issues"
             },
-            "time": "2026-01-25T21:29:03+00:00"
+            "time": "2026-04-12T19:38:50+00:00"
         },
         {
             "name": "bluefission/simpleclients",
