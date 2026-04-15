@@ -104,4 +104,40 @@ class StatementTest extends TestCase
         $this->assertNull($statement->satisfy());
         $this->assertGreaterThanOrEqual(0.7, $statement->percentSatisfied());
     }
+
+    public function testStatementFieldsBatchNormalizesPrototypeStateOnceComplete(): void
+    {
+        $statement = new Statement();
+
+        $statement->assign([
+            'subject' => 'sender',
+            'behavior' => 'requests',
+            'object' => 'refund',
+            'relationship' => 'needs',
+            'condition' => 'triage',
+            'position' => ['x' => 2, 'y' => 9],
+        ]);
+
+        $snapshot = $statement->snapshot();
+
+        $this->assertSame('sender requests refund', $snapshot['name']);
+        $this->assertSame('refund', $snapshot['relations']['needs'][0]['target']);
+        $this->assertSame('triage', $snapshot['conditions'][0]['path']);
+        $this->assertSame(2, $snapshot['coordinates']['x']);
+        $this->assertSame(9, $snapshot['coordinates']['y']);
+    }
+
+    public function testPrototypeFacingReadsNormalizeDirtySemanticStateOnDemand(): void
+    {
+        $statement = new Statement();
+
+        $statement->field('subject', 'sender');
+        $statement->field('behavior', 'requests');
+        $statement->field('object', 'refund');
+
+        $this->assertSame('sender requests refund', $statement->name());
+        $this->assertNotEmpty($statement->relations());
+
+        $this->assertStringContainsString('sender', $statement->explain());
+    }
 }

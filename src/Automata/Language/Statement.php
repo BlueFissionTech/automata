@@ -5,6 +5,7 @@ use BlueFission\Arr;
 use BlueFission\Automata\Comprehension\Entity as ComprehensionEntity;
 use BlueFission\Automata\Context;
 use BlueFission\Collections\Collection;
+use BlueFission\Func;
 use BlueFission\Flag;
 use BlueFission\Num;
 use BlueFission\Obj;
@@ -23,10 +24,24 @@ class Statement extends Obj {
 	use Proto {
 		explain as protected prototypeExplain;
 		snapshot as protected prototypeSnapshot;
+		name as protected prototypeName;
+		labels as protected prototypeLabels;
+		stateValue as protected prototypeStateValue;
+		property as protected prototypeProperty;
+		properties as protected prototypeProperties;
+		relations as protected prototypeRelations;
 	}
-	use Position;
+	use Position {
+		position as protected prototypePosition;
+		dimensions as protected prototypeDimensions;
+		coordinates as protected prototypeCoordinates;
+	}
 	use HasConditions {
 		normalizeConditionRecord as protected prototypeNormalizeConditionRecord;
+		conditions as protected prototypeConditions;
+		hasCondition as protected prototypeHasCondition;
+		conditionsMet as protected prototypeConditionsMet;
+		unmetConditions as protected prototypeUnmetConditions;
 	}
 
 	private const SEMANTIC_FIELDS = [
@@ -74,24 +89,189 @@ class Statement extends Obj {
 		'position'=>''
 	];
 
+	private bool $_semanticDirty = true;
+	private bool $_semanticSyncInProgress = false;
+	private int $_semanticUpdateDepth = 0;
+
 	public function __construct()
 	{
 		parent::__construct();
 		$this->protoId('statement_' . Str::uuid4());
 		$this->kind('statement');
-		$this->syncPrototypeState();
+		$this->syncSemanticState();
 	}
 
 	public function field( string $field, $value = null ): mixed
 	{
 		if (func_num_args() > 1) {
+			if (!$this->isSemanticField($field)) {
+				return parent::field($field, $value);
+			}
+
 			$this->_data[$field] = $this->normalizeSemanticFieldValue($field, $value);
-			$this->syncPrototypeState();
+			$this->markSemanticDirty();
 
 			return $this;
 		}
 
+		if ($this->isPrototypeProjectionField($field)) {
+			$this->ensureSemanticSync();
+		}
+
 		return parent::field($field);
+	}
+
+	public function assign( $data ): \BlueFission\IObj
+	{
+		if ( !is_object($data) && !Arr::isAssoc($data) ) {
+			return parent::assign($data);
+		}
+
+		$this->openSemanticWindow();
+
+		try {
+			foreach ($data as $field => $value) {
+				$this->field((string)$field, $value);
+			}
+		} finally {
+			$this->closeSemanticWindow();
+		}
+
+		return $this;
+	}
+
+	public function normalize(): static
+	{
+		$this->syncSemanticState();
+
+		return $this;
+	}
+
+	public function finalize(): static
+	{
+		$this->syncSemanticState();
+
+		return $this;
+	}
+
+	public function name(?string $name = null): mixed
+	{
+		if (func_num_args() > 0) {
+			return $this->prototypeName($name);
+		}
+
+		$this->ensureSemanticSync();
+
+		return $this->prototypeName();
+	}
+
+	public function labels(?array $labels = null): mixed
+	{
+		if (func_num_args() > 0) {
+			return $this->prototypeLabels($labels);
+		}
+
+		$this->ensureSemanticSync();
+
+		return $this->prototypeLabels();
+	}
+
+	public function stateValue(?string $key = null, mixed $value = null): mixed
+	{
+		if (func_num_args() > 1) {
+			return $this->prototypeStateValue($key, $value);
+		}
+
+		$this->ensureSemanticSync();
+
+		return func_num_args() === 0
+			? $this->prototypeStateValue()
+			: $this->prototypeStateValue($key);
+	}
+
+	public function property(string $name, mixed $value = null): mixed
+	{
+		if (func_num_args() > 1) {
+			return $this->prototypeProperty($name, $value);
+		}
+
+		$this->ensureSemanticSync();
+
+		return $this->prototypeProperty($name);
+	}
+
+	public function properties(?array $properties = null): mixed
+	{
+		if (func_num_args() > 0) {
+			return $this->prototypeProperties($properties);
+		}
+
+		$this->ensureSemanticSync();
+
+		return $this->prototypeProperties();
+	}
+
+	public function relations(?string $relation = null): array
+	{
+		$this->ensureSemanticSync();
+
+		return $this->prototypeRelations($relation);
+	}
+
+	public function position(mixed $position = null): mixed
+	{
+		if (func_num_args() > 0) {
+			$this->field('position', $position);
+			$this->ensureSemanticSync();
+
+			return $this;
+		}
+
+		$this->ensureSemanticSync();
+
+		return $this->prototypePosition();
+	}
+
+	public function dimensions(): array
+	{
+		$this->ensureSemanticSync();
+
+		return $this->prototypeDimensions();
+	}
+
+	public function coordinates(): array
+	{
+		$this->ensureSemanticSync();
+
+		return $this->prototypeCoordinates();
+	}
+
+	public function conditions(): array
+	{
+		$this->ensureSemanticSync();
+
+		return $this->prototypeConditions();
+	}
+
+	public function hasCondition(string $name): bool
+	{
+		$this->ensureSemanticSync();
+
+		return $this->prototypeHasCondition($name);
+	}
+
+	public function conditionsMet(array $context = []): bool
+	{
+		$this->ensureSemanticSync();
+
+		return $this->prototypeConditionsMet($context);
+	}
+
+	public function unmetConditions(array $context = []): array
+	{
+		$this->ensureSemanticSync();
+
+		return $this->prototypeUnmetConditions($context);
 	}
 
 	public function percentSatisfied() {
@@ -128,6 +308,8 @@ class Statement extends Obj {
 
 	public function snapshot(): array
 	{
+		$this->ensureSemanticSync();
+
 		$snapshot = $this->prototypeSnapshot();
 		foreach (self::SEMANTIC_FIELDS as $field) {
 			$snapshot[$field] = $this->semanticPrototypeValue($this->field($field));
@@ -144,6 +326,8 @@ class Statement extends Obj {
 
 	public function explain(): string
 	{
+		$this->ensureSemanticSync();
+
 		$parts = [
 			'statement[' . ($this->protoId() ?: 'unidentified') . ']',
 			$this->semanticTextValue($this->field('subject')),
@@ -154,108 +338,69 @@ class Statement extends Obj {
 			'relations=' . Arr::size($this->relations()),
 		];
 
-		$summary = implode(' | ', (new Collection($parts))
+		$summary = $this->joinTextParts((new Collection($parts))
 			->filter(fn ($part) => $part !== null && $part !== '')
-			->contents());
+			->contents(), ' | ');
 		$this->summary($summary);
 
 		return $summary;
 	}
 
+	private function ensureSemanticSync(bool $force = false): void
+	{
+		if ($this->_semanticSyncInProgress) {
+			return;
+		}
+
+		if ($this->_semanticUpdateDepth > 0 && !$force) {
+			return;
+		}
+
+		if (!$this->_semanticDirty && !$force) {
+			return;
+		}
+
+		$this->syncPrototypeState();
+	}
+
 	private function syncPrototypeState(): void
 	{
-		$this->kind('statement');
-		$this->properties([]);
-		$this->stateValue('statement', []);
-
-		$state = [];
-		foreach (self::SEMANTIC_FIELDS as $field) {
-			$value = $this->field($field);
-			$state[$field] = $this->semanticPrototypeValue($value);
-			$this->property($field, $state[$field]);
-		}
-
-		$this->stateValue('statement', $state);
-		$this->name($this->statementName());
-		$this->labels($this->statementLabels());
-		$this->prototypeSet('relations', [], 'automata.language.statement.relations_reset');
-		$this->prototypeSet('conditions', [], 'automata.language.statement.conditions_reset');
-		$this->syncRelationshipPrototype();
-		$this->syncConditionPrototype();
-		$this->syncPositionPrototype();
-	}
-
-	private function syncRelationshipPrototype(): void
-	{
-		$relationship = $this->semanticTextValue($this->field('relationship'));
-		$object = $this->field('object');
-
-		if (!$this->isSatisfiedFieldValue($object)) {
+		if ($this->_semanticSyncInProgress) {
 			return;
 		}
 
-		$this->relate($relationship ?: 'object', $this->semanticPrototypeValue($object), [
-			'subject' => $this->semanticPrototypeValue($this->field('subject')),
-			'indirect_object' => $this->semanticPrototypeValue($this->field('indirect_object')),
-			'context' => $this->semanticPrototypeValue($this->field('context')),
+		$this->_semanticSyncInProgress = true;
+
+		try {
+			$this->prototypeBoot('statement');
+
+			$state = $this->semanticStatePayload();
+			$position = $this->semanticPositionPayload(parent::field('position'));
+			$coordinates = $this->coordinatePayload($position);
+			$dimensions = $this->dimensionPayload($coordinates);
+			$stateBag = Arr::toArray($this->prototypeGet('state', []));
+			$stateBag['statement'] = $state;
+
+			$this->_data['kind'] = 'statement';
+			$this->_data['properties'] = $state;
+			$this->_data['state'] = $stateBag;
+			$this->_data['name'] = $this->statementName();
+			$this->_data['labels'] = $this->statementLabels();
+			$this->_data['relations'] = $this->relationshipPayload();
+			$this->_data['conditions'] = $this->conditionPayload();
+			$this->_data['dimensions'] = $dimensions;
+			$this->_data['coordinates'] = $coordinates;
+			$this->_data['position'] = $coordinates;
+			$this->_semanticDirty = false;
+		} finally {
+			$this->_semanticSyncInProgress = false;
+		}
+
+		$this->prototypeSignal('automata.language.statement.synced', [
+			'id' => $this->protoId(),
+			'name' => $this->prototypeGet('name', ''),
+			'state' => $this->prototypeGet('state', []),
 		]);
-	}
-
-	private function syncConditionPrototype(): void
-	{
-		$condition = $this->field('condition');
-		if (!$this->isSatisfiedFieldValue($condition)) {
-			return;
-		}
-
-		if (Arr::is($condition) || is_callable($condition)) {
-			$this->addCondition($this->prototypeNormalizeConditionRecord($condition));
-			return;
-		}
-
-		if (is_object($condition) && method_exists($condition, 'conditions')) {
-			foreach ($condition->conditions() as $record) {
-				$this->addCondition($this->prototypeNormalizeConditionRecord($record));
-			}
-			return;
-		}
-
-		$conditionText = $this->semanticTextValue($condition);
-		if ($conditionText === null || $conditionText === '') {
-			return;
-		}
-
-		$this->addCondition($this->prototypeNormalizeConditionRecord([
-			'name' => 'statement_condition',
-			'path' => $conditionText,
-			'expected' => true,
-			'operator' => 'requires',
-		]));
-	}
-
-	private function syncPositionPrototype(): void
-	{
-		$position = $this->semanticPositionPayload($this->field('position'));
-		$this->prototypeSet('dimensions', [], 'automata.language.statement.dimensions_reset');
-		$this->prototypeSet('coordinates', [], 'automata.language.statement.coordinates_reset');
-
-		if (Arr::is($position) && Arr::size($position) > 0) {
-			foreach ($position as $dimension => $value) {
-				$this->defineDimension((string)$dimension);
-				$this->coordinate((string)$dimension, $value);
-			}
-			$this->position($this->coordinates());
-			return;
-		}
-
-		if ($position !== null && $position !== '') {
-			$this->defineDimension('position');
-			$this->coordinate('position', $position);
-			$this->position($this->coordinates());
-			return;
-		}
-
-		$this->position([]);
 	}
 
 	private function statementName(): string
@@ -268,7 +413,7 @@ class Statement extends Obj {
 			->filter(fn ($part) => $part !== null && $part !== '')
 			->contents();
 
-		return implode(' ', $parts);
+		return $this->joinTextParts($parts, ' ');
 	}
 
 	private function statementLabels(): array
@@ -465,5 +610,164 @@ class Statement extends Obj {
 		}
 
 		return [];
+	}
+
+	private function markSemanticDirty(): void
+	{
+		$this->_semanticDirty = true;
+	}
+
+	private function isSemanticField(string $field): bool
+	{
+		return Arr::contains(self::SEMANTIC_FIELDS, $field, true);
+	}
+
+	private function isPrototypeProjectionField(string $field): bool
+	{
+		return Arr::contains([
+			'name',
+			'labels',
+			'state',
+			'properties',
+			'relations',
+			'conditions',
+			'dimensions',
+			'coordinates',
+			'position',
+			'kind',
+		], $field, true);
+	}
+
+	private function semanticStatePayload(): array
+	{
+		$state = [];
+
+		foreach (self::SEMANTIC_FIELDS as $field) {
+			$state[$field] = $this->semanticPrototypeValue(parent::field($field));
+		}
+
+		return $state;
+	}
+
+	private function relationshipPayload(): array
+	{
+		$relationship = $this->semanticTextValue(parent::field('relationship'));
+		$object = parent::field('object');
+
+		if (!$this->isSatisfiedFieldValue($object)) {
+			return [];
+		}
+
+		return [
+			$relationship ?: 'object' => [[
+				'target' => $this->semanticPrototypeValue($object),
+				'meta' => [
+					'subject' => $this->semanticPrototypeValue(parent::field('subject')),
+					'indirect_object' => $this->semanticPrototypeValue(parent::field('indirect_object')),
+					'context' => $this->semanticPrototypeValue(parent::field('context')),
+				],
+			]],
+		];
+	}
+
+	private function conditionPayload(): array
+	{
+		$condition = parent::field('condition');
+
+		if (!$this->isSatisfiedFieldValue($condition)) {
+			return [];
+		}
+
+		if (Arr::is($condition) || Func::isCallable($condition)) {
+			return [$this->prototypeNormalizeConditionRecord($condition)];
+		}
+
+		if (is_object($condition) && method_exists($condition, 'conditions')) {
+			$records = [];
+
+			foreach ($condition->conditions() as $record) {
+				$records[] = $this->prototypeNormalizeConditionRecord($record);
+			}
+
+			return $records;
+		}
+
+		$conditionText = $this->semanticTextValue($condition);
+		if ($conditionText === null || $conditionText === '') {
+			return [];
+		}
+
+		return [$this->prototypeNormalizeConditionRecord([
+			'name' => 'statement_condition',
+			'path' => $conditionText,
+			'expected' => true,
+			'operator' => 'requires',
+		])];
+	}
+
+	private function coordinatePayload(array $position): array
+	{
+		if (Arr::size($position) === 0) {
+			return [];
+		}
+
+		$coordinates = [];
+		foreach ($position as $dimension => $value) {
+			$coordinates[(string)$dimension] = $this->prototypeSnapshotValue($value);
+		}
+
+		return $coordinates;
+	}
+
+	private function dimensionPayload(array $coordinates): array
+	{
+		$dimensions = [];
+
+		foreach ($coordinates as $dimension => $value) {
+			$dimensions[$dimension] = [
+				'label' => (string)$dimension,
+				'kind' => Num::is($value) ? 'absolute' : 'relative',
+				'absolute' => Num::is($value),
+				'unit' => null,
+				'default' => null,
+				'comparable' => true,
+				'directionality' => 'bidirectional',
+			];
+		}
+
+		return $dimensions;
+	}
+
+	private function openSemanticWindow(): void
+	{
+		$this->_semanticUpdateDepth = Num::add($this->_semanticUpdateDepth, 1);
+	}
+
+	private function closeSemanticWindow(): void
+	{
+		$this->_semanticUpdateDepth = (int)Num::max(0, Num::sub($this->_semanticUpdateDepth, 1));
+
+		if ($this->_semanticUpdateDepth === 0) {
+			$this->ensureSemanticSync();
+		}
+	}
+
+	private function syncSemanticState(): void
+	{
+		$this->ensureSemanticSync(force: true);
+	}
+
+	private function joinTextParts(array $parts, string $glue): string
+	{
+		$text = '';
+
+		(new Collection($parts))->each(function ($part) use (&$text, $glue): void {
+			$segment = (string)$part;
+			$text = $text === ''
+				? $segment
+				: Str::concat($text, $glue, $segment);
+		});
+
+		return $text;
 	}
 }
