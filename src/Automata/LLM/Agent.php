@@ -17,6 +17,10 @@ use BlueFission\Automata\LLM\Agent\Memory\MemoryEvent;
 use BlueFission\Automata\LLM\Agent\Orchestration\AgentOrchestrator;
 use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationConfig;
 use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationResult;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleResult;
+use BlueFission\Automata\LLM\Agent\State\AgentState;
+use BlueFission\Automata\LLM\Agent\State\CognitiveController;
+use BlueFission\Automata\LLM\Agent\State\IAgentModule;
 use BlueFission\Automata\LLM\MCP\MCPClient;
 use BlueFission\Automata\LLM\MCP\Tools\MCPDiscoveryTool;
 use BlueFission\Automata\LLM\MCP\Tools\MCPResourceTool;
@@ -46,6 +50,8 @@ class Agent implements IDispatcher
     protected ?string $memorySessionId = null;
     protected int $memorySequence = 0;
     protected ?AgentOrchestrator $orchestrator = null;
+    protected AgentState $agentState;
+    protected CognitiveController $cognitiveController;
 
     public function __construct($llm) {
         $this->__dispatchesConstruct();
@@ -53,6 +59,8 @@ class Agent implements IDispatcher
         $this->llm = $llm;
         $this->toolCatalog = new ToolCatalog();
         $this->toolExecutor = new ToolExecutor();
+        $this->agentState = new AgentState();
+        $this->cognitiveController = new CognitiveController();
         $this->template = "Answer the following question as best you can.
         {#var tools = [{toolNames}]}
         {#var isComplete = 'no'}
@@ -252,6 +260,39 @@ class Agent implements IDispatcher
         }
 
         return $this->orchestrator->run($input, $this->taskTrace());
+    }
+
+    public function agentState(): AgentState
+    {
+        return $this->agentState;
+    }
+
+    public function useAgentState(AgentState $state): void
+    {
+        $this->agentState = $state;
+    }
+
+    public function setCognitiveController(CognitiveController $controller): void
+    {
+        $this->cognitiveController = $controller;
+    }
+
+    public function cognitiveDecision(mixed $decision = null, array $context = []): AgentModuleResult
+    {
+        return $this->cognitiveController->decide($this->agentState, $decision, $context);
+    }
+
+    public function runModule(IAgentModule $module, array $context = []): AgentModuleResult
+    {
+        $result = $module->process($this->agentState, $context);
+        foreach ($result->writes() as $write) {
+            if (!is_array($write)) {
+                continue;
+            }
+            $this->agentState->write((string)$write['channel'], (string)$write['key'], $write['value'] ?? null);
+        }
+
+        return $result;
     }
 
     public function registerMcpClient(MCPClient $client): void
