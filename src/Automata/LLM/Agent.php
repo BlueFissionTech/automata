@@ -8,6 +8,9 @@ use BlueFission\Automata\LLM\Agent\ToolCatalog;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
 use BlueFission\Automata\LLM\Agent\ToolExecutionResult;
 use BlueFission\Automata\LLM\Agent\ToolExecutor;
+use BlueFission\Automata\LLM\Agent\Telemetry\CpctReport;
+use BlueFission\Automata\LLM\Agent\Telemetry\TaskTrace;
+use BlueFission\Automata\LLM\Agent\Telemetry\TaskTraceSpan;
 use BlueFission\Automata\LLM\MCP\MCPClient;
 use BlueFission\Automata\LLM\MCP\Tools\MCPDiscoveryTool;
 use BlueFission\Automata\LLM\MCP\Tools\MCPResourceTool;
@@ -31,6 +34,7 @@ class Agent implements IDispatcher
     protected ?MCPClient $mcpClient = null;
     protected ToolCatalog $toolCatalog;
     protected ToolExecutor $toolExecutor;
+    protected ?TaskTrace $taskTrace = null;
 
     public function __construct($llm) {
         $this->__dispatchesConstruct();
@@ -113,7 +117,71 @@ class Agent implements IDispatcher
 
     public function callTool(string $name, mixed $input = null, array $context = []): ToolExecutionResult
     {
-        return $this->toolExecutor->execute($this->toolCatalog, $name, $input, $context);
+        if (isset($context['task_id']) && (!$this->taskTrace || $this->taskTrace->taskId() !== $context['task_id'])) {
+            $this->startTask((string)$context['task_id']);
+        }
+
+        $trace = $this->taskTrace();
+        $definition = $this->toolCatalog->definition($name);
+        $span = $trace->startSpan(TaskTraceSpan::KIND_TOOL, $name, [
+            'permission' => $definition?->permission(),
+            'parallel_safe' => $definition?->parallelSafe(),
+            'batchable' => $definition?->parallelSafe(),
+        ]);
+
+        $result = $this->toolExecutor->execute($this->toolCatalog, $name, $input, $context);
+        $encodedInput = is_scalar($input) || $input === null ? (string)$input : (string)json_encode($input);
+        $encodedOutput = $result->toJson();
+
+        $trace->addSpan($span->finish($result->ok() ? 'completed' : 'failed', [
+            'outcome_status' => $result->status(),
+            'input_tokens' => $this->estimateTokens($encodedInput),
+            'output_tokens' => $this->estimateTokens($encodedOutput),
+            'total_tokens' => $this->estimateTokens($encodedInput) + $this->estimateTokens($encodedOutput),
+            'batchable' => $definition?->parallelSafe() ?? false,
+            'metadata' => [
+                'result_status' => $result->status(),
+                'definition' => $definition?->toArray(),
+            ],
+        ]));
+
+        return $result;
+    }
+
+    public function startTask(?string $taskId = null, array $metadata = []): TaskTrace
+    {
+        $this->taskTrace = new TaskTrace($taskId, $metadata);
+        Dev::do('automata.llm.agent.task_started', $this->taskTrace->toArray());
+
+        return $this->taskTrace;
+    }
+
+    public function useTaskTrace(TaskTrace $trace): void
+    {
+        $this->taskTrace = $trace;
+    }
+
+    public function taskTrace(): TaskTrace
+    {
+        if (!$this->taskTrace) {
+            $this->startTask();
+        }
+
+        return $this->taskTrace;
+    }
+
+    public function taskId(): string
+    {
+        return $this->taskTrace()->taskId();
+    }
+
+    public function cpctReport(array $traces = [], array $pricing = [], array $config = []): array
+    {
+        if (!$traces) {
+            $traces = [$this->taskTrace()->toArray()];
+        }
+
+        return CpctReport::build($traces, $pricing, $config);
     }
 
     public function registerMcpClient(MCPClient $client): void
@@ -138,6 +206,11 @@ class Agent implements IDispatcher
     }
 
     public function execute($input) {
+        $trace = $this->taskTrace();
+        $span = $trace->startSpan(TaskTraceSpan::KIND_AGENT, 'execute', [
+            'input_token_estimate' => $this->estimateTokens((string)$input),
+        ]);
+
         $toolList = $this->toolCatalog->promptList();
         $toolNames = "'".implode("', '", $this->toolCatalog->names())."'";
 
@@ -154,6 +227,55 @@ class Agent implements IDispatcher
 
         $this->fillIn->setPrompt($prompt);
 
-        return $this->fillIn->run();
+        $result = $this->fillIn->run();
+        $this->recordModelUsageSpans($trace);
+
+        $trace->addSpan($span->finish('completed', [
+            'outcome_status' => 'completed',
+            'input_tokens' => $this->estimateTokens((string)$input),
+            'output_tokens' => $this->estimateTokens(json_encode($result) ?: ''),
+            'total_tokens' => $this->estimateTokens((string)$input) + $this->estimateTokens(json_encode($result) ?: ''),
+        ]));
+        $trace->complete('completed');
+
+        return $result;
+    }
+
+    protected function recordModelUsageSpans(TaskTrace $trace): void
+    {
+        foreach ($this->fillIn->usageLedger() as $entries) {
+            foreach ($entries as $entry) {
+                $usage = $entry['usage'] ?? [];
+                $span = $trace->startSpan(TaskTraceSpan::KIND_MODEL, (string)($entry['element'] ?? 'generation'), [
+                    'placeholder' => $entry['placeholder'] ?? null,
+                    'profile' => $entry['profile'] ?? null,
+                    'attempt' => $entry['attempt'] ?? null,
+                    'accepted' => $entry['accepted'] ?? null,
+                ]);
+
+                $trace->addSpan($span->finish(($entry['accepted'] ?? true) ? 'completed' : 'failed', [
+                    'provider' => $entry['provider'] ?? null,
+                    'model' => $entry['model'] ?? null,
+                    'input_tokens' => $usage['prompt_tokens'] ?? $usage['estimated_prompt_tokens'] ?? 0,
+                    'output_tokens' => $usage['completion_tokens'] ?? $usage['estimated_completion_tokens'] ?? 0,
+                    'total_tokens' => $usage['total_tokens'] ?? $usage['estimated_total_tokens'] ?? 0,
+                    'metadata' => [
+                        'usage' => $usage,
+                        'context' => $entry['context'] ?? [],
+                    ],
+                ]));
+            }
+        }
+    }
+
+    protected function estimateTokens(string $text): int
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return 0;
+        }
+
+        preg_match_all('/\S+/u', $text, $matches);
+        return max(count($matches[0] ?? []), (int)ceil(strlen($text) / 4));
     }
 }
