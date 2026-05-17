@@ -6,6 +6,7 @@
 /.codex/
 /AGENTS.md
 /harness.json
+/templates/
 
 # Blue Fission Codex harness
 /AGENTS.behavior.md

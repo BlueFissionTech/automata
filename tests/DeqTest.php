@@ -4,17 +4,9 @@ namespace BlueFission\Tests;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Deq;
-use Ds\Deque;
 
 class DeqTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        if (!extension_loaded('ds')) {
-            $this->markTestSkipped('The ds extension is required for Deq tests.');
-        }
-    }
-
     public function testCanInstantiateDeq(): void
     {
         $deq = new Deq();
@@ -24,7 +16,13 @@ class DeqTest extends TestCase
         $ref = new \ReflectionClass($deq);
         $prop = $ref->getProperty('_data');
         $prop->setAccessible(true);
-        $this->assertInstanceOf(Deque::class, $prop->getValue($deq));
+        $data = $prop->getValue($deq);
+
+        if (extension_loaded('ds') && class_exists('\Ds\Deque')) {
+            $this->assertInstanceOf('\Ds\Deque', $data);
+        } else {
+            $this->assertIsArray($data);
+        }
     }
 
     public function testPushAndPopFront(): void

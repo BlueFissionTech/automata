@@ -1,7 +1,6 @@
 <?php
 namespace BlueFission;
 
-use Ds\Deque;
 use BlueFission\Behavioral\Behaviors\Event;
 
 /**
@@ -25,7 +24,7 @@ class Deq extends Val implements IVal {
      */
     public function __construct($value = null, bool $snapshot = true) {
         $seed = $value ?? [];
-        parent::__construct(new Deque($seed), $snapshot, false);
+        parent::__construct($this->buildStorage($seed), $snapshot, false);
     }
 
     /**
@@ -33,10 +32,17 @@ class Deq extends Val implements IVal {
      * @return IVal
      */
     public function cast(): IVal {
-        if (!($this->_data instanceof Deque)) {
-            $seed = $this->_data ?? [];
-            $this->_data = new Deque($seed);
+        if ($this->supportsDs()) {
+            if (!$this->isDsDeque($this->_data)) {
+                $this->_data = $this->buildStorage($this->toArray());
+            }
+            return $this;
         }
+
+        if (!is_array($this->_data)) {
+            $this->_data = Arr::toArray($this->_data);
+        }
+
         return $this;
     }
 
@@ -45,7 +51,7 @@ class Deq extends Val implements IVal {
      * @return bool
      */
     public function _is(): bool {
-        return $this->_data instanceof Deque;
+        return $this->isDsDeque($this->_data) || is_array($this->_data);
     }
 
     /**
@@ -54,7 +60,13 @@ class Deq extends Val implements IVal {
      * @return IVal The current instance for chaining
      */
     public function pushFront($value): IVal {
-        $this->_data->unshift($value);
+        if ($this->isDsDeque($this->_data)) {
+            $this->_data->unshift($value);
+        } else {
+            $data = Arr::make($this->_data);
+            $data->unshift($value);
+            $this->_data = $data->val();
+        }
         $this->trigger(Event::CHANGE);
         return $this;
     }
@@ -65,7 +77,13 @@ class Deq extends Val implements IVal {
      * @return IVal The current instance for chaining
      */
     public function pushBack($value): IVal {
-        $this->_data->push($value);
+        if ($this->isDsDeque($this->_data)) {
+            $this->_data->push($value);
+        } else {
+            $data = Arr::make($this->_data);
+            $data->push($value);
+            $this->_data = $data->val();
+        }
         $this->trigger(Event::CHANGE);
         return $this;
     }
@@ -75,7 +93,13 @@ class Deq extends Val implements IVal {
      * @return mixed The value removed from the front
      */
     public function popFront() {
-        $value = $this->_data->shift();
+        if ($this->isDsDeque($this->_data)) {
+            $value = $this->_data->shift();
+        } else {
+            $data = Arr::make($this->_data);
+            $value = $data->shift();
+            $this->_data = $data->val();
+        }
         $this->trigger(Event::CHANGE);
         return $value;
     }
@@ -85,7 +109,13 @@ class Deq extends Val implements IVal {
      * @return mixed The value removed from the back
      */
     public function popBack() {
-        $value = $this->_data->pop();
+        if ($this->isDsDeque($this->_data)) {
+            $value = $this->_data->pop();
+        } else {
+            $data = Arr::make($this->_data);
+            $value = $data->pop();
+            $this->_data = $data->val();
+        }
         $this->trigger(Event::CHANGE);
         return $value;
     }
@@ -96,7 +126,11 @@ class Deq extends Val implements IVal {
      * @return mixed The element at the specified index
      */
     public function get(int $index) {
-        return $this->_data->get($index);
+        if ($this->isDsDeque($this->_data)) {
+            return $this->_data->get($index);
+        }
+
+        return $this->_data[$index] ?? null;
     }
 
     /**
@@ -106,7 +140,11 @@ class Deq extends Val implements IVal {
      * @return IVal The current instance for chaining
      */
     public function set(int $index, $value): IVal {
-        $this->_data->set($index, $value);
+        if ($this->isDsDeque($this->_data)) {
+            $this->_data->set($index, $value);
+        } else {
+            $this->_data[$index] = $value;
+        }
         $this->trigger(Event::CHANGE);
         return $this;
     }
@@ -116,7 +154,11 @@ class Deq extends Val implements IVal {
      * @return IVal The current instance for chaining
      */
     public function clear(): IVal {
-        $this->_data->clear();
+        if ($this->isDsDeque($this->_data)) {
+            $this->_data->clear();
+        } else {
+            $this->_data = [];
+        }
         $this->trigger(Event::CHANGE);
         return $this;
     }
@@ -126,7 +168,11 @@ class Deq extends Val implements IVal {
      * @return int The count of elements
      */
     public function count(): int {
-        return $this->_data->count();
+        if ($this->isDsDeque($this->_data)) {
+            return $this->_data->count();
+        }
+
+        return Arr::size($this->_data);
     }
 
     /**
@@ -134,6 +180,40 @@ class Deq extends Val implements IVal {
      */
     public function isEmpty(): bool
     {
-        return $this->_data->isEmpty();
+        if ($this->isDsDeque($this->_data)) {
+            return $this->_data->isEmpty();
+        }
+
+        return Arr::isEmpty($this->_data);
+    }
+
+    protected function supportsDs(): bool
+    {
+        return class_exists('\Ds\Deque');
+    }
+
+    protected function isDsDeque(mixed $value): bool
+    {
+        return $this->supportsDs() && $value instanceof \Ds\Deque;
+    }
+
+    protected function buildStorage(mixed $seed): mixed
+    {
+        $data = Arr::toArray($seed);
+
+        if ($this->supportsDs()) {
+            return new \Ds\Deque($data);
+        }
+
+        return $data;
+    }
+
+    protected function toArray(): array
+    {
+        if ($this->isDsDeque($this->_data)) {
+            return $this->_data->toArray();
+        }
+
+        return Arr::toArray($this->_data);
     }
 }

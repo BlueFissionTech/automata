@@ -4,17 +4,9 @@ namespace BlueFission\Tests;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Pile;
-use Ds\Stack;
 
 class PileTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        if (!extension_loaded('ds')) {
-            $this->markTestSkipped('The ds extension is required for Pile tests.');
-        }
-    }
-
     public function testCanInstantiatePile(): void
     {
         $pile = new Pile();
@@ -24,7 +16,13 @@ class PileTest extends TestCase
         $ref = new \ReflectionClass($pile);
         $prop = $ref->getProperty('_data');
         $prop->setAccessible(true);
-        $this->assertInstanceOf(Stack::class, $prop->getValue($pile));
+        $data = $prop->getValue($pile);
+
+        if (extension_loaded('ds') && class_exists('\Ds\Stack')) {
+            $this->assertInstanceOf('\Ds\Stack', $data);
+        } else {
+            $this->assertIsArray($data);
+        }
     }
 
     public function testPushAndPeekElement(): void

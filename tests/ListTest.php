@@ -4,17 +4,9 @@ namespace BlueFission\Tests;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Set;
-use Ds\Set as DsSet;
 
 class ListTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        if (!extension_loaded('ds')) {
-            $this->markTestSkipped('The ds extension is required for List tests.');
-        }
-    }
-
     public function testCanInstantiateList(): void
     {
         $list = new Set();
@@ -24,7 +16,13 @@ class ListTest extends TestCase
         $ref = new \ReflectionClass($list);
         $prop = $ref->getProperty('_data');
         $prop->setAccessible(true);
-        $this->assertInstanceOf(DsSet::class, $prop->getValue($list));
+        $data = $prop->getValue($list);
+
+        if (extension_loaded('ds') && class_exists('\Ds\Set')) {
+            $this->assertInstanceOf('\Ds\Set', $data);
+        } else {
+            $this->assertIsArray($data);
+        }
     }
 
     public function testAddAndHasElement(): void
@@ -61,33 +59,39 @@ class ListTest extends TestCase
     public function testUnionOfSets(): void
     {
         $list = new Set([1, 2, 3]);
-        $otherSet = new DsSet([3, 4, 5]);
+        $otherSet = extension_loaded('ds') && class_exists('\Ds\Set')
+            ? new \Ds\Set([3, 4, 5])
+            : [3, 4, 5];
 
         $union = $list->union($otherSet);
-        $expectedUnion = new DsSet([1, 2, 3, 4, 5]);
+        $expectedUnion = [1, 2, 3, 4, 5];
 
-        $this->assertEquals($expectedUnion, $union);
+        $this->assertEqualsCanonicalizing($expectedUnion, is_array($union) ? $union : $union->toArray());
     }
 
     public function testIntersectionOfSets(): void
     {
         $list = new Set([1, 2, 3, 4]);
-        $otherSet = new DsSet([3, 4, 5]);
+        $otherSet = extension_loaded('ds') && class_exists('\Ds\Set')
+            ? new \Ds\Set([3, 4, 5])
+            : [3, 4, 5];
 
         $intersection = $list->intersect($otherSet);
-        $expectedIntersection = new DsSet([3, 4]);
+        $expectedIntersection = [3, 4];
 
-        $this->assertEquals($expectedIntersection, $intersection);
+        $this->assertEqualsCanonicalizing($expectedIntersection, is_array($intersection) ? $intersection : $intersection->toArray());
     }
 
     public function testDifferenceOfSets(): void
     {
         $list = new Set([1, 2, 3, 4]);
-        $otherSet = new DsSet([3, 4, 5]);
+        $otherSet = extension_loaded('ds') && class_exists('\Ds\Set')
+            ? new \Ds\Set([3, 4, 5])
+            : [3, 4, 5];
 
         $difference = $list->diff($otherSet);
-        $expectedDifference = new DsSet([1, 2]);
+        $expectedDifference = [1, 2];
 
-        $this->assertEquals($expectedDifference, $difference);
+        $this->assertEqualsCanonicalizing($expectedDifference, is_array($difference) ? $difference : $difference->toArray());
     }
 }
