@@ -14,6 +14,9 @@ use BlueFission\Automata\LLM\Agent\Telemetry\TaskTraceSpan;
 use BlueFission\Automata\LLM\Agent\Memory\IMemoryEventStore;
 use BlueFission\Automata\LLM\Agent\Memory\IMemoryInjector;
 use BlueFission\Automata\LLM\Agent\Memory\MemoryEvent;
+use BlueFission\Automata\LLM\Agent\Orchestration\AgentOrchestrator;
+use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationConfig;
+use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationResult;
 use BlueFission\Automata\LLM\MCP\MCPClient;
 use BlueFission\Automata\LLM\MCP\Tools\MCPDiscoveryTool;
 use BlueFission\Automata\LLM\MCP\Tools\MCPResourceTool;
@@ -42,6 +45,7 @@ class Agent implements IDispatcher
     protected ?IMemoryInjector $memoryInjector = null;
     protected ?string $memorySessionId = null;
     protected int $memorySequence = 0;
+    protected ?AgentOrchestrator $orchestrator = null;
 
     public function __construct($llm) {
         $this->__dispatchesConstruct();
@@ -234,6 +238,20 @@ class Agent implements IDispatcher
     public function stopMemorySession(array $payload = []): void
     {
         $this->emitMemoryEvent(MemoryEvent::STOP, $payload);
+    }
+
+    public function configureOrchestration(OrchestrationConfig|array $config): void
+    {
+        $this->orchestrator = new AgentOrchestrator($config);
+    }
+
+    public function orchestrate(array $input = []): OrchestrationResult
+    {
+        if (!$this->orchestrator) {
+            $this->configureOrchestration([]);
+        }
+
+        return $this->orchestrator->run($input, $this->taskTrace());
     }
 
     public function registerMcpClient(MCPClient $client): void
