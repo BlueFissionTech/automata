@@ -21,6 +21,7 @@ use BlueFission\Automata\LLM\Agent\State\AgentModuleResult;
 use BlueFission\Automata\LLM\Agent\State\AgentState;
 use BlueFission\Automata\LLM\Agent\State\CognitiveController;
 use BlueFission\Automata\LLM\Agent\State\IAgentModule;
+use BlueFission\Automata\LLM\Agent\Security\RuntimeLogicValidator;
 use BlueFission\Automata\LLM\MCP\MCPClient;
 use BlueFission\Automata\LLM\MCP\Tools\MCPDiscoveryTool;
 use BlueFission\Automata\LLM\MCP\Tools\MCPResourceTool;
@@ -52,6 +53,7 @@ class Agent implements IDispatcher
     protected ?AgentOrchestrator $orchestrator = null;
     protected AgentState $agentState;
     protected CognitiveController $cognitiveController;
+    protected ?RuntimeLogicValidator $runtimeLogicValidator = null;
 
     public function __construct($llm) {
         $this->__dispatchesConstruct();
@@ -155,6 +157,13 @@ class Agent implements IDispatcher
         ]);
 
         $result = $this->toolExecutor->execute($this->toolCatalog, $name, $input, $context);
+        if ($this->runtimeLogicValidator) {
+            $result = $this->runtimeLogicValidator->sanitizeToolResult($result, [
+                'tool' => $name,
+                'task_id' => $trace->taskId(),
+            ]);
+        }
+
         $encodedInput = is_scalar($input) || $input === null ? (string)$input : (string)json_encode($input);
         $encodedOutput = $result->toJson();
 
@@ -295,6 +304,21 @@ class Agent implements IDispatcher
         return $result;
     }
 
+    public function enableRuntimeLogicValidation(?RuntimeLogicValidator $validator = null): void
+    {
+        $this->runtimeLogicValidator = $validator ?: new RuntimeLogicValidator();
+    }
+
+    public function disableRuntimeLogicValidation(): void
+    {
+        $this->runtimeLogicValidator = null;
+    }
+
+    public function securityAuditTrail(): array
+    {
+        return $this->runtimeLogicValidator ? $this->runtimeLogicValidator->auditTrail() : [];
+    }
+
     public function registerMcpClient(MCPClient $client): void
     {
         $this->mcpClient = $client;
@@ -420,7 +444,17 @@ class Agent implements IDispatcher
             $parts[] = "Relevant memory:\n" . $promptContext;
         }
 
-        return implode("\n\n", $parts);
+        $content = implode("\n\n", $parts);
+        if ($this->runtimeLogicValidator) {
+            $scan = $this->runtimeLogicValidator->sanitizeText($content, [
+                'surface' => 'memory_context',
+                'task_id' => $this->taskTrace()->taskId(),
+            ]);
+
+            return $scan['content'];
+        }
+
+        return $content;
     }
 
     protected function emitMemoryEvent(string $event, array $payload = []): void

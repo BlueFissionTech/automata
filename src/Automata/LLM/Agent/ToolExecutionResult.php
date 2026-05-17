@@ -106,4 +106,14 @@ class ToolExecutionResult
 
         return self::success(['output' => (string)$output], $meta);
     }
+
+    public function withPayload(mixed $payload, array $meta = []): self
+    {
+        return new self(
+            $this->status,
+            $payload,
+            $this->error,
+            array_replace_recursive($this->meta, $meta)
+        );
+    }
 }
