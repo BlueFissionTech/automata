@@ -84,8 +84,10 @@ class Pri extends Val implements IVal {
             return null;
         }
 
-        if (!Flag::isEmpty($this->_data)) {
-            $entry = Arr::shift($this->_data);
+        if (!Arr::isEmpty($this->_data)) {
+            $data = Arr::make($this->_data);
+            $entry = $data->shift();
+            $this->_data = $data->val();
             return is_array($entry) ? ($entry[0] ?? null) : null;
         }
 
@@ -104,7 +106,7 @@ class Pri extends Val implements IVal {
             return null;
         }
 
-        if (!Flag::isEmpty($this->_data)) {
+        if (!Arr::isEmpty($this->_data)) {
             $entry = $this->_data[0] ?? null;
             return is_array($entry) ? ($entry[0] ?? null) : null;
         }
@@ -121,7 +123,7 @@ class Pri extends Val implements IVal {
             return $this->_data->isEmpty();
         }
 
-        return Flag::isEmpty($this->_data);
+        return Arr::isEmpty($this->_data);
     }
 
     /**
@@ -147,7 +149,7 @@ class Pri extends Val implements IVal {
             return $this->_data->count();
         }
 
-        return Arr::count($this->_data);
+        return Arr::size($this->_data);
     }
 
     protected function supportsDs(): bool
@@ -167,7 +169,7 @@ class Pri extends Val implements IVal {
         if ($this->supportsDs()) {
             $queue = new \Ds\PriorityQueue();
             foreach ($items as $item) {
-                if (is_array($item) && Arr::count($item) === 2) {
+                if (is_array($item) && Arr::size($item) === 2) {
                     $queue->push($item[0], $item[1]);
                 }
             }
@@ -176,7 +178,7 @@ class Pri extends Val implements IVal {
 
         $queue = [];
         foreach ($items as $item) {
-            if (is_array($item) && Arr::count($item) === 2) {
+            if (is_array($item) && Arr::size($item) === 2) {
                 $queue[] = [$item[0], $item[1]];
             }
         }

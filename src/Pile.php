@@ -82,8 +82,11 @@ class Pile extends Val implements IVal {
             return null;
         }
 
-        if (!Flag::isEmpty($this->_data)) {
-            return Arr::pop($this->_data);
+        if (!Arr::isEmpty($this->_data)) {
+            $data = Arr::make($this->_data);
+            $value = $data->pop();
+            $this->_data = $data->val();
+            return $value;
         }
 
         return null;
@@ -101,8 +104,9 @@ class Pile extends Val implements IVal {
             return null;
         }
 
-        if (!Flag::isEmpty($this->_data)) {
-            return $this->_data[Arr::count($this->_data) - 1] ?? null;
+        if (!Arr::isEmpty($this->_data)) {
+            $data = Arr::make($this->_data);
+            return $data->get($data->count() - 1);
         }
 
         return null;
@@ -117,7 +121,7 @@ class Pile extends Val implements IVal {
             return $this->_data->isEmpty();
         }
 
-        return Flag::isEmpty($this->_data);
+        return Arr::isEmpty($this->_data);
     }
 
     /**
@@ -143,7 +147,7 @@ class Pile extends Val implements IVal {
             return $this->_data->count();
         }
 
-        return Arr::count($this->_data);
+        return Arr::size($this->_data);
     }
 
     protected function supportsDs(): bool

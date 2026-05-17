@@ -96,7 +96,9 @@ class Deq extends Val implements IVal {
         if ($this->isDsDeque($this->_data)) {
             $value = $this->_data->shift();
         } else {
-            $value = Arr::shift($this->_data);
+            $data = Arr::make($this->_data);
+            $value = $data->shift();
+            $this->_data = $data->val();
         }
         $this->trigger(Event::CHANGE);
         return $value;
@@ -110,7 +112,9 @@ class Deq extends Val implements IVal {
         if ($this->isDsDeque($this->_data)) {
             $value = $this->_data->pop();
         } else {
-            $value = Arr::pop($this->_data);
+            $data = Arr::make($this->_data);
+            $value = $data->pop();
+            $this->_data = $data->val();
         }
         $this->trigger(Event::CHANGE);
         return $value;
@@ -168,7 +172,7 @@ class Deq extends Val implements IVal {
             return $this->_data->count();
         }
 
-        return Arr::count($this->_data);
+        return Arr::size($this->_data);
     }
 
     /**
@@ -180,7 +184,7 @@ class Deq extends Val implements IVal {
             return $this->_data->isEmpty();
         }
 
-        return Flag::isEmpty($this->_data);
+        return Arr::isEmpty($this->_data);
     }
 
     protected function supportsDs(): bool

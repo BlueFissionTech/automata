@@ -147,7 +147,7 @@ class Dict extends Val implements IVal {
             return $this->_data->count();
         }
 
-        return Arr::count($this->_data);
+        return Arr::size($this->_data);
     }
 
     protected function supportsDs(): bool
