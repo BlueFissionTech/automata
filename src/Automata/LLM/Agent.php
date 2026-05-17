@@ -4,6 +4,10 @@ namespace BlueFission\Automata\LLM;
 use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Behavioral\Dispatches;
 use BlueFission\Automata\LLM\Tools\ITool;
+use BlueFission\Automata\LLM\Agent\ToolCatalog;
+use BlueFission\Automata\LLM\Agent\ToolDefinition;
+use BlueFission\Automata\LLM\Agent\ToolExecutionResult;
+use BlueFission\Automata\LLM\Agent\ToolExecutor;
 use BlueFission\Automata\LLM\MCP\MCPClient;
 use BlueFission\Automata\LLM\MCP\Tools\MCPDiscoveryTool;
 use BlueFission\Automata\LLM\MCP\Tools\MCPResourceTool;
@@ -25,11 +29,15 @@ class Agent implements IDispatcher
     protected $fillIn;
     protected $replacements = [];
     protected ?MCPClient $mcpClient = null;
+    protected ToolCatalog $toolCatalog;
+    protected ToolExecutor $toolExecutor;
 
     public function __construct($llm) {
         $this->__dispatchesConstruct();
 
         $this->llm = $llm;
+        $this->toolCatalog = new ToolCatalog();
+        $this->toolExecutor = new ToolExecutor();
         $this->template = "Answer the following question as best you can.
         {#var tools = [{toolNames}]}
         {#var isComplete = 'no'}
@@ -70,8 +78,42 @@ class Agent implements IDispatcher
         $this->template = $template;
     }
 
-    public function registerTool(string $name, ITool $tool) {
+    public function registerTool(string $name, ITool $tool, ToolDefinition|array|null $definition = null) {
         $this->tools[$name] = $tool;
+        $this->toolCatalog->register($name, $tool, $definition);
+        Dev::do('automata.llm.agent.tool_registered', [
+            'name' => $name,
+            'definition' => $this->toolCatalog->definition($name)?->toArray(),
+        ]);
+    }
+
+    public function registerToolDefinition(string $name, ToolDefinition|array $definition): void
+    {
+        $this->toolCatalog->define($name, $definition);
+        Dev::do('automata.llm.agent.tool_definition_registered', [
+            'name' => $name,
+            'definition' => $this->toolCatalog->definition($name)?->toArray(),
+        ]);
+    }
+
+    public function toolDefinition(string $name): ?ToolDefinition
+    {
+        return $this->toolCatalog->definition($name);
+    }
+
+    public function toolDefinitions(array $filters = []): array
+    {
+        return $this->toolCatalog->toArray($filters);
+    }
+
+    public function toolPrompt(array $filters = []): string
+    {
+        return $this->toolCatalog->promptList($filters);
+    }
+
+    public function callTool(string $name, mixed $input = null, array $context = []): ToolExecutionResult
+    {
+        return $this->toolExecutor->execute($this->toolCatalog, $name, $input, $context);
     }
 
     public function registerMcpClient(MCPClient $client): void
@@ -96,12 +138,8 @@ class Agent implements IDispatcher
     }
 
     public function execute($input) {
-        $toolList = '';
-        foreach ($this->tools as $name => $tool) {
-            $toolList .= "$name: {$tool->description()}\n";
-        }
-
-        $toolNames = "'".implode("', '", array_keys($this->tools))."'";
+        $toolList = $this->toolCatalog->promptList();
+        $toolNames = "'".implode("', '", $this->toolCatalog->names())."'";
 
         $this->replacements['toolNames'] = $toolNames;
         $this->replacements['toolsList'] = $toolList;
