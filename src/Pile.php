@@ -1,7 +1,6 @@
 <?php
 namespace BlueFission;
 
-use Ds\Stack;
 use BlueFission\Behavioral\Behaviors\Event;
 
 /**
@@ -24,13 +23,7 @@ class Pile extends Val implements IVal {
      * @param bool $snapshot Whether to take a snapshot after initialization
      */
     public function __construct($value = null, bool $snapshot = true) {
-        parent::__construct(new Stack(), $snapshot, false);
-
-        if (is_array($value)) {
-            foreach ($value as $item) {
-                $this->_data->push($item);
-            }
-        }
+        parent::__construct($this->buildStorage($value), $snapshot, false);
     }
 
     /**
@@ -38,13 +31,17 @@ class Pile extends Val implements IVal {
      * @return IVal
      */
     public function cast(): IVal {
-        if (!($this->_data instanceof Stack)) {
-            $tempStack = new Stack();
-            foreach ($this->_data as $item) {
-                $tempStack->push($item);
+        if ($this->supportsDs()) {
+            if (!$this->isDsStack($this->_data)) {
+                $this->_data = $this->buildStorage($this->_data);
             }
-            $this->_data = $tempStack;
+            return $this;
         }
+
+        if (!is_array($this->_data)) {
+            $this->_data = Arr::toArray($this->_data);
+        }
+
         return $this;
     }
 
@@ -53,7 +50,7 @@ class Pile extends Val implements IVal {
      * @return bool
      */
     public function _is(): bool {
-        return $this->_data instanceof Stack;
+        return $this->isDsStack($this->_data) || is_array($this->_data);
     }
 
     /**
@@ -62,7 +59,13 @@ class Pile extends Val implements IVal {
      * @return IVal The current instance for chaining
      */
     public function push($value): IVal {
-        $this->_data->push($value);
+        if ($this->isDsStack($this->_data)) {
+            $this->_data->push($value);
+        } else {
+            $data = Arr::make($this->_data);
+            $data->push($value);
+            $this->_data = $data->val();
+        }
         $this->trigger(Event::CHANGE);
         return $this;
     }
@@ -72,9 +75,17 @@ class Pile extends Val implements IVal {
      * @return mixed The element at the top of the Stack
      */
     public function pop() {
-        if (!$this->_data->isEmpty()) {
-            return $this->_data->pop();
+        if ($this->isDsStack($this->_data)) {
+            if (!$this->_data->isEmpty()) {
+                return $this->_data->pop();
+            }
+            return null;
         }
+
+        if (!Flag::isEmpty($this->_data)) {
+            return Arr::pop($this->_data);
+        }
+
         return null;
     }
 
@@ -83,9 +94,17 @@ class Pile extends Val implements IVal {
      * @return mixed The element at the top if available
      */
     public function peek() {
-        if (!$this->_data->isEmpty()) {
-            return $this->_data->peek();
+        if ($this->isDsStack($this->_data)) {
+            if (!$this->_data->isEmpty()) {
+                return $this->_data->peek();
+            }
+            return null;
         }
+
+        if (!Flag::isEmpty($this->_data)) {
+            return $this->_data[Arr::count($this->_data) - 1] ?? null;
+        }
+
         return null;
     }
 
@@ -94,7 +113,11 @@ class Pile extends Val implements IVal {
      * @return bool True if the stack is empty, false otherwise
      */
     public function isEmpty(): bool {
-        return $this->_data->isEmpty();
+        if ($this->isDsStack($this->_data)) {
+            return $this->_data->isEmpty();
+        }
+
+        return Flag::isEmpty($this->_data);
     }
 
     /**
@@ -102,7 +125,11 @@ class Pile extends Val implements IVal {
      * @return IVal The current instance for chaining
      */
     public function clear(): IVal {
-        $this->_data->clear();
+        if ($this->isDsStack($this->_data)) {
+            $this->_data->clear();
+        } else {
+            $this->_data = [];
+        }
         $this->trigger(Event::CHANGE);
         return $this;
     }
@@ -112,6 +139,35 @@ class Pile extends Val implements IVal {
      * @return int The count of elements
      */
     public function count(): int {
-        return $this->_data->count();
+        if ($this->isDsStack($this->_data)) {
+            return $this->_data->count();
+        }
+
+        return Arr::count($this->_data);
+    }
+
+    protected function supportsDs(): bool
+    {
+        return class_exists('\Ds\Stack');
+    }
+
+    protected function isDsStack(mixed $value): bool
+    {
+        return $this->supportsDs() && $value instanceof \Ds\Stack;
+    }
+
+    protected function buildStorage(mixed $seed): mixed
+    {
+        $items = Arr::toArray($seed);
+
+        if ($this->supportsDs()) {
+            $stack = new \Ds\Stack();
+            foreach ($items as $item) {
+                $stack->push($item);
+            }
+            return $stack;
+        }
+
+        return $items;
     }
 }

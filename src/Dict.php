@@ -1,7 +1,6 @@
 <?php
 namespace BlueFission;
 
-use Ds\Map;
 use BlueFission\Behavioral\Behaviors\Event;
 
 /**
@@ -25,7 +24,7 @@ class Dict extends Val implements IVal {
      */
     public function __construct($value = null, bool $snapshot = true) {
         $seed = $value ?? [];
-        parent::__construct(new Map($seed), $snapshot, false);
+        parent::__construct($this->buildStorage($seed), $snapshot, false);
     }
 
     /**
@@ -33,10 +32,17 @@ class Dict extends Val implements IVal {
      * @return IVal
      */
     public function cast(): IVal {
-        if (!($this->_data instanceof Map)) {
-            $seed = $this->_data ?? [];
-            $this->_data = new Map($seed);
+        if ($this->supportsDs()) {
+            if (!$this->isDsMap($this->_data)) {
+                $this->_data = $this->buildStorage($this->_data);
+            }
+            return $this;
         }
+
+        if (!is_array($this->_data)) {
+            $this->_data = Arr::toArray($this->_data);
+        }
+
         return $this;
     }
 
@@ -45,7 +51,7 @@ class Dict extends Val implements IVal {
      * @return bool
      */
     public function _is(): bool {
-        return $this->_data instanceof Map;
+        return $this->isDsMap($this->_data) || is_array($this->_data);
     }
 
     /**
@@ -55,7 +61,11 @@ class Dict extends Val implements IVal {
      * @return IVal The current instance for chaining
      */
     public function put($key, $value): IVal {
-        $this->_data->put($key, $value);
+        if ($this->isDsMap($this->_data)) {
+            $this->_data->put($key, $value);
+        } else {
+            $this->_data[$key] = $value;
+        }
         $this->trigger(Event::CHANGE);
         return $this;
     }
@@ -66,7 +76,11 @@ class Dict extends Val implements IVal {
      * @return mixed The value associated with the key, or null if the key doesn't exist
      */
     public function get($key) {
-        return $this->_data->get($key, null);
+        if ($this->isDsMap($this->_data)) {
+            return $this->_data->get($key, null);
+        }
+
+        return $this->_data[$key] ?? null;
     }
 
     /**
@@ -75,7 +89,11 @@ class Dict extends Val implements IVal {
      * @return IVal The current instance for chaining
      */
     public function remove($key): IVal {
-        $this->_data->remove($key);
+        if ($this->isDsMap($this->_data)) {
+            $this->_data->remove($key);
+        } elseif (Arr::hasKey($this->_data, $key)) {
+            unset($this->_data[$key]);
+        }
         $this->trigger(Event::CHANGE);
         return $this;
     }
@@ -85,7 +103,11 @@ class Dict extends Val implements IVal {
      * @return IVal The current instance for chaining
      */
     public function clear(): IVal {
-        $this->_data->clear();
+        if ($this->isDsMap($this->_data)) {
+            $this->_data->clear();
+        } else {
+            $this->_data = [];
+        }
         $this->trigger(Event::CHANGE);
         return $this;
     }
@@ -96,7 +118,11 @@ class Dict extends Val implements IVal {
      * @return bool True if the key exists, false otherwise
      */
     public function hasKey($key): bool {
-        return $this->_data->hasKey($key);
+        if ($this->isDsMap($this->_data)) {
+            return $this->_data->hasKey($key);
+        }
+
+        return Arr::hasKey($this->_data, $key);
     }
 
     /**
@@ -105,7 +131,11 @@ class Dict extends Val implements IVal {
      * @return bool True if the value exists within the Map, false otherwise
      */
     public function hasValue($value): bool {
-        return $this->_data->hasValue($value);
+        if ($this->isDsMap($this->_data)) {
+            return $this->_data->hasValue($value);
+        }
+
+        return Arr::has($this->_data, $value, true);
     }
 
     /**
@@ -113,6 +143,31 @@ class Dict extends Val implements IVal {
      * @return int The count of elements
      */
     public function count(): int {
-        return $this->_data->count();
+        if ($this->isDsMap($this->_data)) {
+            return $this->_data->count();
+        }
+
+        return Arr::count($this->_data);
+    }
+
+    protected function supportsDs(): bool
+    {
+        return class_exists('\Ds\Map');
+    }
+
+    protected function isDsMap(mixed $value): bool
+    {
+        return $this->supportsDs() && $value instanceof \Ds\Map;
+    }
+
+    protected function buildStorage(mixed $seed): mixed
+    {
+        $data = Arr::toArray($seed);
+
+        if ($this->supportsDs()) {
+            return new \Ds\Map($data);
+        }
+
+        return $data;
     }
 }

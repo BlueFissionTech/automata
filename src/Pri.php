@@ -1,7 +1,6 @@
 <?php
 namespace BlueFission;
 
-use Ds\PriorityQueue;
 use BlueFission\Behavioral\Behaviors\Event;
 
 /**
@@ -24,15 +23,7 @@ class Pri extends Val implements IVal {
      * @param bool $snapshot Whether to take a snapshot after initialization
      */
     public function __construct($value = null, bool $snapshot = true) {
-        parent::__construct(new PriorityQueue(), $snapshot, false);
-
-        if (is_array($value)) {
-            foreach ($value as $item) {
-                if (is_array($item) && count($item) === 2) {
-                    $this->_data->push($item[0], $item[1]);
-                }
-            }
-        }
+        parent::__construct($this->buildStorage($value), $snapshot, false);
     }
 
     /**
@@ -40,15 +31,17 @@ class Pri extends Val implements IVal {
      * @return IVal
      */
     public function cast(): IVal {
-        if (!($this->_data instanceof PriorityQueue)) {
-            $tempQueue = new PriorityQueue();
-            foreach ($this->_data as $item) {
-                if (is_array($item) && count($item) === 2) {
-                    $tempQueue->push($item[0], $item[1]);
-                }
+        if ($this->supportsDs()) {
+            if (!$this->isDsPriorityQueue($this->_data)) {
+                $this->_data = $this->buildStorage($this->_data);
             }
-            $this->_data = $tempQueue;
+            return $this;
         }
+
+        if (!is_array($this->_data)) {
+            $this->_data = Arr::toArray($this->_data);
+        }
+
         return $this;
     }
 
@@ -57,7 +50,7 @@ class Pri extends Val implements IVal {
      * @return bool
      */
     public function _is(): bool {
-        return $this->_data instanceof PriorityQueue;
+        return $this->isDsPriorityQueue($this->_data) || is_array($this->_data);
     }
 
     /**
@@ -67,7 +60,14 @@ class Pri extends Val implements IVal {
      * @return IVal The current instance for chaining
      */
     public function insert($value, int $priority): IVal {
-        $this->_data->push($value, $priority);
+        if ($this->isDsPriorityQueue($this->_data)) {
+            $this->_data->push($value, $priority);
+        } else {
+            $data = Arr::make($this->_data);
+            $data->push([$value, $priority]);
+            $this->_data = $data->val();
+            $this->sortFallback();
+        }
         $this->trigger(Event::CHANGE);
         return $this;
     }
@@ -77,9 +77,18 @@ class Pri extends Val implements IVal {
      * @return mixed The highest priority element
      */
     public function extract() {
-        if (!$this->_data->isEmpty()) {
-            return $this->_data->pop();
+        if ($this->isDsPriorityQueue($this->_data)) {
+            if (!$this->_data->isEmpty()) {
+                return $this->_data->pop();
+            }
+            return null;
         }
+
+        if (!Flag::isEmpty($this->_data)) {
+            $entry = Arr::shift($this->_data);
+            return is_array($entry) ? ($entry[0] ?? null) : null;
+        }
+
         return null;
     }
 
@@ -88,9 +97,18 @@ class Pri extends Val implements IVal {
      * @return mixed The highest priority element if available
      */
     public function peek() {
-        if (!$this->_data->isEmpty()) {
-            return $this->_data->peek();
+        if ($this->isDsPriorityQueue($this->_data)) {
+            if (!$this->_data->isEmpty()) {
+                return $this->_data->peek();
+            }
+            return null;
         }
+
+        if (!Flag::isEmpty($this->_data)) {
+            $entry = $this->_data[0] ?? null;
+            return is_array($entry) ? ($entry[0] ?? null) : null;
+        }
+
         return null;
     }
 
@@ -99,7 +117,11 @@ class Pri extends Val implements IVal {
      * @return bool True if the queue is empty, false otherwise
      */
     public function isEmpty(): bool {
-        return $this->_data->isEmpty();
+        if ($this->isDsPriorityQueue($this->_data)) {
+            return $this->_data->isEmpty();
+        }
+
+        return Flag::isEmpty($this->_data);
     }
 
     /**
@@ -107,7 +129,11 @@ class Pri extends Val implements IVal {
      * @return IVal The current instance for chaining
      */
     public function clear(): IVal {
-        $this->_data->clear();
+        if ($this->isDsPriorityQueue($this->_data)) {
+            $this->_data->clear();
+        } else {
+            $this->_data = [];
+        }
         $this->trigger(Event::CHANGE);
         return $this;
     }
@@ -117,6 +143,62 @@ class Pri extends Val implements IVal {
      * @return int The count of elements
      */
     public function count(): int {
-        return $this->_data->count();
+        if ($this->isDsPriorityQueue($this->_data)) {
+            return $this->_data->count();
+        }
+
+        return Arr::count($this->_data);
+    }
+
+    protected function supportsDs(): bool
+    {
+        return class_exists('\Ds\PriorityQueue');
+    }
+
+    protected function isDsPriorityQueue(mixed $value): bool
+    {
+        return $this->supportsDs() && $value instanceof \Ds\PriorityQueue;
+    }
+
+    protected function buildStorage(mixed $seed): mixed
+    {
+        $items = Arr::toArray($seed);
+
+        if ($this->supportsDs()) {
+            $queue = new \Ds\PriorityQueue();
+            foreach ($items as $item) {
+                if (is_array($item) && Arr::count($item) === 2) {
+                    $queue->push($item[0], $item[1]);
+                }
+            }
+            return $queue;
+        }
+
+        $queue = [];
+        foreach ($items as $item) {
+            if (is_array($item) && Arr::count($item) === 2) {
+                $queue[] = [$item[0], $item[1]];
+            }
+        }
+        $this->_data = $queue;
+        $this->sortFallback();
+        return $this->_data;
+    }
+
+    protected function sortFallback(): void
+    {
+        if (!is_array($this->_data)) {
+            return;
+        }
+
+        $collection = new \BlueFission\Collections\Collection($this->_data);
+        $this->_data = $collection->sort(
+            function ($left, $right) {
+                $leftPriority = $left[1] ?? 0;
+                $rightPriority = $right[1] ?? 0;
+
+                return $rightPriority <=> $leftPriority;
+            }
+        )->contents();
     }
 }

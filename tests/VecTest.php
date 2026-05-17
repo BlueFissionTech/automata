@@ -4,7 +4,6 @@ namespace BlueFission\Tests;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Vec;
-use Ds\Vector;
 
 class VecTest extends TestCase
 {
@@ -19,8 +18,8 @@ class VecTest extends TestCase
         $prop->setAccessible(true);
         $data = $prop->getValue($vec);
 
-        if (extension_loaded('ds')) {
-            $this->assertInstanceOf(Vector::class, $data); // Ensure the data is indeed a Vector
+        if (extension_loaded('ds') && class_exists('\Ds\Vector')) {
+            $this->assertInstanceOf('\Ds\Vector', $data);
         } else {
             $this->assertIsArray($data);
         }
