@@ -4,17 +4,9 @@ namespace BlueFission\Tests;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Pri;
-use Ds\PriorityQueue;
 
 class PriTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        if (!extension_loaded('ds')) {
-            $this->markTestSkipped('The ds extension is required for Pri tests.');
-        }
-    }
-
     public function testCanInstantiatePri(): void
     {
         $pri = new Pri();
@@ -24,7 +16,13 @@ class PriTest extends TestCase
         $ref = new \ReflectionClass($pri);
         $prop = $ref->getProperty('_data');
         $prop->setAccessible(true);
-        $this->assertInstanceOf(PriorityQueue::class, $prop->getValue($pri));
+        $data = $prop->getValue($pri);
+
+        if (extension_loaded('ds') && class_exists('\Ds\PriorityQueue')) {
+            $this->assertInstanceOf('\Ds\PriorityQueue', $data);
+        } else {
+            $this->assertIsArray($data);
+        }
     }
 
     public function testInsertElementIntoPri(): void

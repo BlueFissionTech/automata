@@ -4,17 +4,9 @@ namespace BlueFission\Tests;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Dict;
-use Ds\Map;
 
 class DictTest extends TestCase
 {
-    protected function setUp(): void
-    {
-        if (!extension_loaded('ds')) {
-            $this->markTestSkipped('The ds extension is required for Dict tests.');
-        }
-    }
-
     public function testCanInstantiateDict(): void
     {
         $dict = new Dict();
@@ -24,7 +16,13 @@ class DictTest extends TestCase
         $ref = new \ReflectionClass($dict);
         $prop = $ref->getProperty('_data');
         $prop->setAccessible(true);
-        $this->assertInstanceOf(Map::class, $prop->getValue($dict));
+        $data = $prop->getValue($dict);
+
+        if (extension_loaded('ds') && class_exists('\Ds\Map')) {
+            $this->assertInstanceOf('\Ds\Map', $data);
+        } else {
+            $this->assertIsArray($data);
+        }
     }
 
     public function testPutAndGetElement(): void
