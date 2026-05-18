@@ -29,6 +29,7 @@ use BlueFission\Automata\LLM\Agent\State\AgentState;
 use BlueFission\Automata\LLM\Agent\State\CognitiveController;
 use BlueFission\Automata\LLM\Agent\State\IAgentModule;
 use BlueFission\Automata\LLM\Agent\Security\RuntimeLogicValidator;
+use BlueFission\Automata\LLM\Agent\State\IStateController;
 use BlueFission\Automata\Memory\IWorkingMemory;
 use BlueFission\Automata\LLM\MCP\MCPClient;
 use BlueFission\Automata\LLM\MCP\Tools\MCPDiscoveryTool;
@@ -63,7 +64,7 @@ class Agent implements IDispatcher
     protected ?Orchestrator $orchestrator = null;
     protected AgentSession $session;
     protected AgentState $agentState;
-    protected CognitiveController $cognitiveController;
+    protected IStateController $cognitiveController;
     protected ?RuntimeLogicValidator $runtimeLogicValidator = null;
     protected ?TaskCallMonitor $callMonitor = null;
     protected ?HumanReviewGate $humanReviewGate = null;
@@ -487,7 +488,7 @@ class Agent implements IDispatcher
     /**
      * Replace the high-level cognitive controller.
      */
-    public function setCognitiveController(CognitiveController $controller): void
+    public function setCognitiveController(IStateController $controller): void
     {
         $this->cognitiveController = $controller;
     }

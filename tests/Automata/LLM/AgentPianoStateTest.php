@@ -6,11 +6,15 @@ use BlueFission\Automata\LLM\Agent;
 use BlueFission\Automata\LLM\Agent\State\ActionAwareness;
 use BlueFission\Automata\LLM\Agent\State\AgentState;
 use BlueFission\Automata\LLM\Agent\State\CallableAgentModule;
+use BlueFission\Automata\LLM\Agent\State\ControlsAgentState;
 use BlueFission\Automata\LLM\Agent\State\CognitiveController;
+use BlueFission\Automata\LLM\Agent\State\IStateController;
 use BlueFission\Automata\Goal\ComparisonOperator;
 use BlueFission\Automata\Goal\Condition;
 use BlueFission\Automata\Goal\GoalManager;
+use BlueFission\Automata\Goal\IGoalManager;
 use BlueFission\Automata\Goal\Initiative;
+use BlueFission\Automata\Goal\ManagesGoals;
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
 use PHPUnit\Framework\TestCase;
@@ -36,6 +40,26 @@ class PianoClientStub implements IClient
         $reply = new Reply();
         $reply->addMessage('responded', true);
         return $reply;
+    }
+}
+
+class PianoTraitGoalManager implements IGoalManager
+{
+    use ManagesGoals;
+
+    public function __construct(array $goals = [])
+    {
+        $this->initializeGoalManager($goals, 10, 10);
+    }
+}
+
+class PianoTraitStateController implements IStateController
+{
+    use ControlsAgentState;
+
+    public function __construct(IGoalManager $goalManager)
+    {
+        $this->initializeStateController([AgentState::GOALS, AgentState::OBSERVATIONS], 2, $goalManager, 2);
     }
 }
 
@@ -146,5 +170,30 @@ class AgentPianoStateTest extends TestCase
         $this->assertSame(['role' => 'farmer', 'action' => 'plant seeds'], $result->decision());
         $this->assertSame(['role' => 'farmer', 'action' => 'plant seeds'], $agent->agentState()->read(AgentState::OUTPUTS, 'controller_decision'));
         $this->assertSame([['role' => 'farmer', 'action' => 'plant seeds']], $agent->agentState()->channel(AgentState::DECISIONS));
+    }
+
+    public function testStateControllerAndGoalManagerAreInterfaceInjectable(): void
+    {
+        $initiative = new Initiative(['name' => 'hydration', 'weight' => 2]);
+        $initiative->addCondition(new Condition([
+            'name' => 'water',
+            'path' => 'water',
+            'operator' => ComparisonOperator::AT_LEAST,
+            'expected' => 1,
+            'priority' => 4,
+            'action' => 'carry-water',
+        ]));
+
+        $goalManager = new PianoTraitGoalManager([$initiative]);
+        $agent = new Agent(new PianoClientStub());
+        $agent->useAgentState(new AgentState([], $goalManager));
+        $agent->setCognitiveController(new PianoTraitStateController($goalManager));
+
+        $result = $agent->cognitiveDecision(null, ['water' => 0]);
+        $decision = $result->decision();
+
+        $this->assertSame($goalManager, $agent->agentState()->goals());
+        $this->assertSame('carry-water', $decision['selected']['action']);
+        $this->assertSame('hydration', $decision['selected']['goal']);
     }
 }
