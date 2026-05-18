@@ -3,10 +3,12 @@
 namespace BlueFission\Tests\Automata\LLM;
 
 use BlueFission\Automata\LLM\Agent;
+use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\Memory\FileMemoryEventStore;
 use BlueFission\Automata\LLM\Agent\Memory\InMemoryEventStore;
-use BlueFission\Automata\LLM\Agent\Memory\MemoryEvent;
 use BlueFission\Automata\LLM\Agent\Memory\StaticMemoryInjector;
+use BlueFission\Automata\Context;
+use BlueFission\Automata\Memory\Abs2Memory;
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
 use BlueFission\Automata\LLM\Tools\BaseTool;
@@ -66,12 +68,12 @@ class AgentMemoryHooksTest extends TestCase
         $events = $store->events('session-memory-1');
 
         $this->assertSame([
-            MemoryEvent::SESSION_START,
-            MemoryEvent::PRE_TOOL_USE,
-            MemoryEvent::POST_TOOL_USE,
-            MemoryEvent::STOP,
-        ], array_column($events, 'event'));
-        $this->assertSame([1, 2, 3, 4], array_column($events, 'sequence'));
+            AgentHook::SESSION_START,
+            AgentHook::PRE_TOOL_USE,
+            AgentHook::POST_TOOL_USE,
+            AgentHook::TURN_STOP,
+        ], $this->column($events, 'event'));
+        $this->assertSame([1, 2, 3, 4], $this->column($events, 'sequence'));
         $this->assertSame('task-memory-1', $events[0]['task_id']);
         $this->assertSame('memory_echo', $events[1]['payload']['tool']);
         $this->assertSame('success', $events[2]['payload']['result']['status']);
@@ -96,8 +98,8 @@ class AgentMemoryHooksTest extends TestCase
         $this->assertStringContainsString('project: automata agent memory', $agent->output());
 
         $events = $agent->memoryEvents();
-        $this->assertSame(MemoryEvent::SESSION_START, $events[0]['event']);
-        $this->assertSame(MemoryEvent::USER_PROMPT_SUBMIT, $events[1]['event']);
+        $this->assertSame(AgentHook::SESSION_START, $events[0]['event']);
+        $this->assertSame(AgentHook::USER_PROMPT_SUBMIT, $events[1]['event']);
         $this->assertStringContainsString('profile: prefer local tools', $events[1]['payload']['prompt']);
     }
 
@@ -111,15 +113,13 @@ class AgentMemoryHooksTest extends TestCase
         $this->assertSame([], $agent->memoryEvents());
     }
 
-    public function testFileMemoryStorePersistsJsonLines(): void
+    public function testFileMemoryStorePersistsThroughStorageAdapter(): void
     {
-        $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'automata-memory-hooks-test.jsonl';
-        if (is_file($path)) {
-            unlink($path);
-        }
+        $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'automata-memory-hooks-test-' . uniqid('', true) . '.json';
 
         $store = new FileMemoryEventStore($path);
-        $store->append(new MemoryEvent(MemoryEvent::SESSION_START, ['ok' => true], [
+        $store->clear();
+        $store->append(new \BlueFission\Automata\LLM\Agent\Memory\MemoryEvent(AgentHook::SESSION_START, ['ok' => true], [
             'session_id' => 'file-session',
             'task_id' => 'task-file',
             'sequence' => 1,
@@ -130,6 +130,30 @@ class AgentMemoryHooksTest extends TestCase
 
         $this->assertCount(1, $events);
         $this->assertSame('task-file', $events[0]['task_id']);
-        $this->assertSame(MemoryEvent::SESSION_START, $events[0]['event']);
+        $this->assertSame(AgentHook::SESSION_START, $events[0]['event']);
+    }
+
+    public function testAgentSessionScopesPermissionsAndWorkingMemory(): void
+    {
+        $agent = new Agent(new MemoryHookClientStub());
+        $memory = new Abs2Memory();
+
+        $agent->enableMemory(new InMemoryEventStore(), null, 'session-scope', $memory);
+        $agent->session()->allow('read');
+        $agent->session()->remember('preference', new Context(['value' => 'local tools']));
+
+        $this->assertTrue($agent->session()->can('read'));
+        $this->assertSame('session-scope', $agent->session()->id());
+        $this->assertNotNull($agent->session()->recall('preference'));
+    }
+
+    protected function column(array $rows, string $key): array
+    {
+        $values = [];
+        foreach ($rows as $row) {
+            $values[] = $row[$key] ?? null;
+        }
+
+        return $values;
     }
 }

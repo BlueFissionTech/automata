@@ -2,7 +2,10 @@
 
 namespace BlueFission\Automata\LLM\Agent\Telemetry;
 
+use BlueFission\Arr;
+use BlueFission\Automata\LLM\Agent\ToolDefinition;
 use BlueFission\DevElation as Dev;
+use BlueFission\Str;
 
 class TaskTraceSpan
 {
@@ -13,9 +16,12 @@ class TaskTraceSpan
 
     protected array $data = [];
 
+    /**
+     * Create a span with default CPCT fields.
+     */
     public function __construct(array $data = [])
     {
-        $this->data = array_replace_recursive($this->defaults(), $data);
+        $this->data = ToolDefinition::mergeConfig($this->defaults(), $data);
         if (!$this->data['span_id']) {
             $this->data['span_id'] = self::id('span');
         }
@@ -24,6 +30,9 @@ class TaskTraceSpan
         }
     }
 
+    /**
+     * Start a span for a trace task.
+     */
     public static function start(string $taskId, string $kind, string $name, array $metadata = [], ?string $parentSpanId = null): self
     {
         return new self([
@@ -35,11 +44,17 @@ class TaskTraceSpan
         ]);
     }
 
+    /**
+     * Rehydrate a span from stored data.
+     */
     public static function fromArray(array $data): self
     {
         return new self($data);
     }
 
+    /**
+     * Generate a trace-safe identifier.
+     */
     public static function id(string $prefix = 'id'): string
     {
         try {
@@ -49,19 +64,25 @@ class TaskTraceSpan
         }
     }
 
+    /**
+     * Finish the span with status and metrics.
+     */
     public function finish(string $status = 'completed', array $metrics = []): self
     {
         $endedAt = $metrics['ended_at'] ?? microtime(true);
-        $this->data = array_replace_recursive($this->data, $metrics);
+        $this->data = ToolDefinition::mergeConfig($this->data, $metrics);
         $this->data['status'] = $status;
         $this->data['ended_at'] = $endedAt;
         $this->data['duration_ms'] = max(0, (int)round(((float)$endedAt - (float)$this->data['started_at']) * 1000));
 
-        Dev::do('automata.llm.agent.telemetry.span_finished', $this->toArray());
+        Dev::do(CpctHook::SPAN_FINISHED, $this->toArray());
 
         return $this;
     }
 
+    /**
+     * Finish the span as a structured failure.
+     */
     public function fail(string $code, string $message, array $details = []): self
     {
         return $this->finish('failed', [
@@ -73,22 +94,34 @@ class TaskTraceSpan
         ]);
     }
 
+    /**
+     * Set a span data field.
+     */
     public function set(string $key, mixed $value): self
     {
         $this->data[$key] = $value;
         return $this;
     }
 
+    /**
+     * Get a span data field.
+     */
     public function get(string $key, mixed $default = null): mixed
     {
-        return $this->data[$key] ?? $default;
+        return Arr::hasKey($this->data, $key) ? $this->data[$key] : $default;
     }
 
+    /**
+     * Return the span as normalized storage data.
+     */
     public function toArray(): array
     {
         return Dev::apply('automata.llm.agent.telemetry.span.to_array', $this->data);
     }
 
+    /**
+     * Return default metric fields for CPCT accounting.
+     */
     protected function defaults(): array
     {
         return [
