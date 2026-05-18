@@ -187,6 +187,40 @@ class TaskTrace implements IDispatcher
     }
 
     /**
+     * Capture deterministic MCP, RPC, API, or other external call data.
+     */
+    public function recordTaskCall(string $kind, string $name, array $request = [], array $response = [], array $metadata = []): self
+    {
+        $span = $this->startSpan($kind, $name, [
+            'source' => $metadata['source'] ?? 'task_call_log',
+            'context' => $metadata,
+        ]);
+
+        $status = (string)($metadata['status'] ?? $response['status'] ?? 'completed');
+        $this->addSpan($span->finish($status, [
+            'outcome_status' => $status,
+            'tool_spend' => $metadata['tool_spend'] ?? 0.0,
+            'estimated_cost' => $metadata['estimated_cost'] ?? null,
+            'metadata' => ToolDefinition::mergeConfig($metadata, [
+                'request' => $request,
+                'response' => $response,
+            ]),
+            'error' => $response['error'] ?? null,
+        ]));
+
+        Dev::do(CpctHook::TASK_CALL_CAPTURED, [
+            'task_id' => $this->taskId,
+            'kind' => $kind,
+            'name' => $name,
+            'request' => $request,
+            'response' => $response,
+            'metadata' => $metadata,
+        ]);
+
+        return $this;
+    }
+
+    /**
      * Mark the task outcome as completed, abandoned, or failed.
      */
     public function complete(string $status = 'completed'): self
