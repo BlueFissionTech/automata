@@ -4,6 +4,7 @@ namespace BlueFission\Automata\LLM\Agent\State;
 
 use BlueFission\Arr;
 use BlueFission\Automata\Goal\GoalManager;
+use BlueFission\Automata\Goal\IGoalManager;
 use BlueFission\Automata\Goal\Initiative;
 use BlueFission\Behavioral\Behaviors\Action;
 use BlueFission\Behavioral\Behaviors\State as BehaviorState;
@@ -37,9 +38,9 @@ class AgentState extends Obj
     public const ACTION_REMEMBER = 'DoRemember';
 
     protected array $channels;
-    protected GoalManager $goalManager;
+    protected IGoalManager $goalManager;
 
-    public function __construct(array $channels = [], ?GoalManager $goalManager = null)
+    public function __construct(array $channels = [], ?IGoalManager $goalManager = null)
     {
         parent::__construct();
 
@@ -116,7 +117,7 @@ class AgentState extends Obj
     /**
      * Attach the Automata goal manager used by cognitive decisions.
      */
-    public function useGoalManager(GoalManager $goalManager): self
+    public function useGoalManager(IGoalManager $goalManager): self
     {
         $this->goalManager = $goalManager;
 
@@ -126,7 +127,7 @@ class AgentState extends Obj
     /**
      * Return the Automata goal manager for initiative and expectation evaluation.
      */
-    public function goals(): GoalManager
+    public function goals(): IGoalManager
     {
         return $this->goalManager;
     }

@@ -89,6 +89,8 @@ PIANO is modeled as orchestration because the cognitive controller produces a bo
 
 Goal reasoning lives in Automata's `Goal` namespace instead of inside the cognitive controller. `GoalManager` holds active `Initiative` objects, checks `Condition` and `Criterion` satisfaction from deterministic context, tracks expectations, scores behavior options, and returns bounded `GoalDecision` options. `CognitiveController` now applies a bottleneck over state channels, asks the goal manager for ranked options, and writes the selected option back into state. This keeps prompt/inference work focused on choosing among bounded options rather than inventing every possible next action from raw context.
 
+The default classes are dependency-injection examples as much as concrete implementations. `GoalManager` implements `IGoalManager` and uses `ManagesGoals`; custom managers can implement the same interface and import the trait when they only need to adjust persistence, weighting, or constructor policy. `CognitiveController` implements `IStateController` and uses `ControlsAgentState`; custom controllers can import that trait to keep the standard bottleneck, goal recommendation, and state-write behavior while overriding only the decision context or option selection. `AgentState` accepts an `IGoalManager`, and `Agent::setCognitiveController()` accepts an `IStateController`, so applications can swap either side through normal dependency injection.
+
 ## Integration Notes
 
 Prefer DevElation helpers for value, array, collection, and configuration behavior when extending these classes. Keep tool implementations thin and reusable; put selection guidance in `ToolDefinition`, execution behavior in the tool, and lifecycle side effects behind hooks.
