@@ -2,8 +2,10 @@
 
 namespace BlueFission\Tests\Automata\LLM;
 
+use BlueFission\Arr;
 use BlueFission\Automata\LLM\Agent;
 use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationConfig;
+use BlueFission\Automata\LLM\Agent\Orchestration\OrchestratedAgent;
 use BlueFission\Automata\LLM\Agent\Orchestration\Orchestrator;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTraceSpan;
 use BlueFission\Automata\LLM\Clients\IClient;
@@ -141,6 +143,53 @@ class AgentOrchestrationTest extends TestCase
         $this->assertSame('piano', $result['pattern']);
         $this->assertSame('gather evidence', $result['output']['spoken']);
         $this->assertSame('gather evidence', $result['output']['action']);
+    }
+
+    public function testNestedOrchestrationCanActAsBlackBoxAgent(): void
+    {
+        $innerMind = new OrchestratedAgent('villager_inner_mind', [
+            'pattern' => OrchestrationConfig::HIERARCHICAL,
+            'supervisor' => fn (): array => ['output' => ['workers' => ['lead', 'memory_counselor', 'policy_counselor']]],
+            'workers' => [
+                'lead' => fn (array $context): array => [
+                    'output' => [
+                        'proposal' => 'respond_to_' . $context['perceptions']['need'],
+                        'private_seen' => Arr::hasKey($context, 'private_plan'),
+                    ],
+                ],
+                'memory_counselor' => fn (array $context): array => [
+                    'output' => ['memory' => $context['shared_context']['memory']],
+                ],
+                'policy_counselor' => fn (array $context): array => [
+                    'output' => ['constraint' => $context['shared_context']['rule']],
+                ],
+            ],
+        ], [
+            'include' => ['perceptions', 'shared_context'],
+        ]);
+
+        $society = new Orchestrator([
+            'pattern' => OrchestrationConfig::PIANO,
+            'supervisor' => fn (): array => ['output' => ['goal' => 'coordinate society']],
+            'workers' => [
+                'villager' => $innerMind,
+                'broadcast' => fn (array $context): array => [
+                    'output' => ['broadcast' => $context['controller_decision']['goal']],
+                ],
+            ],
+        ]);
+
+        $result = $society->run([
+            'perceptions' => ['need' => 'food'],
+            'shared_context' => ['memory' => 'hungry', 'rule' => 'share tools'],
+            'private_plan' => 'not in child scope',
+        ])->toArray();
+
+        $this->assertSame('respond_to_food', $result['output']['villager']['proposal']);
+        $this->assertSame('hungry', $result['output']['villager']['memory']);
+        $this->assertSame('share tools', $result['output']['villager']['constraint']);
+        $this->assertFalse($result['output']['villager']['private_seen']);
+        $this->assertArrayNotHasKey('proposal', $result['output']);
     }
 
     public function testAgentOrchestrationRecordsTraceSpan(): void

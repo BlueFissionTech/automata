@@ -71,6 +71,8 @@ Lifecycle memory logging is intentionally tied to `AgentHook` names rather than 
 
 PIANO is modeled as orchestration because the cognitive controller produces a bottlenecked decision and broadcasts it to worker channels such as speech, action, state, and memory. Every pattern can receive session scope, task traces, working memory, and Agent hook events through the same Agent surfaces.
 
+`OrchestratedAgent` lets any orchestration run as a black-box worker inside a parent orchestration. This is useful for hierarchical societies: a PIANO society can include a villager worker whose inner mind is itself a hierarchical lead-plus-counselor orchestration. The wrapper accepts a scoped context allowlist, so the child orchestration only sees the perceptions and shared context granted to that agent rather than the full parent society state. Parent merge logic preserves black-box output under the worker name instead of flattening the inner workers into the larger society output.
+
 ## Agent State And Goals
 
 `AgentState` is a DevElation behavioral state machine with isolated channels for goals, observations, decisions, expectations, outputs, social signals, rules, and reflections. PIANO modules read and write those channels while the state machine gates behaviors such as deciding, tool use, speech, and memory updates through active states like observing, reasoning, acting, speaking, reflecting, and socializing.

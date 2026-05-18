@@ -31,7 +31,7 @@ abstract class AbstractPattern implements IOrchestrationPattern
                 'name' => $name,
                 'status' => 'completed',
                 'confidence' => 1.0,
-                'metadata' => [],
+                'metadata' => Arr::is($worker) ? ($worker['metadata'] ?? []) : [],
             ], $output);
         }
 
@@ -54,6 +54,11 @@ abstract class AbstractPattern implements IOrchestrationPattern
 
         foreach ($workerResults as $result) {
             $value = $result['output'] ?? null;
+            if (($result['metadata']['black_box'] ?? false) === true) {
+                $output[$result['name']] = $value;
+                continue;
+            }
+
             if (!Arr::is($value)) {
                 $output[$result['name']] = $value;
                 continue;
