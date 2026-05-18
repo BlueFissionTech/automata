@@ -12,6 +12,7 @@ class CpctHook
     public const MODEL_USAGE_CAPTURED = 'automata.llm.agent.telemetry.model_usage_captured';
     public const BATCH_USAGE_CAPTURED = 'automata.llm.agent.telemetry.batch_usage_captured';
     public const ROUTING_CANDIDATE_CAPTURED = 'automata.llm.agent.telemetry.routing_candidate_captured';
+    public const TASK_CALL_CAPTURED = 'automata.llm.agent.telemetry.task_call_captured';
     public const REPORT_BUILT = 'automata.llm.agent.telemetry.report_built';
 
     /**
@@ -28,6 +29,7 @@ class CpctHook
             self::MODEL_USAGE_CAPTURED,
             self::BATCH_USAGE_CAPTURED,
             self::ROUTING_CANDIDATE_CAPTURED,
+            self::TASK_CALL_CAPTURED,
             self::REPORT_BUILT,
         ];
     }
