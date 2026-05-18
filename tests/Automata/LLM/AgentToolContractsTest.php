@@ -2,12 +2,16 @@
 
 namespace BlueFission\Tests\Automata\LLM;
 
+use BlueFission\Arr;
 use BlueFission\Automata\LLM\Agent;
+use BlueFission\Automata\LLM\Agent\AgentHook;
+use BlueFission\Automata\LLM\Agent\ToolCatalog;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
 use BlueFission\Automata\LLM\Agent\ToolExecutionResult;
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
 use BlueFission\Automata\LLM\Tools\BaseTool;
+use BlueFission\Net\HTTP;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -45,7 +49,7 @@ class EchoContractTool extends BaseTool
 
     public function execute($input): string
     {
-        return is_array($input) ? (string)json_encode($input) : 'echo:' . (string)$input;
+        return Arr::is($input) ? (string)HTTP::jsonEncode($input) : 'echo:' . (string)$input;
     }
 }
 
@@ -124,7 +128,12 @@ class AgentToolContractsTest extends TestCase
 
         $this->assertFalse($result->ok());
         $this->assertSame(ToolExecutionResult::STATUS_VALIDATION_ERROR, $result->status());
-        $this->assertStringContainsString('input.sort must be one of', implode("\n", $result->errorDetails()['details']['errors']));
+        $message = '';
+        foreach ($result->errorDetails()['details']['errors'] as $error) {
+            $message .= $message === '' ? $error : "\n" . $error;
+        }
+
+        $this->assertStringContainsString('input.sort must be one of', $message);
     }
 
     public function testCriticalToolRequiresApproval(): void
@@ -148,6 +157,11 @@ class AgentToolContractsTest extends TestCase
         $agent->registerTool('web_search', new EchoContractTool(), [
             'purpose' => 'Search current web information.',
             'tags' => ['current', 'read'],
+            'groups' => ['retrieval'],
+            'taxonomy' => [
+                'domain' => ['web'],
+                'freshness' => ['current'],
+            ],
             'decision_boundary' => 'current or time-sensitive facts',
             'negative_guidance' => 'questions answerable from stable local context',
             'parallel_safe' => true,
@@ -158,11 +172,68 @@ class AgentToolContractsTest extends TestCase
             'permission' => ToolDefinition::PERMISSION_WRITE,
         ]);
 
-        $prompt = $agent->toolPrompt(['tags' => ['current']]);
+        $prompt = $agent->toolPrompt([ToolCatalog::FILTER_TAGS => ['current']]);
 
         $this->assertStringContainsString('web_search', $prompt);
         $this->assertStringContainsString('Do not use when:', $prompt);
         $this->assertStringNotContainsString('note_write', $prompt);
+    }
+
+    public function testToolCatalogFiltersByGroupsAndTaxonomy(): void
+    {
+        $agent = new Agent(new ToolContractClientStub());
+        $agent->registerTool('memory_search', new EchoContractTool(), [
+            'purpose' => 'Search working memory.',
+            'tags' => ['memory', 'read'],
+            'groups' => ['agent.lifecycle'],
+            'taxonomy' => [
+                'domain' => ['memory'],
+                'lifecycle' => ['user_prompt_submit'],
+                'risk' => ['read_only'],
+            ],
+        ]);
+        $agent->registerTool('external_write', new EchoContractTool(), [
+            'purpose' => 'Write externally.',
+            'groups' => ['external'],
+            'taxonomy' => [
+                'domain' => ['external'],
+                'risk' => ['write'],
+            ],
+        ]);
+
+        $definitions = $agent->toolDefinitions([
+            ToolCatalog::FILTER_GROUPS => ['agent.lifecycle'],
+            ToolCatalog::FILTER_TAXONOMY => [
+                'risk' => ['read_only'],
+            ],
+        ]);
+
+        $this->assertArrayHasKey('memory_search', $definitions);
+        $this->assertArrayNotHasKey('external_write', $definitions);
+    }
+
+    public function testToolDefinitionUsesConfigurableContract(): void
+    {
+        $definition = new ToolDefinition([
+            'name' => 'search',
+            'category' => 'retrieval',
+            'tags' => ['memory', 'memory'],
+        ]);
+
+        $definition->config('category', 'knowledge');
+
+        $this->assertSame('knowledge', $definition->category());
+        $this->assertSame(['memory'], $definition->tags());
+    }
+
+    public function testAgentHookConstantsExposeLifecycleNames(): void
+    {
+        $this->assertContains(AgentHook::SESSION_START, AgentHook::all());
+        $this->assertContains(AgentHook::USER_PROMPT_SUBMIT, AgentHook::all());
+        $this->assertContains(AgentHook::PERMISSION_REQUEST, AgentHook::toolUse());
+        $this->assertContains(AgentHook::PRE_TOOL_USE, AgentHook::toolUse());
+        $this->assertContains(AgentHook::POST_TOOL_USE, AgentHook::toolUse());
+        $this->assertContains(AgentHook::TURN_STOP, AgentHook::all());
     }
 
     public function testRepeatedToolFailureOpensCircuit(): void

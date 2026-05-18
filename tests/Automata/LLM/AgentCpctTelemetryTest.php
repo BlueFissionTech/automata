@@ -2,13 +2,18 @@
 
 namespace BlueFission\Tests\Automata\LLM;
 
+use BlueFission\Arr;
 use BlueFission\Automata\LLM\Agent;
+use BlueFission\Automata\LLM\Agent\Telemetry\CpctHook;
+use BlueFission\Automata\LLM\Agent\Telemetry\CpctPricing;
 use BlueFission\Automata\LLM\Agent\Telemetry\CpctReport;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTrace;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTraceSpan;
+use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
 use BlueFission\Automata\LLM\Tools\BaseTool;
+use BlueFission\Net\HTTP;
 use PHPUnit\Framework\TestCase;
 
 class CpctClientStub implements IClient
@@ -45,7 +50,7 @@ class CpctEchoTool extends BaseTool
 
     public function execute($input): string
     {
-        return is_array($input) ? (string)json_encode($input) : (string)$input;
+        return Arr::is($input) ? (string)HTTP::jsonEncode($input) : (string)$input;
     }
 }
 
@@ -145,6 +150,67 @@ class AgentCpctTelemetryTest extends TestCase
         $this->assertSame(0.5, $report['batch_utilization']['utilization']);
         $this->assertSame(1, $report['tier_routing']['candidate_spans']);
         $this->assertSame(1.5, $report['tier_routing']['estimated_savings']);
+    }
+
+    public function testTaskTraceCapturesProviderUsageAndRoutingHooks(): void
+    {
+        $trace = new TaskTrace('task-capture');
+        $trace->recordModelUsage('provider-call', [
+            'prompt_tokens' => 100,
+            'completion_tokens' => 40,
+            'cache_hit_tokens' => 25,
+        ], [
+            'provider' => 'example',
+            'model' => 'default',
+            'estimated_cost' => 0.25,
+        ]);
+        $trace->recordBatchUsage('nightly-eval', 200, true, ['model' => 'default']);
+        $trace->recordRoutingCandidate('provider-call', 'cheap-model', 0.10, true);
+        $trace->complete('completed');
+
+        $report = CpctReport::build([$trace], [
+            'default' => [
+                'input' => 1.0,
+                'output' => 2.0,
+            ],
+        ]);
+
+        $this->assertInstanceOf(IDispatcher::class, $trace);
+        $this->assertCount(2, $trace->spans());
+        $this->assertSame(25, $report['cache_roi']['cache_hit_tokens']);
+        $this->assertSame(1, $report['batch_utilization']['batched_spans']);
+        $this->assertSame(1, $report['tier_routing']['candidate_spans']);
+        $this->assertSame(0.15, $report['tier_routing']['estimated_savings']);
+    }
+
+    public function testCpctPricingIsConfigurable(): void
+    {
+        $pricing = new CpctPricing([
+            'default' => [
+                'input' => 1.0,
+                'output' => 2.0,
+            ],
+        ]);
+
+        $pricing->config('models', [
+            'default' => [
+                'input' => 2.0,
+                'output' => 4.0,
+            ],
+        ]);
+
+        $this->assertSame(6.0, $pricing->costForSpan([
+            'model' => 'default',
+            'input_tokens' => 1000,
+            'output_tokens' => 1000,
+        ]));
+    }
+
+    public function testCpctHookConstantsExposeCapturePoints(): void
+    {
+        $this->assertContains(CpctHook::MODEL_USAGE_CAPTURED, CpctHook::all());
+        $this->assertContains(CpctHook::BATCH_USAGE_CAPTURED, CpctHook::all());
+        $this->assertContains(CpctHook::ROUTING_CANDIDATE_CAPTURED, CpctHook::all());
     }
 
     protected function traceWithCost(string $taskId, float $cost): TaskTrace
