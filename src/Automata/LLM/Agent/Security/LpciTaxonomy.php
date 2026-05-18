@@ -18,6 +18,9 @@ class LpciTaxonomy
     public const CATEGORY_EXFILTRATION = 'exfiltration_reframe';
     public const CATEGORY_TRACE = 'trace_tamper';
 
+    /**
+     * Return the supported LPCI lifecycle stages.
+     */
     public static function stages(): array
     {
         return [

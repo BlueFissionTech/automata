@@ -2,6 +2,8 @@
 
 namespace BlueFission\Automata\LLM\Agent\Security;
 
+use BlueFission\Arr;
+use BlueFission\Collections\Collection;
 use BlueFission\Str;
 
 class LpciScanner
@@ -17,13 +19,16 @@ class LpciScanner
         'future sessions',
     ];
 
+    /**
+     * Scan one content surface for LPCI indicators.
+     */
     public function scan(string $content, array $context = []): array
     {
         $findings = [];
         $lower = Str::lower($content);
 
         foreach ($this->dangerTerms as $term) {
-            if (str_contains($lower, $term)) {
+            if (Str::pos($lower, $term) !== false) {
                 $findings[] = new LpciFinding([
                     'status' => $this->statusForTerm($term),
                     'stage' => $this->stageForTerm($term),
@@ -34,7 +39,7 @@ class LpciScanner
             }
         }
 
-        $findings = array_merge($findings, $this->scanEncoded($content, $context));
+        $findings = $this->appendFindings($findings, $this->scanEncoded($content, $context));
 
         if (preg_match('/\b(when|after|if)\b.{0,80}\b(tool|turn|keyword|next)\b/i', $content)) {
             $findings[] = new LpciFinding([
@@ -46,7 +51,7 @@ class LpciScanner
             ]);
         }
 
-        if (!$findings) {
+        if (Arr::make($findings)->count() === 0) {
             $findings[] = new LpciFinding([
                 'status' => LpciFinding::ALLOWED,
                 'message' => 'No LPCI indicators detected.',
@@ -57,6 +62,9 @@ class LpciScanner
         return $findings;
     }
 
+    /**
+     * Sanitize content and return scan findings for audit trails.
+     */
     public function sanitize(string $content, array $context = []): array
     {
         $findings = $this->scan($content, $context);
@@ -79,7 +87,7 @@ class LpciScanner
 
         return [
             'content' => $sanitized,
-            'findings' => array_map(fn (LpciFinding $finding): array => $finding->toArray(), $findings),
+            'findings' => $this->findingsToArray($findings),
             'status' => $this->highestStatus($findings),
         ];
     }
@@ -115,7 +123,7 @@ class LpciScanner
         $findings = [];
         $lower = Str::lower($decoded);
         foreach ($this->dangerTerms as $term) {
-            if (str_contains($lower, $term)) {
+            if (Str::pos($lower, $term) !== false) {
                 $findings[] = new LpciFinding([
                     'status' => LpciFinding::BLOCKED,
                     'stage' => LpciTaxonomy::S5_EVASION_OBFUSCATION,
@@ -157,7 +165,7 @@ class LpciScanner
 
     protected function statusForTerm(string $term): string
     {
-        return in_array($term, [
+        return Arr::has([
             'ignore previous',
             'reveal secret',
             'system prompt',
@@ -166,7 +174,7 @@ class LpciScanner
             'hide this',
             'store this instruction',
             'future sessions',
-        ], true)
+        ], $term, true)
             ? LpciFinding::BLOCKED
             : LpciFinding::WARNING;
     }
@@ -187,5 +195,27 @@ class LpciScanner
             'exfiltrate', 'reveal secret', 'system prompt' => LpciTaxonomy::CATEGORY_EXFILTRATION,
             default => LpciTaxonomy::CATEGORY_SEMANTIC_REFRAME,
         };
+    }
+
+    /**
+     * Append finding lists without raw array merge helpers.
+     */
+    protected function appendFindings(array $left, array $right): array
+    {
+        foreach ($right as $finding) {
+            $left[] = $finding;
+        }
+
+        return $left;
+    }
+
+    /**
+     * Export finding objects as arrays.
+     */
+    protected function findingsToArray(array $findings): array
+    {
+        return (new Collection($findings))
+            ->map(fn (LpciFinding $finding): array => $finding->toArray())
+            ->toArray();
     }
 }

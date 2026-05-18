@@ -7,6 +7,10 @@ use BlueFission\Automata\LLM\Agent\State\ActionAwareness;
 use BlueFission\Automata\LLM\Agent\State\AgentState;
 use BlueFission\Automata\LLM\Agent\State\CallableAgentModule;
 use BlueFission\Automata\LLM\Agent\State\CognitiveController;
+use BlueFission\Automata\Goal\ComparisonOperator;
+use BlueFission\Automata\Goal\Condition;
+use BlueFission\Automata\Goal\GoalManager;
+use BlueFission\Automata\Goal\Initiative;
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
 use PHPUnit\Framework\TestCase;
@@ -48,6 +52,18 @@ class AgentPianoStateTest extends TestCase
         $this->assertSame([], $state->channel(AgentState::SOCIAL));
     }
 
+    public function testAgentStateUsesDevelationStateMachineForBehaviorGates(): void
+    {
+        $state = new AgentState();
+        $state->allowInState(AgentState::STATE_ACTING, AgentState::ACTION_USE_TOOL);
+        $state->denyInState(AgentState::STATE_ACTING, AgentState::ACTION_SPEAK);
+        $state->enter(AgentState::STATE_ACTING);
+
+        $this->assertTrue($state->canPerform(AgentState::ACTION_USE_TOOL));
+        $this->assertFalse($state->canPerform(AgentState::ACTION_SPEAK));
+        $this->assertTrue($state->is(AgentState::STATE_ACTING));
+    }
+
     public function testCognitiveControllerAppliesBottleneckPriorities(): void
     {
         $state = new AgentState();
@@ -64,6 +80,29 @@ class AgentPianoStateTest extends TestCase
         $this->assertArrayHasKey(AgentState::GOALS, $bottleneck);
         $this->assertArrayNotHasKey(AgentState::SOCIAL, $bottleneck);
         $this->assertSame(['intent' => 'assign_builder'], $state->read(AgentState::OUTPUTS, 'controller_decision'));
+    }
+
+    public function testCognitiveControllerUsesAutomataGoalManagerForDeterministicOptions(): void
+    {
+        $state = new AgentState();
+        $initiative = new Initiative(['name' => 'survive', 'weight' => 2]);
+        $initiative->addCondition(new Condition([
+            'name' => 'food',
+            'path' => 'food',
+            'operator' => ComparisonOperator::AT_LEAST,
+            'expected' => 1,
+            'priority' => 3,
+            'action' => 'gather-food',
+        ]));
+        $state->addGoal($initiative);
+
+        $controller = new CognitiveController(goalManager: new GoalManager([$initiative]));
+        $result = $controller->decide($state, null, ['food' => 0]);
+        $decision = $result->decision();
+
+        $this->assertSame('gather-food', $decision['selected']['action']);
+        $this->assertSame('survive', $decision['selected']['goal']);
+        $this->assertGreaterThan(0, $decision['selected']['score']);
     }
 
     public function testActionAwarenessComparesExpectedAndObservedOutcomes(): void

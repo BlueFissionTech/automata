@@ -3,8 +3,8 @@
 namespace BlueFission\Tests\Automata\LLM;
 
 use BlueFission\Automata\LLM\Agent;
-use BlueFission\Automata\LLM\Agent\Orchestration\AgentOrchestrator;
 use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationConfig;
+use BlueFission\Automata\LLM\Agent\Orchestration\Orchestrator;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTraceSpan;
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
@@ -38,7 +38,7 @@ class AgentOrchestrationTest extends TestCase
 {
     public function testSequentialPipelinePassesAccumulatedContext(): void
     {
-        $orchestrator = new AgentOrchestrator([
+        $orchestrator = new Orchestrator([
             'pattern' => OrchestrationConfig::SEQUENTIAL,
             'workers' => [
                 'parse' => fn (array $context): array => ['output' => ['field' => 'amount']],
@@ -50,12 +50,12 @@ class AgentOrchestrationTest extends TestCase
 
         $this->assertSame('sequential', $result['pattern']);
         $this->assertSame('amount:100', $result['output']['format']['formatted']);
-        $this->assertSame(2, count($result['worker_results']));
+        $this->assertCount(2, $result['worker_results']);
     }
 
     public function testFanOutMergeCollectsConflicts(): void
     {
-        $orchestrator = new AgentOrchestrator([
+        $orchestrator = new Orchestrator([
             'pattern' => OrchestrationConfig::FAN_OUT,
             'workers' => [
                 'field_a' => fn (): array => ['output' => ['amount' => 100, 'currency' => 'USD']],
@@ -72,7 +72,7 @@ class AgentOrchestrationTest extends TestCase
 
     public function testHierarchicalPatternEscalatesLowConfidenceWorker(): void
     {
-        $orchestrator = new AgentOrchestrator([
+        $orchestrator = new Orchestrator([
             'pattern' => OrchestrationConfig::HIERARCHICAL,
             'confidence_threshold' => 0.8,
             'supervisor' => fn (): array => ['output' => ['workers' => ['cheap']]],
@@ -96,7 +96,7 @@ class AgentOrchestrationTest extends TestCase
     public function testReflexivePatternStopsWhenVerifierPasses(): void
     {
         $attempt = 0;
-        $orchestrator = new AgentOrchestrator([
+        $orchestrator = new Orchestrator([
             'pattern' => OrchestrationConfig::REFLEXIVE,
             'max_iterations' => 3,
             'producer' => function (array $context) use (&$attempt): array {
@@ -117,6 +117,30 @@ class AgentOrchestrationTest extends TestCase
         $this->assertSame('completed', $result['status']);
         $this->assertSame(2, $result['iterations']);
         $this->assertSame('version-2', $result['output']['draft']);
+    }
+
+    public function testPianoPatternBroadcastsControllerDecisionToWorkers(): void
+    {
+        $orchestrator = new Orchestrator([
+            'pattern' => OrchestrationConfig::PIANO,
+            'supervisor' => fn (): array => ['output' => ['goal' => 'gather evidence'], 'confidence' => 0.9],
+            'workers' => [
+                'speech' => fn (array $context): array => [
+                    'output' => ['spoken' => $context['controller_decision']['goal']],
+                    'confidence' => 0.85,
+                ],
+                'action' => fn (array $context): array => [
+                    'output' => ['action' => $context['controller_decision']['goal']],
+                    'confidence' => 0.8,
+                ],
+            ],
+        ]);
+
+        $result = $orchestrator->run(['state' => ['energy' => 1]])->toArray();
+
+        $this->assertSame('piano', $result['pattern']);
+        $this->assertSame('gather evidence', $result['output']['spoken']);
+        $this->assertSame('gather evidence', $result['output']['action']);
     }
 
     public function testAgentOrchestrationRecordsTraceSpan(): void

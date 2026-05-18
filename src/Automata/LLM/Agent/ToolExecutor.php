@@ -9,6 +9,9 @@ class ToolExecutor
 {
     protected array $failures = [];
 
+    /**
+     * Validate, authorize, execute, and normalize a tool call.
+     */
     public function execute(ToolCatalog $catalog, string $name, mixed $input = null, array $context = []): ToolExecutionResult
     {
         $tool = $catalog->tool($name);
@@ -52,7 +55,7 @@ class ToolExecutor
 
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
             try {
-                Dev::do('automata.llm.agent.tool_executor.before_execute', [
+                Dev::do(AgentHook::PRE_TOOL_USE, [
                     'tool' => $name,
                     'attempt' => $attempt,
                     'input' => $preparedInput,
@@ -69,7 +72,7 @@ class ToolExecutor
                     'definition' => $definition->toArray(),
                 ]);
 
-                Dev::do('automata.llm.agent.tool_executor.after_execute', $result->toArray());
+                Dev::do(AgentHook::POST_TOOL_USE, $result->toArray());
 
                 return $result;
             } catch (Throwable $exception) {
@@ -91,6 +94,9 @@ class ToolExecutor
         ]);
     }
 
+    /**
+     * Reset circuit-breaker failure counts for all tools or one named tool.
+     */
     public function reset(?string $name = null): void
     {
         if ($name === null) {
@@ -101,6 +107,9 @@ class ToolExecutor
         unset($this->failures[$name]);
     }
 
+    /**
+     * Return failure counts used by circuit-breaker checks.
+     */
     public function failures(): array
     {
         return $this->failures;

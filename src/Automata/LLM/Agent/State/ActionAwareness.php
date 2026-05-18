@@ -4,6 +4,9 @@ namespace BlueFission\Automata\LLM\Agent\State;
 
 class ActionAwareness
 {
+    /**
+     * Record what an action is expected to change before it runs.
+     */
     public static function expect(AgentState $state, string $actionId, mixed $expected): void
     {
         $state->write(AgentState::EXPECTATIONS, $actionId, [
@@ -13,6 +16,9 @@ class ActionAwareness
         ]);
     }
 
+    /**
+     * Compare an observed outcome with the prior expectation and log the result.
+     */
     public static function observe(AgentState $state, string $actionId, mixed $observed): array
     {
         $record = $state->read(AgentState::EXPECTATIONS, $actionId, [
