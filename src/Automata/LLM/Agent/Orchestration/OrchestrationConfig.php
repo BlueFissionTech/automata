@@ -2,28 +2,37 @@
 
 namespace BlueFission\Automata\LLM\Agent\Orchestration;
 
+use BlueFission\Automata\LLM\Agent\ToolDefinition;
+
 class OrchestrationConfig
 {
     public const SEQUENTIAL = 'sequential';
     public const FAN_OUT = 'fan_out';
     public const HIERARCHICAL = 'hierarchical';
     public const REFLEXIVE = 'reflexive';
+    public const PIANO = 'piano';
+    public const MERGE_COLLECT_CONFLICTS = 'collect_conflicts';
+    public const MERGE_PREFER_LAST = 'prefer_last';
 
     protected array $config;
 
+    /**
+     * Create orchestration configuration.
+     */
     public function __construct(array $config = [])
     {
-        $this->config = array_replace_recursive([
+        $this->config = ToolDefinition::mergeConfig([
             'pattern' => self::SEQUENTIAL,
             'workers' => [],
             'supervisor' => null,
             'producer' => null,
             'verifier' => null,
             'fallback' => null,
-            'merge_policy' => 'collect_conflicts',
+            'merge_policy' => self::MERGE_COLLECT_CONFLICTS,
             'confidence_threshold' => 0.75,
             'max_iterations' => 3,
             'model_tiers' => [],
+            'patterns' => [],
         ], $config);
     }
 
@@ -70,6 +79,11 @@ class OrchestrationConfig
     public function maxIterations(): int
     {
         return max(1, (int)$this->config['max_iterations']);
+    }
+
+    public function patterns(): array
+    {
+        return $this->config['patterns'] ?? [];
     }
 
     public function toArray(): array

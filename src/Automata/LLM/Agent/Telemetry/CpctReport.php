@@ -3,10 +3,14 @@
 namespace BlueFission\Automata\LLM\Agent\Telemetry;
 
 use BlueFission\Arr;
+use BlueFission\Collections\Collection;
 use BlueFission\DevElation as Dev;
 
 class CpctReport
 {
+    /**
+     * Build CPCT distribution and savings lines from task-scoped traces.
+     */
     public static function build(array $traces, array|CpctPricing $pricing = [], array $config = []): array
     {
         $pricing = $pricing instanceof CpctPricing ? $pricing : new CpctPricing($pricing);
@@ -41,7 +45,7 @@ class CpctReport
                     }
                 }
 
-                if (isset($row['candidate_estimated_cost'])) {
+                if (Arr::hasKey($row, 'candidate_estimated_cost') && $row['candidate_estimated_cost'] !== null) {
                     $tierCandidates++;
                     $current = $row['estimated_cost'] ?? $pricing->costForSpan($row);
                     $candidate = (float)$row['candidate_estimated_cost'];
@@ -56,7 +60,7 @@ class CpctReport
                 'task_id' => $trace->taskId(),
                 'outcome_status' => $status,
                 'totals' => $totals,
-                'over_budget' => isset($config['target_cost']) && $totals['total_cost'] > (float)$config['target_cost'],
+                'over_budget' => Arr::hasKey($config, 'target_cost') && $totals['total_cost'] > (float)$config['target_cost'],
             ];
 
             if ($status === 'completed') {
@@ -64,10 +68,10 @@ class CpctReport
             }
         }
 
-        sort($costs);
+        $costs = (new Collection($costs))->sort()->toArray();
 
         $report = [
-            'task_count' => count($taskRows),
+            'task_count' => Arr::make($taskRows)->count(),
             'status_counts' => $statusCounts,
             'cpct_distribution' => [
                 'p50' => self::percentile($costs, 50),
@@ -94,16 +98,22 @@ class CpctReport
             'tasks' => $taskRows,
         ];
 
+        Dev::do(CpctHook::REPORT_BUILT, $report);
+
         return Dev::apply('automata.llm.agent.telemetry.cpct_report', $report);
     }
 
+    /**
+     * Calculate an interpolated percentile over task costs.
+     */
     protected static function percentile(array $values, int $percentile): float
     {
         if (!$values) {
             return 0.0;
         }
 
-        $index = (($percentile / 100) * (count($values) - 1));
+        $count = Arr::make($values)->count();
+        $index = (($percentile / 100) * ($count - 1));
         $lower = (int)floor($index);
         $upper = (int)ceil($index);
         if ($lower === $upper) {
