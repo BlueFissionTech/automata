@@ -11,6 +11,10 @@ use BlueFission\Automata\LLM\Agent\ToolCatalog;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
 use BlueFission\Automata\LLM\Agent\ToolExecutionResult;
 use BlueFission\Automata\LLM\Agent\ToolExecutor;
+use BlueFission\Automata\LLM\Agent\Governance\GovernanceDecision;
+use BlueFission\Automata\LLM\Agent\Governance\HumanReviewGate;
+use BlueFission\Automata\LLM\Agent\Governance\TaskCallMonitor;
+use BlueFission\Automata\LLM\Agent\Governance\TaskCallPolicy;
 use BlueFission\Automata\LLM\Agent\Telemetry\CpctReport;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTrace;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTraceSpan;
@@ -53,6 +57,8 @@ class Agent implements IDispatcher
     protected int $memorySequence = 0;
     protected ?Orchestrator $orchestrator = null;
     protected AgentSession $session;
+    protected ?TaskCallMonitor $callMonitor = null;
+    protected ?HumanReviewGate $humanReviewGate = null;
 
     public function __construct($llm) {
         $this->__dispatchesConstruct();
@@ -167,6 +173,68 @@ class Agent implements IDispatcher
 
         $trace = $this->taskTrace();
         $definition = $this->toolCatalog->definition($name);
+        if ($this->mcpClient) {
+            $this->mcpClient->useTaskTrace($trace);
+        }
+
+        if ($this->callMonitor) {
+            $this->callMonitor->useTrace($trace);
+        }
+
+        if ($definition?->requiresApproval() && (($context['approved'] ?? false) !== true) && $this->humanReviewGate) {
+            $decision = $this->humanReviewGate->request([
+                'task_id' => $trace->taskId(),
+                'kind' => TaskTraceSpan::KIND_TOOL,
+                'name' => $name,
+                'request' => [
+                    'input' => $input,
+                ],
+                'metadata' => [
+                    'permission' => $definition->permission(),
+                    'definition' => $definition->toArray(),
+                ],
+            ]);
+
+            if ($decision->isSteered()) {
+                $input = $this->steeredToolInput($input, $decision);
+            }
+
+            if (!$decision->allowsExecution()) {
+                $trace->recordTaskCall(
+                    TaskTraceSpan::KIND_REVIEW,
+                    'tool_approval:' . $name,
+                    ['input' => $input],
+                    [
+                        'ok' => false,
+                        'status' => $decision->status(),
+                        'error' => [
+                            'code' => $decision->isPending() ? 'human_review_required' : 'approval_denied',
+                            'message' => $decision->message(),
+                        ],
+                    ],
+                    [
+                        'permission' => $definition->permission(),
+                        'decision' => $decision->toArray(),
+                    ]
+                );
+
+                return ToolExecutionResult::error(
+                    $decision->isPending() ? 'human_review_required' : 'approval_denied',
+                    $decision->message() ?: 'Tool execution was not approved.',
+                    [
+                        'tool' => $name,
+                        'permission' => $definition->permission(),
+                        'decision' => $decision->toArray(),
+                    ],
+                    [],
+                    ToolExecutionResult::STATUS_PERMISSION_DENIED
+                );
+            }
+
+            $context['approved'] = true;
+            $context['approval_decision'] = $decision->toArray();
+        }
+
         $this->emitMemoryEvent(AgentHook::PRE_TOOL_USE, [
             'tool' => $name,
             'input' => $input,
@@ -206,6 +274,12 @@ class Agent implements IDispatcher
     public function startTask(?string $taskId = null, array $metadata = []): TaskTrace
     {
         $this->taskTrace = new TaskTrace($taskId, $metadata);
+        if ($this->callMonitor) {
+            $this->callMonitor->useTrace($this->taskTrace);
+        }
+        if ($this->mcpClient) {
+            $this->mcpClient->useTaskTrace($this->taskTrace);
+        }
         Dev::do('automata.llm.agent.task_started', $this->taskTrace->toArray());
 
         return $this->taskTrace;
@@ -214,6 +288,12 @@ class Agent implements IDispatcher
     public function useTaskTrace(TaskTrace $trace): void
     {
         $this->taskTrace = $trace;
+        if ($this->callMonitor) {
+            $this->callMonitor->useTrace($trace);
+        }
+        if ($this->mcpClient) {
+            $this->mcpClient->useTaskTrace($trace);
+        }
     }
 
     public function taskTrace(): TaskTrace
@@ -237,6 +317,50 @@ class Agent implements IDispatcher
         }
 
         return CpctReport::build($traces, $pricing, $config);
+    }
+
+    /**
+     * Attach a task-call monitor for MCP, RPC, API, and related boundaries.
+     */
+    public function useCallMonitor(TaskCallMonitor $monitor): void
+    {
+        $this->callMonitor = $monitor;
+        $this->callMonitor->useTrace($this->taskTrace());
+        if ($this->humanReviewGate) {
+            $this->callMonitor->useHumanReviewGate($this->humanReviewGate);
+        }
+        if ($this->mcpClient) {
+            $this->mcpClient->useCallMonitor($this->callMonitor);
+        }
+    }
+
+    /**
+     * Return the monitor used for governed external task calls.
+     */
+    public function callMonitor(): TaskCallMonitor
+    {
+        if (!$this->callMonitor) {
+            $this->callMonitor = new TaskCallMonitor($this->taskTrace());
+        }
+
+        return $this->callMonitor;
+    }
+
+    /**
+     * Attach a human approval and steering utility to tools and task calls.
+     */
+    public function useHumanReviewGate(HumanReviewGate $gate, TaskCallPolicy|array|null $policy = null): void
+    {
+        $this->humanReviewGate = $gate;
+        if (!$this->callMonitor || $policy) {
+            $this->callMonitor = new TaskCallMonitor($this->taskTrace(), $policy ?? [], $gate);
+        } else {
+            $this->callMonitor->useHumanReviewGate($gate);
+        }
+
+        if ($this->mcpClient) {
+            $this->mcpClient->useCallMonitor($this->callMonitor);
+        }
     }
 
     /**
@@ -329,6 +453,10 @@ class Agent implements IDispatcher
     public function registerMcpClient(MCPClient $client): void
     {
         $this->mcpClient = $client;
+        $this->mcpClient->useTaskTrace($this->taskTrace());
+        if ($this->callMonitor) {
+            $this->mcpClient->useCallMonitor($this->callMonitor);
+        }
 
         $tools = [
             new MCPRegisterServerTool($client),
@@ -491,6 +619,23 @@ class Agent implements IDispatcher
         }
 
         return (string)$value;
+    }
+
+    /**
+     * Apply human steering changes to the input when the input is array-shaped.
+     */
+    protected function steeredToolInput(mixed $input, GovernanceDecision $decision): mixed
+    {
+        if (Arr::is($input)) {
+            return ToolDefinition::mergeConfig($input, $decision->payload());
+        }
+
+        $payload = $decision->payload();
+        if (Arr::hasKey($payload, 'input')) {
+            return $payload['input'];
+        }
+
+        return $input;
     }
 
     protected function applyMemoryContext(string $input): string

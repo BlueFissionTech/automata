@@ -13,6 +13,10 @@ class TaskTraceSpan
     public const KIND_MODEL = 'model';
     public const KIND_TOOL = 'tool';
     public const KIND_ORCHESTRATION = 'orchestration';
+    public const KIND_MCP = 'mcp';
+    public const KIND_RPC = 'rpc';
+    public const KIND_API = 'api';
+    public const KIND_REVIEW = 'review';
 
     protected array $data = [];
 
