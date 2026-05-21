@@ -103,6 +103,6 @@ abstract class AbstractPattern implements IOrchestrationPattern
             return null;
         }
 
-        return round(array_sum($scores) / Arr::make($scores)->count(), 4);
+        return round(array_sum($scores) / Arr::count($scores), 4);
     }
 }
