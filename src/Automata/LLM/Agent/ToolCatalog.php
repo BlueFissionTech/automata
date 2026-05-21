@@ -123,7 +123,7 @@ class ToolCatalog
             $limited = [];
             $limit = max(0, (int)$filters[self::FILTER_LIMIT]);
             foreach ($definitions as $name => $definition) {
-                if (Arr::make($limited)->count() >= $limit) {
+                if (Arr::count($limited) >= $limit) {
                     break;
                 }
 

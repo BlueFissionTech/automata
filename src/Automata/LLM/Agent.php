@@ -163,7 +163,7 @@ class Agent implements IDispatcher
         }
 
         Dev::do('automata.llm.agent.mcp_registered', [
-            'tool_count' => Arr::make($tools)->count(),
+            'tool_count' => Arr::count($tools),
         ]);
     }
 
