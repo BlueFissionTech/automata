@@ -465,7 +465,7 @@ class Agent implements IDispatcher
             }
         }
 
-        return max(Arr::make($words)->count(), (int)ceil(Str::len($text) / 4));
+        return max(Arr::count($words), (int)ceil(Str::len($text) / 4));
     }
 
     /**
