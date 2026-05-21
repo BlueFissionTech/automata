@@ -51,7 +51,7 @@ class LpciScanner
             ]);
         }
 
-        if (Arr::make($findings)->count() === 0) {
+        if (Arr::count($findings) === 0) {
             $findings[] = new LpciFinding([
                 'status' => LpciFinding::ALLOWED,
                 'message' => 'No LPCI indicators detected.',
