@@ -5,22 +5,22 @@ namespace BlueFission\Automata\LLM\Agent\Governance;
 use BlueFission\Arr;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
 use BlueFission\DevElation as Dev;
+use BlueFission\Obj;
 
-class GovernanceDecision
+class GovernanceDecision extends Obj
 {
     public const STATUS_APPROVED = 'approved';
     public const STATUS_DENIED = 'denied';
     public const STATUS_PENDING = 'pending';
     public const STATUS_STEERED = 'steered';
 
-    protected array $data = [];
-
     /**
      * Store a normalized decision from policy or human review.
      */
     public function __construct(array $data = [])
     {
-        $this->data = ToolDefinition::mergeConfig($this->defaults(), $data);
+        parent::__construct();
+        $this->replaceFields(ToolDefinition::mergeConfig($this->defaults(), $data));
     }
 
     /**
@@ -104,7 +104,7 @@ class GovernanceDecision
      */
     public function with(array $data): self
     {
-        return new self(ToolDefinition::mergeConfig($this->data, $data));
+        return new self(ToolDefinition::mergeConfig(parent::toArray(), $data));
     }
 
     /**
@@ -112,7 +112,7 @@ class GovernanceDecision
      */
     public function status(): string
     {
-        return (string)$this->data['status'];
+        return (string)$this->field('status');
     }
 
     /**
@@ -160,7 +160,7 @@ class GovernanceDecision
      */
     public function message(): string
     {
-        return (string)$this->data['message'];
+        return (string)$this->field('message');
     }
 
     /**
@@ -168,7 +168,7 @@ class GovernanceDecision
      */
     public function payload(): array
     {
-        return Arr::make($this->data['payload'] ?? [])->toArray();
+        return Arr::make($this->field('payload') ?? [])->toArray();
     }
 
     /**
@@ -176,7 +176,7 @@ class GovernanceDecision
      */
     public function toArray(): array
     {
-        return Dev::apply('automata.llm.agent.governance.decision.to_array', $this->data);
+        return Dev::apply('automata.llm.agent.governance.decision.to_array', parent::toArray());
     }
 
     /**
@@ -191,5 +191,15 @@ class GovernanceDecision
             'review_id' => null,
             'reviewer' => null,
         ];
+    }
+
+    /**
+     * Replace Obj-backed decision fields without dropping false, null, or empty values.
+     */
+    protected function replaceFields(array $data): void
+    {
+        foreach ($data as $key => $value) {
+            $this->_data[$key] = $value;
+        }
     }
 }

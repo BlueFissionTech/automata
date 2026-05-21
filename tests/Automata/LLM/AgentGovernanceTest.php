@@ -17,6 +17,7 @@ use BlueFission\Automata\LLM\MCP\MCPClient;
 use BlueFission\Automata\LLM\Reply;
 use BlueFission\Automata\LLM\Tools\BaseTool;
 use BlueFission\Net\HTTP;
+use BlueFission\Obj;
 use PHPUnit\Framework\TestCase;
 
 class GovernanceClientStub implements IClient
@@ -169,5 +170,15 @@ class AgentGovernanceTest extends TestCase
         $this->assertContains(AgentHook::POST_TASK_CALL, AgentHook::taskCalls());
         $this->assertContains(AgentHook::HUMAN_REVIEW_REQUEST, AgentHook::all());
         $this->assertContains(AgentHook::HUMAN_REVIEW_DECISION, AgentHook::all());
+    }
+
+    public function testGovernanceDecisionUsesObjectFields(): void
+    {
+        $decision = GovernanceDecision::steered(['value' => 'changed'], 'reviewed');
+
+        $this->assertInstanceOf(Obj::class, $decision);
+        $this->assertSame(GovernanceDecision::STATUS_STEERED, $decision->field('status'));
+        $this->assertSame('reviewed', $decision->message());
+        $this->assertSame(['value' => 'changed'], $decision->payload());
     }
 }

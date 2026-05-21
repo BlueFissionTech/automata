@@ -14,6 +14,7 @@ use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
 use BlueFission\Automata\LLM\Tools\BaseTool;
 use BlueFission\Net\HTTP;
+use BlueFission\Obj;
 use PHPUnit\Framework\TestCase;
 
 class CpctClientStub implements IClient
@@ -176,11 +177,27 @@ class AgentCpctTelemetryTest extends TestCase
         ]);
 
         $this->assertInstanceOf(IDispatcher::class, $trace);
+        $this->assertInstanceOf(Obj::class, $trace);
         $this->assertCount(2, $trace->spans());
         $this->assertSame(25, $report['cache_roi']['cache_hit_tokens']);
         $this->assertSame(1, $report['batch_utilization']['batched_spans']);
         $this->assertSame(1, $report['tier_routing']['candidate_spans']);
         $this->assertSame(0.15, $report['tier_routing']['estimated_savings']);
+    }
+
+    public function testTaskTraceSpanUsesObjectFields(): void
+    {
+        $span = new TaskTraceSpan([
+            'task_id' => 'task-object',
+            'name' => 'model-call',
+            'batchable' => false,
+            'metadata' => ['source' => 'test'],
+        ]);
+
+        $this->assertInstanceOf(Obj::class, $span);
+        $this->assertSame('task-object', $span->get('task_id'));
+        $this->assertFalse($span->get('batchable'));
+        $this->assertSame('model-call', $span->field('name'));
     }
 
     public function testCpctPricingIsConfigurable(): void

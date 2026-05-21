@@ -5,8 +5,9 @@ namespace BlueFission\Automata\LLM\Agent;
 use BlueFission\Arr;
 use BlueFission\DevElation as Dev;
 use BlueFission\Net\HTTP;
+use BlueFission\Obj;
 
-class ToolExecutionResult
+class ToolExecutionResult extends Obj
 {
     public const STATUS_SUCCESS = 'success';
     public const STATUS_ERROR = 'error';
@@ -15,20 +16,18 @@ class ToolExecutionResult
     public const STATUS_CIRCUIT_OPEN = 'circuit_open';
     public const STATUS_UNAVAILABLE = 'unavailable';
 
-    protected string $status;
-    protected mixed $payload;
-    protected ?array $error;
-    protected array $meta;
-
     /**
      * Store normalized tool execution state, payload, error, and metadata.
      */
     public function __construct(string $status, mixed $payload = null, ?array $error = null, array $meta = [])
     {
-        $this->status = $status;
-        $this->payload = $payload;
-        $this->error = $error;
-        $this->meta = $meta;
+        parent::__construct();
+        $this->replaceFields([
+            'status' => $status,
+            'payload' => $payload,
+            'error' => $error,
+            'meta' => $meta,
+        ]);
     }
 
     /**
@@ -64,7 +63,7 @@ class ToolExecutionResult
      */
     public function ok(): bool
     {
-        return $this->status === self::STATUS_SUCCESS;
+        return $this->status() === self::STATUS_SUCCESS;
     }
 
     /**
@@ -72,7 +71,7 @@ class ToolExecutionResult
      */
     public function status(): string
     {
-        return $this->status;
+        return (string)$this->field('status');
     }
 
     /**
@@ -80,7 +79,7 @@ class ToolExecutionResult
      */
     public function payload(): mixed
     {
-        return $this->payload;
+        return $this->field('payload');
     }
 
     /**
@@ -88,7 +87,9 @@ class ToolExecutionResult
      */
     public function errorDetails(): ?array
     {
-        return $this->error;
+        $error = $this->field('error');
+
+        return Arr::is($error) ? $error : null;
     }
 
     /**
@@ -96,7 +97,7 @@ class ToolExecutionResult
      */
     public function meta(): array
     {
-        return $this->meta;
+        return Arr::make($this->field('meta') ?? [])->toArray();
     }
 
     /**
@@ -105,11 +106,11 @@ class ToolExecutionResult
     public function toArray(): array
     {
         $result = [
-            'status' => $this->status,
+            'status' => $this->status(),
             'ok' => $this->ok(),
-            'payload' => $this->payload,
-            'error' => $this->error,
-            'meta' => $this->meta,
+            'payload' => $this->payload(),
+            'error' => $this->errorDetails(),
+            'meta' => $this->meta(),
         ];
 
         return Dev::apply('automata.llm.agent.tool_execution_result.to_array', $result);
@@ -145,5 +146,15 @@ class ToolExecutionResult
         }
 
         return self::success(['output' => (string)$output], $meta);
+    }
+
+    /**
+     * Replace Obj-backed result fields without dropping null or empty payloads.
+     */
+    protected function replaceFields(array $data): void
+    {
+        foreach ($data as $key => $value) {
+            $this->_data[$key] = $value;
+        }
     }
 }

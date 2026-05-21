@@ -5,9 +5,10 @@ namespace BlueFission\Automata\LLM\Agent\Telemetry;
 use BlueFission\Arr;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
 use BlueFission\DevElation as Dev;
+use BlueFission\Obj;
 use BlueFission\Str;
 
-class TaskTraceSpan
+class TaskTraceSpan extends Obj
 {
     public const KIND_AGENT = 'agent';
     public const KIND_MODEL = 'model';
@@ -18,20 +19,22 @@ class TaskTraceSpan
     public const KIND_API = 'api';
     public const KIND_REVIEW = 'review';
 
-    protected array $data = [];
-
     /**
      * Create a span with default CPCT fields.
      */
     public function __construct(array $data = [])
     {
-        $this->data = ToolDefinition::mergeConfig($this->defaults(), $data);
-        if (!$this->data['span_id']) {
-            $this->data['span_id'] = self::id('span');
+        parent::__construct();
+
+        $data = ToolDefinition::mergeConfig($this->defaults(), $data);
+        if (!$data['span_id']) {
+            $data['span_id'] = self::id('span');
         }
-        if (!$this->data['started_at']) {
-            $this->data['started_at'] = microtime(true);
+        if (!$data['started_at']) {
+            $data['started_at'] = microtime(true);
         }
+
+        $this->replaceFields($data);
     }
 
     /**
@@ -74,10 +77,11 @@ class TaskTraceSpan
     public function finish(string $status = 'completed', array $metrics = []): self
     {
         $endedAt = $metrics['ended_at'] ?? microtime(true);
-        $this->data = ToolDefinition::mergeConfig($this->data, $metrics);
-        $this->data['status'] = $status;
-        $this->data['ended_at'] = $endedAt;
-        $this->data['duration_ms'] = max(0, (int)round(((float)$endedAt - (float)$this->data['started_at']) * 1000));
+        $data = ToolDefinition::mergeConfig(parent::toArray(), $metrics);
+        $data['status'] = $status;
+        $data['ended_at'] = $endedAt;
+        $data['duration_ms'] = max(0, (int)round(((float)$endedAt - (float)$data['started_at']) * 1000));
+        $this->replaceFields($data);
 
         Dev::do(CpctHook::SPAN_FINISHED, $this->toArray());
 
@@ -103,7 +107,7 @@ class TaskTraceSpan
      */
     public function set(string $key, mixed $value): self
     {
-        $this->data[$key] = $value;
+        $this->_data[$key] = $value;
         return $this;
     }
 
@@ -112,7 +116,7 @@ class TaskTraceSpan
      */
     public function get(string $key, mixed $default = null): mixed
     {
-        return Arr::hasKey($this->data, $key) ? $this->data[$key] : $default;
+        return Arr::hasKey(parent::toArray(), $key) ? $this->field($key) : $default;
     }
 
     /**
@@ -120,7 +124,7 @@ class TaskTraceSpan
      */
     public function toArray(): array
     {
-        return Dev::apply('automata.llm.agent.telemetry.span.to_array', $this->data);
+        return Dev::apply('automata.llm.agent.telemetry.span.to_array', parent::toArray());
     }
 
     /**
@@ -159,5 +163,15 @@ class TaskTraceSpan
             'metadata' => [],
             'error' => null,
         ];
+    }
+
+    /**
+     * Replace Obj-backed span fields without losing false, null, or empty values.
+     */
+    protected function replaceFields(array $data): void
+    {
+        foreach ($data as $key => $value) {
+            $this->_data[$key] = $value;
+        }
     }
 }
