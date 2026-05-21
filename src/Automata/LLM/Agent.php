@@ -1,9 +1,15 @@
 <?php
 namespace BlueFission\Automata\LLM;
 
+use BlueFission\Arr;
+use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Behavioral\Dispatches;
 use BlueFission\Automata\LLM\Tools\ITool;
+use BlueFission\Automata\LLM\Agent\ToolCatalog;
+use BlueFission\Automata\LLM\Agent\ToolDefinition;
+use BlueFission\Automata\LLM\Agent\ToolExecutionResult;
+use BlueFission\Automata\LLM\Agent\ToolExecutor;
 use BlueFission\Automata\LLM\MCP\MCPClient;
 use BlueFission\Automata\LLM\MCP\Tools\MCPDiscoveryTool;
 use BlueFission\Automata\LLM\MCP\Tools\MCPResourceTool;
@@ -25,11 +31,15 @@ class Agent implements IDispatcher
     protected $fillIn;
     protected $replacements = [];
     protected ?MCPClient $mcpClient = null;
+    protected ToolCatalog $toolCatalog;
+    protected ToolExecutor $toolExecutor;
 
     public function __construct($llm) {
         $this->__dispatchesConstruct();
 
         $this->llm = $llm;
+        $this->toolCatalog = new ToolCatalog();
+        $this->toolExecutor = new ToolExecutor();
         $this->template = "Answer the following question as best you can.
         {#var tools = [{toolNames}]}
         {#var isComplete = 'no'}
@@ -64,16 +74,78 @@ class Agent implements IDispatcher
             Event::RECEIVED,
             Event::CHANGE,
         ]);
+
+        Dev::do(AgentHook::SESSION_START, [
+            'agent' => static::class,
+        ]);
     }
 
+    /**
+     * Replace the prompt template used by the agent loop.
+     */
     public function setTemplate(string $template) {
         $this->template = $template;
     }
 
-    public function registerTool(string $name, ITool $tool) {
+    /**
+     * Register an executable tool and its model-facing contract.
+     */
+    public function registerTool(string $name, ITool $tool, ToolDefinition|array|null $definition = null) {
         $this->tools[$name] = $tool;
+        $this->toolCatalog->register($name, $tool, $definition);
+        Dev::do('automata.llm.agent.tool_registered', [
+            'name' => $name,
+            'definition' => $this->toolCatalog->definition($name)?->toArray(),
+        ]);
     }
 
+    /**
+     * Register or replace a tool definition without replacing the executable tool.
+     */
+    public function registerToolDefinition(string $name, ToolDefinition|array $definition): void
+    {
+        $this->toolCatalog->define($name, $definition);
+        Dev::do('automata.llm.agent.tool_definition_registered', [
+            'name' => $name,
+            'definition' => $this->toolCatalog->definition($name)?->toArray(),
+        ]);
+    }
+
+    /**
+     * Retrieve a named tool definition.
+     */
+    public function toolDefinition(string $name): ?ToolDefinition
+    {
+        return $this->toolCatalog->definition($name);
+    }
+
+    /**
+     * Retrieve tool definitions after applying catalog filters.
+     */
+    public function toolDefinitions(array $filters = []): array
+    {
+        return $this->toolCatalog->toArray($filters);
+    }
+
+    /**
+     * Render filtered tool definitions for prompt context.
+     */
+    public function toolPrompt(array $filters = []): string
+    {
+        return $this->toolCatalog->promptList($filters);
+    }
+
+    /**
+     * Call a tool through validation, permission, retry, and circuit-breaker handling.
+     */
+    public function callTool(string $name, mixed $input = null, array $context = []): ToolExecutionResult
+    {
+        return $this->toolExecutor->execute($this->toolCatalog, $name, $input, $context);
+    }
+
+    /**
+     * Register MCP tools behind the same tool contract boundary.
+     */
     public function registerMcpClient(MCPClient $client): void
     {
         $this->mcpClient = $client;
@@ -91,31 +163,57 @@ class Agent implements IDispatcher
         }
 
         Dev::do('automata.llm.agent.mcp_registered', [
-            'tool_count' => count($tools),
+            'tool_count' => Arr::count($tools),
         ]);
     }
 
+    /**
+     * Run the prompt loop with registered tool names and prompt contracts.
+     */
     public function execute($input) {
-        $toolList = '';
-        foreach ($this->tools as $name => $tool) {
-            $toolList .= "$name: {$tool->description()}\n";
-        }
-
-        $toolNames = "'".implode("', '", array_keys($this->tools))."'";
+        $toolList = $this->toolCatalog->promptList();
+        $toolNames = $this->formatToolNames($this->toolCatalog->names());
 
         $this->replacements['toolNames'] = $toolNames;
         $this->replacements['toolsList'] = $toolList;
         $this->replacements['input'] = $input;
 
+        Dev::do(AgentHook::USER_PROMPT_SUBMIT, [
+            'input' => $input,
+            'tool_names' => $this->toolCatalog->names(),
+        ]);
+
         // Create a prompt using the template
-        $patterns = array_map(function($pattern) {
-            return '{' . $pattern . '}';
-        }, array_keys($this->replacements));
+        $patterns = [];
+        foreach (Arr::keys($this->replacements) as $pattern) {
+            $patterns[] = '{' . $pattern . '}';
+        }
 
         $prompt = str_replace($patterns, $this->replacements, $this->template);
 
         $this->fillIn->setPrompt($prompt);
 
-        return $this->fillIn->run();
+        $reply = $this->fillIn->run();
+
+        Dev::do(AgentHook::TURN_STOP, [
+            'input' => $input,
+            'reply' => $reply,
+        ]);
+
+        return $reply;
+    }
+
+    /**
+     * Render tool names in the grammar format expected by FillIn.
+     */
+    protected function formatToolNames(array $names): string
+    {
+        $output = '';
+        foreach ($names as $name) {
+            $quoted = "'" . $name . "'";
+            $output .= $output === '' ? $quoted : ', ' . $quoted;
+        }
+
+        return $output;
     }
 }
