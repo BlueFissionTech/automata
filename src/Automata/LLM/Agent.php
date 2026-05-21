@@ -566,7 +566,7 @@ class Agent implements IDispatcher
         }
 
         Dev::do('automata.llm.agent.mcp_registered', [
-            'tool_count' => Arr::make($tools)->count(),
+            'tool_count' => Arr::count($tools),
         ]);
     }
 
@@ -685,7 +685,7 @@ class Agent implements IDispatcher
             }
         }
 
-        return max(Arr::make($words)->count(), (int)ceil(Str::len($text) / 4));
+        return max(Arr::count($words), (int)ceil(Str::len($text) / 4));
     }
 
     /**

@@ -75,7 +75,7 @@ class OrchestratedAgent
     protected function scopedContext(array $context, array $priorResults): array
     {
         $included = Arr::make($this->scope['include'] ?? [])->toArray();
-        $scoped = Arr::make($included)->count() === 0
+        $scoped = Arr::count($included) === 0
             ? $context
             : $this->onlyContext($context, $included);
 

@@ -511,12 +511,12 @@ class ToolDefinition implements IConfigurable, IDispatcher
 
             $properties = Arr::make($schema['properties'] ?? [])->toArray();
             $required = Arr::make($schema['required'] ?? [])->toArray();
-            if (Arr::make($properties)->count() === 1) {
+            if (Arr::count($properties) === 1) {
                 $field = Arr::keys($properties)[0] ?? null;
                 return [$field => (string)$input];
             }
 
-            if (Arr::make($required)->count() === 1) {
+            if (Arr::count($required) === 1) {
                 return [$required[0] => (string)$input];
             }
         }

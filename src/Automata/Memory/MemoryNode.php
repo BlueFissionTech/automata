@@ -55,7 +55,7 @@ class MemoryNode extends GraphNode
         $currentData = $this->context->all();
         $otherData = $other->all();
 
-        if (Arr::make($currentData)->count() === 0 && Arr::make($otherData)->count() === 0) {
+        if (Arr::count($currentData) === 0 && Arr::count($otherData) === 0) {
             return 1.0;
         }
 
@@ -80,17 +80,17 @@ class MemoryNode extends GraphNode
         $intersection = $this->intersection($currentData, $otherData);
         $union = $this->union($currentData, $otherData);
 
-        return Arr::make($union)->count() > 0 ? Arr::make($intersection)->count() / Arr::make($union)->count() : 0.0;
+        return Arr::count($union) > 0 ? Arr::count($intersection) / Arr::count($union) : 0.0;
     }
 
     private function isVector(array $data): bool
     {
-        return Arr::make($data)->count() > 0 && Num::is($this->firstValue($data));
+        return Arr::count($data) > 0 && Num::is($this->firstValue($data));
     }
 
     private function isScalarString(array $data): bool
     {
-        return Arr::make($data)->count() > 0 && Str::is($this->firstValue($data));
+        return Arr::count($data) > 0 && Str::is($this->firstValue($data));
     }
 
     private function cosineSimilarity(array $vec1, array $vec2): float

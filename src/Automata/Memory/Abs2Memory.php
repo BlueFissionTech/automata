@@ -117,7 +117,7 @@ class Abs2Memory extends Graph implements IWorkingMemory
         $related = [];
 
         foreach ($edges as $adj => $_weight) {
-            if (Arr::make($related)->count() >= $max) {
+            if (Arr::count($related) >= $max) {
                 break;
             }
 
