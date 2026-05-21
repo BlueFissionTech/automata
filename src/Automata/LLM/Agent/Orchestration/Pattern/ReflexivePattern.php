@@ -50,7 +50,7 @@ class ReflexivePattern extends AbstractPattern
             'pattern' => $this->name(),
             'output' => $output,
             'worker_results' => $workerResults,
-            'iterations' => (int)ceil(Arr::make($workerResults)->count() / 2),
+            'iterations' => (int)ceil(Arr::count($workerResults) / 2),
             'confidence' => $this->averageConfidence($workerResults),
             'metadata' => ['passed' => $passed, 'feedback' => $feedback],
         ]);

@@ -71,7 +71,7 @@ class CpctReport
         $costs = (new Collection($costs))->sort()->toArray();
 
         $report = [
-            'task_count' => Arr::make($taskRows)->count(),
+            'task_count' => Arr::count($taskRows),
             'status_counts' => $statusCounts,
             'cpct_distribution' => [
                 'p50' => self::percentile($costs, 50),
@@ -112,7 +112,7 @@ class CpctReport
             return 0.0;
         }
 
-        $count = Arr::make($values)->count();
+        $count = Arr::count($values);
         $index = (($percentile / 100) * ($count - 1));
         $lower = (int)floor($index);
         $upper = (int)ceil($index);
