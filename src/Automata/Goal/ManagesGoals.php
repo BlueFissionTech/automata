@@ -40,13 +40,13 @@ trait ManagesGoals
     {
         $this->goals[$this->goalKey($goal)] = $goal;
 
-        while (Arr::make($this->goals)->count() > $this->maxGoals) {
+        while (Arr::count($this->goals) > $this->maxGoals) {
             $this->removeOldestGoal();
         }
 
         Dev::do('goal.manager.goal_added', [
             'goal' => $goal,
-            'count' => Arr::make($this->goals)->count(),
+            'count' => Arr::count($this->goals),
         ]);
 
         return $this;
@@ -140,7 +140,7 @@ trait ManagesGoals
             }
         }
 
-        if (Arr::make($updates)->count() > 0) {
+        if (Arr::count($updates) > 0) {
             Dev::do('goal.manager.criteria_updated', ['updates' => $updates]);
         }
 
@@ -235,7 +235,7 @@ trait ManagesGoals
             }
         }
 
-        if (Arr::make($options)->count() === 0) {
+        if (Arr::count($options) === 0) {
             $options[] = GoalDecision::option(IGoalManager::DEFAULT_ACTION, 0.0, [
                 'source' => 'fallback',
             ]);

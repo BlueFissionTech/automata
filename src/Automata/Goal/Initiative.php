@@ -157,7 +157,7 @@ class Initiative extends InitiativeObject implements IProjectionBuilder
             }
 
             $tags = $criterion instanceof InitiativeObject ? $criterion->field('tags') : null;
-            if (!Arr::is($tags) || Arr::make($tags)->count() === 0) {
+            if (!Arr::is($tags) || Arr::count($tags) === 0) {
                 $tags = [$this->criterionKey($criterion)];
             }
 
@@ -178,7 +178,7 @@ class Initiative extends InitiativeObject implements IProjectionBuilder
 
         Dev::do('goal.initiative.projections_built', [
             'initiative' => $this,
-            'count' => Arr::make($projections)->count(),
+            'count' => Arr::count($projections),
         ]);
 
         return $projections;
