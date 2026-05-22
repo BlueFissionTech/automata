@@ -21,6 +21,9 @@ use BlueFission\Automata\LLM\Agent\Telemetry\TaskTraceSpan;
 use BlueFission\Automata\LLM\Agent\Memory\IMemoryEventStore;
 use BlueFission\Automata\LLM\Agent\Memory\IMemoryInjector;
 use BlueFission\Automata\LLM\Agent\Memory\MemoryEvent;
+use BlueFission\Automata\LLM\Agent\Orchestration\Orchestrator;
+use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationConfig;
+use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationResult;
 use BlueFission\Automata\Memory\IWorkingMemory;
 use BlueFission\Automata\LLM\MCP\MCPClient;
 use BlueFission\Automata\LLM\MCP\Tools\MCPDiscoveryTool;
@@ -52,6 +55,7 @@ class Agent implements IDispatcher
     protected ?IMemoryInjector $memoryInjector = null;
     protected ?string $memorySessionId = null;
     protected int $memorySequence = 0;
+    protected ?Orchestrator $orchestrator = null;
     protected AgentSession $session;
     protected ?TaskCallMonitor $callMonitor = null;
     protected ?HumanReviewGate $humanReviewGate = null;
@@ -421,6 +425,26 @@ class Agent implements IDispatcher
     public function stopMemorySession(array $payload = []): void
     {
         $this->emitMemoryEvent(AgentHook::TURN_STOP, $payload);
+    }
+
+    /**
+     * Configure the orchestration coordinator.
+     */
+    public function configureOrchestration(OrchestrationConfig|array $config): void
+    {
+        $this->orchestrator = new Orchestrator($config);
+    }
+
+    /**
+     * Run the configured orchestration pattern with the current task trace.
+     */
+    public function orchestrate(array $input = []): OrchestrationResult
+    {
+        if (!$this->orchestrator) {
+            $this->configureOrchestration([]);
+        }
+
+        return $this->orchestrator->run($input, $this->taskTrace());
     }
 
     /**

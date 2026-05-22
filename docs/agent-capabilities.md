@@ -75,6 +75,14 @@ The monitor emits lifecycle hooks, applies policy, asks for review when configur
 
 Lifecycle memory logging is intentionally tied to `AgentHook` names rather than memory-specific hook constants. Memory event stores persist hook activity, but the lifecycle belongs to the agent. `InMemoryEventStore` is process-local for tests and short runs. `FileMemoryEventStore` uses DevElation `Disk` storage through `StorageMemoryEventStore`, so applications can replace the storage adapter with another DevElation storage implementation without overriding file and JSON logic.
 
+## Orchestration
+
+`Orchestrator` coordinates multi-agent or multi-worker flows. Patterns live under `Agent\Orchestration\Pattern` and implement `IOrchestrationPattern`, so applications can inject new orchestration strategies without modifying the coordinator. Built-in patterns include sequential, fan-out, hierarchical, reflexive, and PIANO-style controller broadcast.
+
+PIANO is modeled as orchestration because the cognitive controller produces a bottlenecked decision and broadcasts it to worker channels such as speech, action, state, and memory. Every pattern can receive session scope, task traces, working memory, and Agent hook events through the same Agent surfaces.
+
+`OrchestratedAgent` lets any orchestration run as a black-box worker inside a parent orchestration. This is useful for hierarchical societies: a PIANO society can include a villager worker whose inner mind is itself a hierarchical lead-plus-counselor orchestration. The wrapper accepts a scoped context allowlist, so the child orchestration only sees the perceptions and shared context granted to that agent rather than the full parent society state. Parent merge logic preserves black-box output under the worker name instead of flattening the inner workers into the larger society output.
+
 ## Integration Notes
 
 Prefer DevElation helpers for value, array, collection, and configuration behavior when extending these classes. Keep tool implementations thin and reusable; put selection guidance in `ToolDefinition`, execution behavior in the tool, and lifecycle side effects behind hooks.
