@@ -3,6 +3,7 @@ namespace BlueFission\Automata\LLM;
 
 use BlueFission\Arr;
 use BlueFission\Automata\LLM\Agent\AgentHook;
+use BlueFission\Automata\LLM\Agent\AgentSession;
 use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Behavioral\Dispatches;
 use BlueFission\Automata\LLM\Tools\ITool;
@@ -17,6 +18,10 @@ use BlueFission\Automata\LLM\Agent\Governance\TaskCallPolicy;
 use BlueFission\Automata\LLM\Agent\Telemetry\CpctReport;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTrace;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTraceSpan;
+use BlueFission\Automata\LLM\Agent\Memory\IMemoryEventStore;
+use BlueFission\Automata\LLM\Agent\Memory\IMemoryInjector;
+use BlueFission\Automata\LLM\Agent\Memory\MemoryEvent;
+use BlueFission\Automata\Memory\IWorkingMemory;
 use BlueFission\Automata\LLM\MCP\MCPClient;
 use BlueFission\Automata\LLM\MCP\Tools\MCPDiscoveryTool;
 use BlueFission\Automata\LLM\MCP\Tools\MCPResourceTool;
@@ -43,6 +48,11 @@ class Agent implements IDispatcher
     protected ToolCatalog $toolCatalog;
     protected ToolExecutor $toolExecutor;
     protected ?TaskTrace $taskTrace = null;
+    protected ?IMemoryEventStore $memoryEventStore = null;
+    protected ?IMemoryInjector $memoryInjector = null;
+    protected ?string $memorySessionId = null;
+    protected int $memorySequence = 0;
+    protected AgentSession $session;
     protected ?TaskCallMonitor $callMonitor = null;
     protected ?HumanReviewGate $humanReviewGate = null;
 
@@ -50,6 +60,7 @@ class Agent implements IDispatcher
         $this->__dispatchesConstruct();
 
         $this->llm = $llm;
+        $this->session = new AgentSession(null, ['client' => 'automata']);
         $this->toolCatalog = new ToolCatalog();
         $this->toolExecutor = new ToolExecutor();
         $this->template = "Answer the following question as best you can.
@@ -220,6 +231,12 @@ class Agent implements IDispatcher
             $context['approval_decision'] = $decision->toArray();
         }
 
+        $this->emitMemoryEvent(AgentHook::PRE_TOOL_USE, [
+            'tool' => $name,
+            'input' => $input,
+            'definition' => $definition?->toArray(),
+        ]);
+
         $span = $trace->startSpan(TaskTraceSpan::KIND_TOOL, $name, [
             'permission' => $definition?->permission(),
             'parallel_safe' => $definition?->parallelSafe(),
@@ -241,6 +258,11 @@ class Agent implements IDispatcher
                 'definition' => $definition?->toArray(),
             ],
         ]));
+
+        $this->emitMemoryEvent(AgentHook::POST_TOOL_USE, [
+            'tool' => $name,
+            'result' => $result->toArray(),
+        ]);
 
         return $result;
     }
@@ -338,6 +360,70 @@ class Agent implements IDispatcher
     }
 
     /**
+     * Attach an externally managed session scope.
+     */
+    public function useSession(AgentSession $session): void
+    {
+        $this->session = $session;
+        $this->memorySessionId = $session->id();
+    }
+
+    /**
+     * Return the current session scope.
+     */
+    public function session(): AgentSession
+    {
+        return $this->session;
+    }
+
+    /**
+     * Attach deterministic memory logging and optional context injection to the agent session.
+     */
+    public function enableMemory(IMemoryEventStore $store, ?IMemoryInjector $injector = null, ?string $sessionId = null, ?IWorkingMemory $workingMemory = null): void
+    {
+        $this->memoryEventStore = $store;
+        $this->memoryInjector = $injector;
+        $this->session = new AgentSession($sessionId, $this->session->context(['client' => 'automata']), $workingMemory);
+        $this->memorySessionId = $this->session->id();
+        $this->memorySequence = 0;
+
+        $this->emitMemoryEvent(AgentHook::SESSION_START, [
+            'session_context' => $this->memoryInjector ? $this->memoryInjector->sessionContext($this->memoryContext()) : '',
+        ]);
+    }
+
+    /**
+     * Disable memory logging and injection for the current agent.
+     */
+    public function disableMemory(): void
+    {
+        $this->memoryEventStore = null;
+        $this->memoryInjector = null;
+        $this->memorySessionId = null;
+        $this->memorySequence = 0;
+    }
+
+    /**
+     * Return stored memory lifecycle events for the current or requested session.
+     */
+    public function memoryEvents(?string $sessionId = null): array
+    {
+        if (!$this->memoryEventStore) {
+            return [];
+        }
+
+        return $this->memoryEventStore->events($sessionId ?? $this->memorySessionId);
+    }
+
+    /**
+     * Emit the terminal lifecycle event for memory-aware sessions.
+     */
+    public function stopMemorySession(array $payload = []): void
+    {
+        $this->emitMemoryEvent(AgentHook::TURN_STOP, $payload);
+    }
+
+    /**
      * Register MCP tools behind the same tool contract boundary.
      */
     public function registerMcpClient(MCPClient $client): void
@@ -370,6 +456,11 @@ class Agent implements IDispatcher
      */
     public function execute($input) {
         $trace = $this->taskTrace();
+        $input = $this->applyMemoryContext((string)$input);
+        $this->emitMemoryEvent(AgentHook::USER_PROMPT_SUBMIT, [
+            'prompt' => $input,
+        ]);
+
         $span = $trace->startSpan(TaskTraceSpan::KIND_AGENT, 'execute', [
             'input_token_estimate' => $this->estimateTokens((string)$input),
         ]);
@@ -415,6 +506,14 @@ class Agent implements IDispatcher
         ]);
 
         return $result;
+    }
+
+    /**
+     * Return the FillIn output after execution.
+     */
+    public function output(): string
+    {
+        return $this->fillIn->output();
     }
 
     /**
@@ -513,5 +612,64 @@ class Agent implements IDispatcher
         }
 
         return $input;
+    }
+
+    protected function applyMemoryContext(string $input): string
+    {
+        if (!$this->memoryInjector) {
+            return $input;
+        }
+
+        $sessionContext = Str::trim($this->memoryInjector->sessionContext($this->memoryContext()));
+        $promptContext = Str::trim($this->memoryInjector->promptContext($input, $this->memoryContext()));
+        $parts = [];
+
+        if ($sessionContext !== '') {
+            $parts[] = "Memory context:\n" . $sessionContext;
+        }
+
+        $parts[] = $input;
+
+        if ($promptContext !== '') {
+            $parts[] = "Relevant memory:\n" . $promptContext;
+        }
+
+        return $this->joinStrings($parts, "\n\n");
+    }
+
+    protected function emitMemoryEvent(string $event, array $payload = []): void
+    {
+        if (!$this->memoryEventStore || !$this->memorySessionId) {
+            return;
+        }
+
+        $memoryEvent = new MemoryEvent($event, $payload, $this->memoryContext([
+            'sequence' => ++$this->memorySequence,
+        ]));
+
+        $this->memoryEventStore->append($memoryEvent);
+        Dev::do('automata.llm.agent.memory_event', $memoryEvent->toArray());
+    }
+
+    protected function memoryContext(array $extra = []): array
+    {
+        return $this->session->context(ToolDefinition::mergeConfig([
+            'session_id' => $this->memorySessionId,
+            'task_id' => $this->taskTrace()->taskId(),
+            'client' => 'automata',
+        ], $extra));
+    }
+
+    /**
+     * Join strings without depending on raw array helpers.
+     */
+    protected function joinStrings(array $values, string $glue): string
+    {
+        $output = '';
+        foreach ($values as $value) {
+            $output .= $output === '' ? (string)$value : $glue . (string)$value;
+        }
+
+        return $output;
     }
 }

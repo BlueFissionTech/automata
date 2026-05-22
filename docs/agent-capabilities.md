@@ -69,6 +69,12 @@ The monitor emits lifecycle hooks, applies policy, asks for review when configur
 
 `MCPClient` can use the same monitor, so MCP discovery, resource reads, raw requests, and tool calls are governed and observed instead of bypassing the agent's task accounting. Critical local tools can use the same human gate before `ToolExecutor` runs them.
 
+## Session Scope And Memory
+
+`AgentSession` is the boundary for shared scope. An agent can keep its own prompt context, while the session decides what context, permissions, tools, uploaded inputs, and working memory are available to one or more agents. The session can attach an Automata `IWorkingMemory` implementation, including `Abs2Memory`, so durable memory and Holoscene-compatible working-memory implementations are reached through existing Automata contracts instead of a separate memory silo.
+
+Lifecycle memory logging is intentionally tied to `AgentHook` names rather than memory-specific hook constants. Memory event stores persist hook activity, but the lifecycle belongs to the agent. `InMemoryEventStore` is process-local for tests and short runs. `FileMemoryEventStore` uses DevElation `Disk` storage through `StorageMemoryEventStore`, so applications can replace the storage adapter with another DevElation storage implementation without overriding file and JSON logic.
+
 ## Integration Notes
 
 Prefer DevElation helpers for value, array, collection, and configuration behavior when extending these classes. Keep tool implementations thin and reusable; put selection guidance in `ToolDefinition`, execution behavior in the tool, and lifecycle side effects behind hooks.
