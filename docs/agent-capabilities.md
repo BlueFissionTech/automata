@@ -47,6 +47,28 @@ Hooks are emitted through DevElation so local applications can attach determinis
 
 Tool errors should be structured enough for the model and caller to reason from. Validation failures, permission denials, unavailable tools, and open circuits are represented as `ToolExecutionResult` statuses with codes, messages, details, and metadata. The agent can report partial or failed execution instead of silently filling gaps.
 
+## CPCT Telemetry
+
+Cost per completed task, or CPCT, measures the spend attached to a user-visible outcome rather than only provider token volume. `TaskTrace` is the task-scoped trace object. It carries a stable task id, behavioral change events, and spans for agent, model, tool, and orchestration work. `TaskTraceSpan` stores the fields needed to roll up prompt-cache ROI, batch utilization, model-tier routing, wall time, tool spend, and model spend.
+
+`CpctPricing` is DevElation-configurable so model rate cards can be supplied by local configuration. `CpctReport` turns one or more traces into the CPCT distribution and the three operational savings lines:
+
+- cache ROI from cache-hit and cache-write tokens
+- batch utilization from batchable and actually batched spans
+- tier routing savings from cheaper-model candidates that still meet the SLO
+
+Provider SDK callbacks, queue logs, or offline service reports can write deterministic data into a trace through `recordModelUsage`, `recordBatchUsage`, and `recordRoutingCandidate`. The hooks in `CpctHook` expose those capture points without requiring the model to decide when accounting should happen.
+
+## Governed Task Calls
+
+External execution surfaces should share the same task boundary whether they are local tools, MCP servers, JSON-RPC calls, or direct APIs. `TaskCallMonitor` provides that boundary. It accepts a task trace, a DevElation-configurable `TaskCallPolicy`, and an optional `HumanReviewGate`.
+
+The monitor emits lifecycle hooks, applies policy, asks for review when configured, executes the call, and writes MCP/RPC/API spans into the trace. Direct service logs can also be captured with `recordTaskCall`, so applications can account for batch or provider-side activity even when the call happened outside the live agent loop.
+
+`HumanReviewGate` is intentionally simple: give it a callable that returns an approval, denial, pending decision, or steering payload. A steering decision lets a reviewer constrain or adjust the request before it executes. This keeps human-in-the-loop approval out of model context while still making review outcomes visible in CPCT traces.
+
+`MCPClient` can use the same monitor, so MCP discovery, resource reads, raw requests, and tool calls are governed and observed instead of bypassing the agent's task accounting. Critical local tools can use the same human gate before `ToolExecutor` runs them.
+
 ## Integration Notes
 
 Prefer DevElation helpers for value, array, collection, and configuration behavior when extending these classes. Keep tool implementations thin and reusable; put selection guidance in `ToolDefinition`, execution behavior in the tool, and lifecycle side effects behind hooks.
