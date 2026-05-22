@@ -67,7 +67,14 @@ class ToolDefinition extends Obj implements IConfigurable, IDispatcher
     {
         $merged = [];
         foreach ($configs as $config) {
-            $merged = array_replace_recursive($merged, $config);
+            foreach ($config as $key => $value) {
+                if (Arr::hasKey($merged, $key) && Arr::is($merged[$key]) && Arr::is($value)) {
+                    $merged[$key] = self::mergeConfig($merged[$key], $value);
+                    continue;
+                }
+
+                $merged[$key] = $value;
+            }
         }
 
         return $merged;

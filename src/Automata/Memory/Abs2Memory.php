@@ -5,7 +5,9 @@ namespace BlueFission\Automata\Memory;
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Automata\Context;
 use BlueFission\Automata\Path\Graph;
+use BlueFission\Arr;
 use BlueFission\DevElation as Dev;
+use BlueFission\Num;
 
 /**
  * ABS/working-memory implementation backed by a graph of MemoryNode instances.
@@ -115,7 +117,7 @@ class Abs2Memory extends Graph implements IWorkingMemory
         $related = [];
 
         foreach ($edges as $adj => $_weight) {
-            if (count($related) >= $max) {
+            if (Arr::count($related) >= $max) {
                 break;
             }
 
@@ -174,11 +176,11 @@ class Abs2Memory extends Graph implements IWorkingMemory
             $start,
             $end,
             static function ($val) {
-                if (is_numeric($val)) {
+                if (Num::is($val)) {
                     return (float)$val;
                 }
 
-                if (is_array($val) && isset($val['weight']) && is_numeric($val['weight'])) {
+                if (Arr::is($val) && Arr::hasKey($val, 'weight') && Num::is($val['weight'])) {
                     return (float)$val['weight'];
                 }
 
@@ -194,16 +196,16 @@ class Abs2Memory extends Graph implements IWorkingMemory
         }
 
         $nodes = $this->nodes();
-        if (isset($nodes[$name])) {
+        if (Arr::hasKey($nodes, $name)) {
             unset($nodes[$name]);
             $this->nodes = $nodes;
         }
 
         $edges = $this->edges;
-        if (is_array($edges)) {
+        if (Arr::is($edges)) {
             unset($edges[$name]);
             foreach ($edges as $from => $links) {
-                if (is_array($links) && array_key_exists($name, $links)) {
+                if (Arr::is($links) && Arr::hasKey($links, $name)) {
                     unset($edges[$from][$name]);
                 }
             }
@@ -215,7 +217,7 @@ class Abs2Memory extends Graph implements IWorkingMemory
     {
         $out = [];
         foreach ($this->_memoryNodes->contents() as $label => $entry) {
-            if (isset($entry['value']) && $entry['value'] instanceof MemoryNode) {
+            if (Arr::hasKey($entry, 'value') && $entry['value'] instanceof MemoryNode) {
                 $out[$label] = $entry['value'];
             }
         }

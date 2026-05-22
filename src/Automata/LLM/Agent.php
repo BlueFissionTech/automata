@@ -24,6 +24,11 @@ use BlueFission\Automata\LLM\Agent\Memory\MemoryEvent;
 use BlueFission\Automata\LLM\Agent\Orchestration\Orchestrator;
 use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationConfig;
 use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationResult;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleResult;
+use BlueFission\Automata\LLM\Agent\State\AgentState;
+use BlueFission\Automata\LLM\Agent\State\CognitiveController;
+use BlueFission\Automata\LLM\Agent\State\IAgentModule;
+use BlueFission\Automata\LLM\Agent\State\IStateController;
 use BlueFission\Automata\Memory\IWorkingMemory;
 use BlueFission\Automata\LLM\MCP\MCPClient;
 use BlueFission\Automata\LLM\MCP\Tools\MCPDiscoveryTool;
@@ -57,6 +62,8 @@ class Agent implements IDispatcher
     protected int $memorySequence = 0;
     protected ?Orchestrator $orchestrator = null;
     protected AgentSession $session;
+    protected AgentState $agentState;
+    protected IStateController $cognitiveController;
     protected ?TaskCallMonitor $callMonitor = null;
     protected ?HumanReviewGate $humanReviewGate = null;
 
@@ -67,6 +74,8 @@ class Agent implements IDispatcher
         $this->session = new AgentSession(null, ['client' => 'automata']);
         $this->toolCatalog = new ToolCatalog();
         $this->toolExecutor = new ToolExecutor();
+        $this->agentState = new AgentState();
+        $this->cognitiveController = new CognitiveController();
         $this->template = "Answer the following question as best you can.
         {#var tools = [{toolNames}]}
         {#var isComplete = 'no'}
@@ -240,6 +249,9 @@ class Agent implements IDispatcher
             'input' => $input,
             'definition' => $definition?->toArray(),
         ]);
+        $this->agentState
+            ->allowInState(AgentState::STATE_ACTING, AgentState::ACTION_USE_TOOL)
+            ->enter(AgentState::STATE_ACTING);
 
         $span = $trace->startSpan(TaskTraceSpan::KIND_TOOL, $name, [
             'permission' => $definition?->permission(),
@@ -267,6 +279,7 @@ class Agent implements IDispatcher
             'tool' => $name,
             'result' => $result->toArray(),
         ]);
+        $this->agentState->leave(AgentState::STATE_ACTING);
 
         return $result;
     }
@@ -448,6 +461,55 @@ class Agent implements IDispatcher
     }
 
     /**
+     * Return the current concurrent module state.
+     */
+    public function agentState(): AgentState
+    {
+        return $this->agentState;
+    }
+
+    /**
+     * Replace the concurrent module state implementation.
+     */
+    public function useAgentState(AgentState $state): void
+    {
+        $this->agentState = $state;
+    }
+
+    /**
+     * Replace the high-level cognitive controller.
+     */
+    public function setCognitiveController(IStateController $controller): void
+    {
+        $this->cognitiveController = $controller;
+    }
+
+    /**
+     * Ask the cognitive controller to choose a bounded decision option.
+     */
+    public function cognitiveDecision(mixed $decision = null, array $context = []): AgentModuleResult
+    {
+        return $this->cognitiveController->decide($this->agentState, $decision, $context);
+    }
+
+    /**
+     * Run an agent module and apply its state writes.
+     */
+    public function runModule(IAgentModule $module, array $context = []): AgentModuleResult
+    {
+        $result = $module->process($this->agentState, $context);
+        foreach ($result->writes() as $write) {
+            if (!Arr::is($write) || !Arr::hasKey($write, 'channel') || !Arr::hasKey($write, 'key')) {
+                continue;
+            }
+
+            $this->agentState->write((string)$write['channel'], (string)$write['key'], $write['value'] ?? null);
+        }
+
+        return $result;
+    }
+
+    /**
      * Register MCP tools behind the same tool contract boundary.
      */
     public function registerMcpClient(MCPClient $client): void
@@ -481,6 +543,7 @@ class Agent implements IDispatcher
     public function execute($input) {
         $trace = $this->taskTrace();
         $input = $this->applyMemoryContext((string)$input);
+        $this->agentState->enter(AgentState::STATE_REASONING);
         $this->emitMemoryEvent(AgentHook::USER_PROMPT_SUBMIT, [
             'prompt' => $input,
         ]);
@@ -528,6 +591,7 @@ class Agent implements IDispatcher
             'reply' => $result,
             'task_id' => $trace->taskId(),
         ]);
+        $this->agentState->leave(AgentState::STATE_REASONING);
 
         return $result;
     }

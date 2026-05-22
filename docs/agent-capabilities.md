@@ -83,6 +83,14 @@ PIANO is modeled as orchestration because the cognitive controller produces a bo
 
 `OrchestratedAgent` lets any orchestration run as a black-box worker inside a parent orchestration. This is useful for hierarchical societies: a PIANO society can include a villager worker whose inner mind is itself a hierarchical lead-plus-counselor orchestration. The wrapper accepts a scoped context allowlist, so the child orchestration only sees the perceptions and shared context granted to that agent rather than the full parent society state. Parent merge logic preserves black-box output under the worker name instead of flattening the inner workers into the larger society output.
 
+## Agent State And Goals
+
+`AgentState` is a DevElation behavioral state machine with isolated channels for goals, observations, decisions, expectations, outputs, social signals, rules, and reflections. PIANO modules read and write those channels while the state machine gates behaviors such as deciding, tool use, speech, and memory updates through active states like observing, reasoning, acting, speaking, reflecting, and socializing.
+
+Goal reasoning lives in Automata's `Goal` namespace instead of inside the cognitive controller. `GoalManager` holds active `Initiative` objects, checks `Condition` and `Criterion` satisfaction from deterministic context, tracks expectations, scores behavior options, and returns bounded `GoalDecision` options. `CognitiveController` now applies a bottleneck over state channels, asks the goal manager for ranked options, and writes the selected option back into state. This keeps prompt/inference work focused on choosing among bounded options rather than inventing every possible next action from raw context.
+
+The default classes are dependency-injection examples as much as concrete implementations. `GoalManager` implements `IGoalManager` and uses `ManagesGoals`; custom managers can implement the same interface and import the trait when they only need to adjust persistence, weighting, or constructor policy. `CognitiveController` implements `IStateController` and uses `ControlsAgentState`; custom controllers can import that trait to keep the standard bottleneck, goal recommendation, and state-write behavior while overriding only the decision context or option selection. `AgentState` accepts an `IGoalManager`, and `Agent::setCognitiveController()` accepts an `IStateController`, so applications can swap either side through normal dependency injection.
+
 ## Integration Notes
 
 Prefer DevElation helpers for value, array, collection, and configuration behavior when extending these classes. Keep tool implementations thin and reusable; put selection guidance in `ToolDefinition`, execution behavior in the tool, and lifecycle side effects behind hooks.

@@ -6,7 +6,9 @@ use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Automata\Context;
 use BlueFission\Automata\Feedback\IProjectionBuilder;
 use BlueFission\Automata\Feedback\Projection;
+use BlueFission\Arr;
 use BlueFission\DevElation as Dev;
+use BlueFission\Num;
 
 class Initiative extends InitiativeObject implements IProjectionBuilder
 {
@@ -57,9 +59,7 @@ class Initiative extends InitiativeObject implements IProjectionBuilder
 
     public function children(): array
     {
-        return array_values(array_map(function ($entry) {
-            return $entry['value'] ?? $entry;
-        }, $this->_children->contents()));
+        return $this->collectionValues($this->_children);
     }
 
     public function addObjective(Objective $objective): self
@@ -128,7 +128,16 @@ class Initiative extends InitiativeObject implements IProjectionBuilder
 
     public function criteria(): array
     {
-        return array_merge($this->objectives(), $this->conditions());
+        $criteria = [];
+        foreach ($this->objectives() as $objective) {
+            $criteria[] = $objective;
+        }
+
+        foreach ($this->conditions() as $condition) {
+            $criteria[] = $condition;
+        }
+
+        return $criteria;
     }
 
     public function buildProjections(): array
@@ -148,13 +157,13 @@ class Initiative extends InitiativeObject implements IProjectionBuilder
             }
 
             $tags = $criterion instanceof InitiativeObject ? $criterion->field('tags') : null;
-            if (!is_array($tags) || empty($tags)) {
+            if (!Arr::is($tags) || Arr::count($tags) === 0) {
                 $tags = [$this->criterionKey($criterion)];
             }
 
             $priority = $criterion instanceof InitiativeObject ? (float)($criterion->field('priority') ?? 0.0) : 0.0;
             $ttl = $criterion instanceof InitiativeObject ? $criterion->field('ttl') : null;
-            $ttl = is_numeric($ttl) ? (float)$ttl : (float)($this->field('ttl') ?? 60.0);
+            $ttl = Num::is($ttl) ? (float)$ttl : (float)($this->field('ttl') ?? 60.0);
 
             $context = $this->buildProjectionContext($criterion);
 
@@ -169,7 +178,7 @@ class Initiative extends InitiativeObject implements IProjectionBuilder
 
         Dev::do('goal.initiative.projections_built', [
             'initiative' => $this,
-            'count' => count($projections),
+            'count' => Arr::count($projections),
         ]);
 
         return $projections;

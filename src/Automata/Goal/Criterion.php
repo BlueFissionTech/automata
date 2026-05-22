@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Goal;
 
+use BlueFission\Num;
 use BlueFission\DevElation as Dev;
 
 class Criterion extends InitiativeObject
@@ -19,7 +20,7 @@ class Criterion extends InitiativeObject
     public function priority(): float
     {
         $priority = $this->field('priority');
-        return is_numeric($priority) ? (float)$priority : 0.0;
+        return Num::is($priority) ? (float)$priority : 0.0;
     }
 
     public function satisfied(bool $value = null): bool
