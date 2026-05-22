@@ -12,6 +12,7 @@ use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
 use BlueFission\Automata\LLM\Tools\BaseTool;
 use BlueFission\Net\HTTP;
+use BlueFission\Obj;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -222,8 +223,20 @@ class AgentToolContractsTest extends TestCase
 
         $definition->config('category', 'knowledge');
 
+        $this->assertInstanceOf(Obj::class, $definition);
         $this->assertSame('knowledge', $definition->category());
+        $this->assertSame('knowledge', $definition->field('category'));
         $this->assertSame(['memory'], $definition->tags());
+    }
+
+    public function testToolExecutionResultUsesObjectFields(): void
+    {
+        $result = ToolExecutionResult::error('blocked', 'Blocked.', ['reason' => 'policy'], ['trace' => 'task-1']);
+
+        $this->assertInstanceOf(Obj::class, $result);
+        $this->assertSame(ToolExecutionResult::STATUS_ERROR, $result->field('status'));
+        $this->assertSame('blocked', $result->errorDetails()['code']);
+        $this->assertSame(['trace' => 'task-1'], $result->meta());
     }
 
     public function testAgentHookConstantsExposeLifecycleNames(): void

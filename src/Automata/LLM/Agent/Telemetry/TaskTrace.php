@@ -5,34 +5,30 @@ namespace BlueFission\Automata\LLM\Agent\Telemetry;
 use BlueFission\Arr;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
 use BlueFission\Behavioral\Behaviors\Event;
-use BlueFission\Behavioral\Dispatches;
 use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Collections\Collection;
 use BlueFission\DevElation as Dev;
+use BlueFission\Obj;
 
-class TaskTrace implements IDispatcher
+class TaskTrace extends Obj implements IDispatcher
 {
-    use Dispatches {
-        Dispatches::__construct as private __dispatchesConstruct;
-    }
-
-    protected string $taskId;
-
-    protected array $metadata = [];
-
-    /** @var TaskTraceSpan[] */
-    protected array $spans = [];
-
-    protected string $outcomeStatus = 'running';
+    protected $_data = [
+        'task_id' => '',
+        'metadata' => [],
+        'spans' => [],
+        'outcome_status' => 'running',
+    ];
 
     /**
      * Create a trace for one user-visible unit of completed work.
      */
     public function __construct(?string $taskId = null, array $metadata = [])
     {
-        $this->__dispatchesConstruct();
-        $this->taskId = $taskId ?: TaskTraceSpan::id('task');
-        $this->metadata = $metadata;
+        parent::__construct();
+        $this->put('task_id', $taskId ?: TaskTraceSpan::id('task'));
+        $this->put('metadata', $metadata);
+        $this->put('spans', []);
+        $this->put('outcome_status', 'running');
 
         Dev::do(CpctHook::TRACE_STARTED, $this->toArray());
         $this->trigger(Event::STARTED);
@@ -44,7 +40,7 @@ class TaskTrace implements IDispatcher
     public static function fromArray(array $data): self
     {
         $trace = new self($data['task_id'] ?? null, $data['metadata'] ?? []);
-        $trace->outcomeStatus = $data['outcome_status'] ?? 'running';
+        $trace->put('outcome_status', $data['outcome_status'] ?? 'running');
         foreach ($data['spans'] ?? [] as $span) {
             $trace->addSpan($span instanceof TaskTraceSpan ? $span : TaskTraceSpan::fromArray($span));
         }
@@ -57,7 +53,7 @@ class TaskTrace implements IDispatcher
      */
     public function taskId(): string
     {
-        return $this->taskId;
+        return (string)$this->field('task_id');
     }
 
     /**
@@ -65,7 +61,7 @@ class TaskTrace implements IDispatcher
      */
     public function metadata(): array
     {
-        return $this->metadata;
+        return Arr::make($this->field('metadata') ?? [])->toArray();
     }
 
     /**
@@ -73,9 +69,12 @@ class TaskTrace implements IDispatcher
      */
     public function addSpan(TaskTraceSpan $span): self
     {
-        $this->spans[] = $span;
+        $spans = $this->spans();
+        $spans[] = $span;
+        $this->put('spans', $spans);
+
         Dev::do(CpctHook::SPAN_ADDED, [
-            'task_id' => $this->taskId,
+            'task_id' => $this->taskId(),
             'span' => $span->toArray(),
         ]);
         $this->trigger(Event::CHANGE);
@@ -88,7 +87,7 @@ class TaskTrace implements IDispatcher
      */
     public function startSpan(string $kind, string $name, array $metadata = [], ?string $parentSpanId = null): TaskTraceSpan
     {
-        $span = TaskTraceSpan::start($this->taskId, $kind, $name, $metadata, $parentSpanId);
+        $span = TaskTraceSpan::start($this->taskId(), $kind, $name, $metadata, $parentSpanId);
         Dev::do(CpctHook::SPAN_STARTED, $span->toArray());
 
         return $span;
@@ -128,7 +127,7 @@ class TaskTrace implements IDispatcher
 
         $this->addSpan($span->finish((string)($metadata['status'] ?? 'completed'), $metrics));
         Dev::do(CpctHook::MODEL_USAGE_CAPTURED, [
-            'task_id' => $this->taskId,
+            'task_id' => $this->taskId(),
             'usage' => $usage,
             'metadata' => $metadata,
         ]);
@@ -151,7 +150,7 @@ class TaskTrace implements IDispatcher
         ]));
 
         Dev::do(CpctHook::BATCH_USAGE_CAPTURED, [
-            'task_id' => $this->taskId,
+            'task_id' => $this->taskId(),
             'name' => $name,
             'tokens' => $tokens,
             'processed' => $processed,
@@ -166,7 +165,7 @@ class TaskTrace implements IDispatcher
      */
     public function recordRoutingCandidate(string $spanName, string $candidateModel, float $estimatedCost, bool $metSlo): self
     {
-        foreach ($this->spans as $span) {
+        foreach ($this->spans() as $span) {
             if ($span->get('name') !== $spanName) {
                 continue;
             }
@@ -177,7 +176,7 @@ class TaskTrace implements IDispatcher
                 ->set('candidate_met_slo', $metSlo);
 
             Dev::do(CpctHook::ROUTING_CANDIDATE_CAPTURED, [
-                'task_id' => $this->taskId,
+                'task_id' => $this->taskId(),
                 'span' => $span->toArray(),
             ]);
             $this->trigger(Event::CHANGE);
@@ -209,7 +208,7 @@ class TaskTrace implements IDispatcher
         ]));
 
         Dev::do(CpctHook::TASK_CALL_CAPTURED, [
-            'task_id' => $this->taskId,
+            'task_id' => $this->taskId(),
             'kind' => $kind,
             'name' => $name,
             'request' => $request,
@@ -225,7 +224,7 @@ class TaskTrace implements IDispatcher
      */
     public function complete(string $status = 'completed'): self
     {
-        $this->outcomeStatus = $status;
+        $this->put('outcome_status', $status);
         Dev::do(CpctHook::TRACE_COMPLETED, $this->toArray());
         $this->trigger(Event::COMPLETE);
 
@@ -237,7 +236,7 @@ class TaskTrace implements IDispatcher
      */
     public function outcomeStatus(): string
     {
-        return $this->outcomeStatus;
+        return (string)$this->field('outcome_status');
     }
 
     /**
@@ -245,7 +244,9 @@ class TaskTrace implements IDispatcher
      */
     public function spans(): array
     {
-        return $this->spans;
+        $spans = $this->field('spans');
+
+        return Arr::is($spans) ? $spans : [];
     }
 
     /**
@@ -267,7 +268,7 @@ class TaskTrace implements IDispatcher
             'total_cost' => 0.0,
         ];
 
-        foreach ($this->spans as $span) {
+        foreach ($this->spans() as $span) {
             $row = $span->toArray();
             foreach (['input_tokens', 'output_tokens', 'total_tokens', 'cache_hit_tokens', 'cache_write_tokens', 'uncached_input_tokens', 'batch_tokens'] as $key) {
                 $totals[$key] += (int)($row[$key] ?? 0);
@@ -293,15 +294,23 @@ class TaskTrace implements IDispatcher
      */
     public function toArray(): array
     {
-        $spans = (new Collection($this->spans))
+        $spans = (new Collection($this->spans()))
             ->map(fn (TaskTraceSpan $span): array => $span->toArray())
             ->toArray();
 
         return Dev::apply('automata.llm.agent.telemetry.trace.to_array', [
-            'task_id' => $this->taskId,
-            'metadata' => $this->metadata,
-            'outcome_status' => $this->outcomeStatus,
+            'task_id' => $this->taskId(),
+            'metadata' => $this->metadata(),
+            'outcome_status' => $this->outcomeStatus(),
             'spans' => $spans,
         ]);
+    }
+
+    /**
+     * Set Obj-backed trace fields without dropping false, null, or empty values.
+     */
+    protected function put(string $field, mixed $value): void
+    {
+        $this->_data[$field] = $value;
     }
 }

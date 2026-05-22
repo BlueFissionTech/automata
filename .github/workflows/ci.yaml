@@ -10,7 +10,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ["8.2", "8.3"]
+        # PHPUnit 12 requires PHP 8.3+, so this branch validates the new test toolchain there.
+        php: ["8.3"]
 
     steps:
       - name: Check out repository

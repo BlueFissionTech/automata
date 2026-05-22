@@ -11,13 +11,15 @@ use BlueFission\Collections\Collection;
 use BlueFission\DevElation as Dev;
 use BlueFission\Net\HTTP;
 use BlueFission\Num;
+use BlueFission\Obj;
 use BlueFission\Str;
 use BlueFission\Val;
 
-class ToolDefinition implements IConfigurable, IDispatcher
+class ToolDefinition extends Obj implements IConfigurable, IDispatcher
 {
     use Configurable {
         Configurable::__construct as private __configurableConstruct;
+        Configurable::config as private configurableConfig;
     }
 
     public const PERMISSION_READ = 'read';
@@ -31,9 +33,11 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function __construct(array $config = [])
     {
+        parent::__construct();
         $this->_config = $this->defaults();
         $this->__configurableConstruct(self::mergeConfig($this->_config, $config));
         $this->normalizeConfig();
+        $this->syncDataFromConfig();
     }
 
     /**
@@ -77,11 +81,27 @@ class ToolDefinition implements IConfigurable, IDispatcher
     }
 
     /**
+     * Set or retrieve config while keeping Obj field storage synchronized.
+     */
+    public function config($config = null, $value = null): mixed
+    {
+        $isMutation = !Val::isNull($config) && !(Str::is($config) && Val::isNull($value));
+        $result = $this->configurableConfig($config, $value);
+
+        if ($isMutation) {
+            $this->normalizeConfig();
+            $this->syncDataFromConfig();
+        }
+
+        return $result;
+    }
+
+    /**
      * Return the tool name exposed to the model.
      */
     public function name(): string
     {
-        return (string)$this->_config['name'];
+        return (string)$this->field('name');
     }
 
     /**
@@ -89,7 +109,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function description(): string
     {
-        return (string)$this->_config['description'];
+        return (string)$this->field('description');
     }
 
     /**
@@ -97,7 +117,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function purpose(): string
     {
-        return (string)$this->_config['purpose'];
+        return (string)$this->field('purpose');
     }
 
     /**
@@ -105,7 +125,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function category(): string
     {
-        return (string)$this->_config['category'];
+        return (string)$this->field('category');
     }
 
     /**
@@ -113,7 +133,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function permission(): string
     {
-        return (string)$this->_config['permission'];
+        return (string)$this->field('permission');
     }
 
     /**
@@ -121,7 +141,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function requiresApproval(): bool
     {
-        return (bool)$this->_config['requires_approval'] || $this->permission() === self::PERMISSION_CRITICAL;
+        return (bool)$this->field('requires_approval') || $this->permission() === self::PERMISSION_CRITICAL;
     }
 
     /**
@@ -129,7 +149,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function inputSchema(): array
     {
-        return Arr::make($this->_config['input_schema'] ?? [])->toArray();
+        return Arr::make($this->field('input_schema') ?? [])->toArray();
     }
 
     /**
@@ -137,7 +157,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function outputSchema(): array
     {
-        return Arr::make($this->_config['output_schema'] ?? [])->toArray();
+        return Arr::make($this->field('output_schema') ?? [])->toArray();
     }
 
     /**
@@ -145,7 +165,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function tags(): array
     {
-        return Arr::make($this->_config['tags'] ?? [])->toArray();
+        return Arr::make($this->field('tags') ?? [])->toArray();
     }
 
     /**
@@ -153,7 +173,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function groups(): array
     {
-        return Arr::make($this->_config['groups'] ?? [])->toArray();
+        return Arr::make($this->field('groups') ?? [])->toArray();
     }
 
     /**
@@ -161,7 +181,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function taxonomy(): array
     {
-        return Arr::make($this->_config['taxonomy'] ?? [])->toArray();
+        return Arr::make($this->field('taxonomy') ?? [])->toArray();
     }
 
     /**
@@ -169,7 +189,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function dependencies(): array
     {
-        return Arr::make($this->_config['dependencies'] ?? [])->toArray();
+        return Arr::make($this->field('dependencies') ?? [])->toArray();
     }
 
     /**
@@ -177,7 +197,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function timeoutSeconds(): int
     {
-        return max(0, (int)$this->_config['timeout_seconds']);
+        return max(0, (int)$this->field('timeout_seconds'));
     }
 
     /**
@@ -185,7 +205,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function maxRetries(): int
     {
-        return max(0, (int)$this->_config['max_retries']);
+        return max(0, (int)$this->field('max_retries'));
     }
 
     /**
@@ -193,7 +213,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function failureThreshold(): int
     {
-        return max(1, (int)$this->_config['failure_threshold']);
+        return max(1, (int)$this->field('failure_threshold'));
     }
 
     /**
@@ -201,7 +221,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function parallelSafe(): bool
     {
-        return (bool)$this->_config['parallel_safe'];
+        return (bool)$this->field('parallel_safe');
     }
 
     /**
@@ -209,7 +229,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function decisionBoundary(): string
     {
-        return (string)$this->_config['decision_boundary'];
+        return (string)$this->field('decision_boundary');
     }
 
     /**
@@ -217,7 +237,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function negativeGuidance(): string
     {
-        return (string)$this->_config['negative_guidance'];
+        return (string)$this->field('negative_guidance');
     }
 
     /**
@@ -411,7 +431,7 @@ class ToolDefinition implements IConfigurable, IDispatcher
      */
     public function toArray(): array
     {
-        return Dev::apply('automata.llm.agent.tool_definition.to_array', $this->_config);
+        return Dev::apply('automata.llm.agent.tool_definition.to_array', parent::toArray());
     }
 
     /**
@@ -454,6 +474,16 @@ class ToolDefinition implements IConfigurable, IDispatcher
         $this->_config['groups'] = self::normalizeStringList($this->_config['groups'] ?? []);
         $this->_config['dependencies'] = self::normalizeStringList($this->_config['dependencies'] ?? []);
         $this->_config['taxonomy'] = self::normalizeTaxonomy($this->_config['taxonomy'] ?? []);
+    }
+
+    /**
+     * Copy Configurable state into Obj fields without dropping falsy contract values.
+     */
+    protected function syncDataFromConfig(): void
+    {
+        foreach ($this->_config as $key => $value) {
+            $this->_data[$key] = $value;
+        }
     }
 
     /**
