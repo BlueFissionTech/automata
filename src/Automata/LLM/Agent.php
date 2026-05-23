@@ -28,6 +28,7 @@ use BlueFission\Automata\LLM\Agent\State\AgentModuleResult;
 use BlueFission\Automata\LLM\Agent\State\AgentState;
 use BlueFission\Automata\LLM\Agent\State\CognitiveController;
 use BlueFission\Automata\LLM\Agent\State\IAgentModule;
+use BlueFission\Automata\LLM\Agent\Security\RuntimeLogicValidator;
 use BlueFission\Automata\LLM\Agent\State\IStateController;
 use BlueFission\Automata\Memory\IWorkingMemory;
 use BlueFission\Automata\LLM\MCP\MCPClient;
@@ -64,6 +65,7 @@ class Agent implements IDispatcher
     protected AgentSession $session;
     protected AgentState $agentState;
     protected IStateController $cognitiveController;
+    protected ?RuntimeLogicValidator $runtimeLogicValidator = null;
     protected ?TaskCallMonitor $callMonitor = null;
     protected ?HumanReviewGate $humanReviewGate = null;
 
@@ -260,6 +262,13 @@ class Agent implements IDispatcher
         ]);
 
         $result = $this->toolExecutor->execute($this->toolCatalog, $name, $input, $context);
+        if ($this->runtimeLogicValidator) {
+            $result = $this->runtimeLogicValidator->sanitizeToolResult($result, [
+                'tool' => $name,
+                'task_id' => $trace->taskId(),
+            ]);
+        }
+
         $encodedInput = $this->stringifyForTelemetry($input);
         $encodedOutput = $result->toJson();
 
@@ -510,6 +519,30 @@ class Agent implements IDispatcher
     }
 
     /**
+     * Enable runtime LPCI validation on memory and tool surfaces.
+     */
+    public function enableRuntimeLogicValidation(?RuntimeLogicValidator $validator = null): void
+    {
+        $this->runtimeLogicValidator = $validator ?: new RuntimeLogicValidator();
+    }
+
+    /**
+     * Disable runtime LPCI validation.
+     */
+    public function disableRuntimeLogicValidation(): void
+    {
+        $this->runtimeLogicValidator = null;
+    }
+
+    /**
+     * Return the runtime security audit trail collected by the validator.
+     */
+    public function securityAuditTrail(): array
+    {
+        return $this->runtimeLogicValidator ? $this->runtimeLogicValidator->auditTrail() : [];
+    }
+
+    /**
      * Register MCP tools behind the same tool contract boundary.
      */
     public function registerMcpClient(MCPClient $client): void
@@ -722,7 +755,17 @@ class Agent implements IDispatcher
             $parts[] = "Relevant memory:\n" . $promptContext;
         }
 
-        return $this->joinStrings($parts, "\n\n");
+        $content = $this->joinStrings($parts, "\n\n");
+        if ($this->runtimeLogicValidator) {
+            $scan = $this->runtimeLogicValidator->sanitizeText($content, [
+                'surface' => 'memory_context',
+                'task_id' => $this->taskTrace()->taskId(),
+            ]);
+
+            return $scan['content'];
+        }
+
+        return $content;
     }
 
     protected function emitMemoryEvent(string $event, array $payload = []): void

@@ -149,6 +149,19 @@ class ToolExecutionResult extends Obj
     }
 
     /**
+     * Return a copy with a rewritten payload and merged metadata.
+     */
+    public function withPayload(mixed $payload, array $meta = []): self
+    {
+        return new self(
+            $this->status(),
+            $payload,
+            $this->errorDetails(),
+            ToolDefinition::mergeConfig($this->meta(), $meta)
+        );
+    }
+
+    /**
      * Replace Obj-backed result fields without dropping null or empty payloads.
      */
     protected function replaceFields(array $data): void
