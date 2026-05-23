@@ -91,6 +91,23 @@ Goal reasoning lives in Automata's `Goal` namespace instead of inside the cognit
 
 The default classes are dependency-injection examples as much as concrete implementations. `GoalManager` implements `IGoalManager` and uses `ManagesGoals`; custom managers can implement the same interface and import the trait when they only need to adjust persistence, weighting, or constructor policy. `CognitiveController` implements `IStateController` and uses `ControlsAgentState`; custom controllers can import that trait to keep the standard bottleneck, goal recommendation, and state-write behavior while overriding only the decision context or option selection. `AgentState` accepts an `IGoalManager`, and `Agent::setCognitiveController()` accepts an `IStateController`, so applications can swap either side through normal dependency injection.
 
+## Interpreter Integration Contract
+
+`AgentIntegrationContract` exposes Automata's stable agent feature surface as deterministic metadata for JenSS, Jenerator, Chainlinq, and linqr adapters. It does not execute tools or prompts. Instead, it names the supported feature ids, owning classes, lifecycle hooks, tool catalog filter constants, language binding hints, and production acceptance checks that downstream runtimes can use to generate syntax bindings and conformance fixtures.
+
+The first contract version covers:
+
+- agent runtime configuration and execution
+- tool contracts, catalog filtering, and structured results
+- lifecycle hooks for deterministic adapter behavior
+- session scope, permissions, context, and working memory
+- governance, human review, MCP/RPC/API task-call monitoring
+- orchestration patterns, nested orchestrations, and PIANO flows
+- behavioral state, goals, criteria, expectations, and bounded decisions
+- CPCT telemetry and runtime security validation
+
+Adapters should bind to the contract's feature ids rather than hard-coding prompt text or concrete class internals. For example, JenSS can map a `tool` construct to `agent.tool_contracts`, while linqr can map query catalog retrieval to the same feature through `query.tool_catalog`. This keeps syntax design in JenSS and linqr while Automata owns the runtime contract.
+
 ## Integration Notes
 
 Prefer DevElation helpers for value, array, collection, and configuration behavior when extending these classes. Keep tool implementations thin and reusable; put selection guidance in `ToolDefinition`, execution behavior in the tool, and lifecycle side effects behind hooks.
