@@ -3,7 +3,10 @@
 namespace BlueFission\Automata\LLM\Agent\Integration;
 
 use BlueFission\Arr;
+use BlueFission\Automata\Comprehension\Holoscene;
+use BlueFission\Automata\Comprehension\Scene;
 use BlueFission\Automata\Goal\GoalManager;
+use BlueFission\Automata\Language\Reader;
 use BlueFission\Automata\LLM\Agent;
 use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\AgentSession;
@@ -14,6 +17,7 @@ use BlueFission\Automata\LLM\Agent\Orchestration\Orchestrator;
 use BlueFission\Automata\LLM\Agent\Security\RuntimeLogicValidator;
 use BlueFission\Automata\LLM\Agent\State\AgentState;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTrace;
+use BlueFission\Automata\Memory\IWorkingMemory;
 use BlueFission\Automata\LLM\Agent\ToolCatalog;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
 use BlueFission\Automata\LLM\Agent\ToolExecutionResult;
@@ -36,6 +40,7 @@ class AgentIntegrationContract extends Obj
     public const FEATURE_HOOKS = 'agent.lifecycle_hooks';
     public const FEATURE_SESSION = 'agent.session_scope';
     public const FEATURE_MEMORY = 'agent.memory_context';
+    public const FEATURE_HOLOSCENE = 'agent.holoscene_comprehension';
     public const FEATURE_GOVERNANCE = 'agent.governance';
     public const FEATURE_MCP = 'agent.mcp_observability';
     public const FEATURE_ORCHESTRATION = 'agent.orchestration';
@@ -210,6 +215,14 @@ class AgentIntegrationContract extends Obj
                     'inputs' => ['label', 'context', 'edges', 'injector'],
                     'outputs' => ['context', 'memory_events'],
                 ],
+                self::FEATURE_HOLOSCENE => [
+                    'summary' => 'Holoscene comprehension for scoped sensory, narrative, scene, and episode context.',
+                    'classes' => [Holoscene::class, Scene::class, Reader::class, IWorkingMemory::class],
+                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR, self::CONSUMER_LINQR, self::CONSUMER_CHAINLINQ],
+                    'constructs' => ['holoscene', 'scene', 'episode', 'reader.to_holoscene', 'holoscene.narrate'],
+                    'inputs' => ['statements', 'episode_id', 'scene', 'working_memory', 'session_scope'],
+                    'outputs' => ['holoscene_snapshot', 'assessment', 'narrative_log', 'working_memory_context'],
+                ],
                 self::FEATURE_GOVERNANCE => [
                     'summary' => 'Human review, steering, policy gates, and governed task calls for tools, APIs, RPC, and MCP.',
                     'classes' => [TaskCallMonitor::class, HumanReviewGate::class, GovernanceDecision::class],
@@ -266,6 +279,7 @@ class AgentIntegrationContract extends Obj
                     'on' => self::FEATURE_HOOKS,
                     'session' => self::FEATURE_SESSION,
                     'memory' => self::FEATURE_MEMORY,
+                    'holoscene' => self::FEATURE_HOLOSCENE,
                     'review' => self::FEATURE_GOVERNANCE,
                     'mcp' => self::FEATURE_MCP,
                     'orchestrate' => self::FEATURE_ORCHESTRATION,
@@ -278,16 +292,19 @@ class AgentIntegrationContract extends Obj
                     'runtime.tool' => self::FEATURE_TOOLS,
                     'runtime.hook' => self::FEATURE_HOOKS,
                     'runtime.session' => self::FEATURE_SESSION,
+                    'runtime.holoscene' => self::FEATURE_HOLOSCENE,
                     'runtime.trace' => self::FEATURE_TELEMETRY,
                 ],
                 self::CONSUMER_LINQR => [
                     'query.tool_catalog' => self::FEATURE_TOOLS,
+                    'query.holoscene' => self::FEATURE_HOLOSCENE,
                     'query.trace' => self::FEATURE_TELEMETRY,
                 ],
                 self::CONSUMER_CHAINLINQ => [
                     'adapter.tool_catalog' => self::FEATURE_TOOLS,
                     'adapter.task_call' => self::FEATURE_GOVERNANCE,
                     'adapter.mcp' => self::FEATURE_MCP,
+                    'adapter.holoscene' => self::FEATURE_HOLOSCENE,
                     'adapter.trace' => self::FEATURE_TELEMETRY,
                 ],
             ],
@@ -309,6 +326,7 @@ class AgentIntegrationContract extends Obj
                 'Language constructs produce deterministic arrays accepted by Automata classes.',
                 'Tool and MCP calls emit task trace spans and governance outcomes.',
                 'Session scope controls shared context instead of agents sharing full context windows.',
+                'Holoscene episodes use scoped working memory and snapshots rather than raw prompt-only memory coupling.',
                 'Conformance fixtures cover successful execution, blocked execution, review steering, and trace export.',
             ],
         ];

@@ -7,8 +7,10 @@ use BlueFission\Automata\LLM\Agent\AgentSession;
 use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\Integration\AgentIntegrationContract;
 use BlueFission\Automata\LLM\Agent\ToolCatalog;
+use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
+use BlueFission\Automata\Memory\Abs2Memory;
 use BlueFission\Obj;
 use PHPUnit\Framework\TestCase;
 
@@ -38,6 +40,19 @@ class IntegrationContractClientStub implements IClient
     }
 }
 
+class IntegrationContractSceneStub
+{
+    public function stats(): array
+    {
+        return ['frame_count' => 1];
+    }
+
+    public function data(): array
+    {
+        return ['summary' => 'contract scene'];
+    }
+}
+
 class AgentIntegrationContractTest extends TestCase
 {
     public function testContractExportsStableFeatureIds(): void
@@ -59,6 +74,7 @@ class AgentIntegrationContractTest extends TestCase
         $features = $contract->features(AgentIntegrationContract::CONSUMER_LINQR);
 
         $this->assertArrayHasKey(AgentIntegrationContract::FEATURE_TOOLS, $features);
+        $this->assertArrayHasKey(AgentIntegrationContract::FEATURE_HOLOSCENE, $features);
         $this->assertArrayHasKey(AgentIntegrationContract::FEATURE_TELEMETRY, $features);
         $this->assertArrayNotHasKey(AgentIntegrationContract::FEATURE_HOOKS, $features);
     }
@@ -70,7 +86,9 @@ class AgentIntegrationContractTest extends TestCase
         $chainlinq = $contract->bindings(AgentIntegrationContract::CONSUMER_CHAINLINQ);
 
         $this->assertSame(AgentIntegrationContract::FEATURE_TOOLS, $jenss['tool']);
+        $this->assertSame(AgentIntegrationContract::FEATURE_HOLOSCENE, $jenss['holoscene']);
         $this->assertSame(AgentIntegrationContract::FEATURE_ORCHESTRATION, $jenss['orchestrate']);
+        $this->assertSame(AgentIntegrationContract::FEATURE_HOLOSCENE, $chainlinq['adapter.holoscene']);
         $this->assertSame(AgentIntegrationContract::FEATURE_MCP, $chainlinq['adapter.mcp']);
     }
 
@@ -90,7 +108,18 @@ class AgentIntegrationContractTest extends TestCase
 
         $this->assertStringContainsString('"version":"1.0.0"', $json);
         $this->assertStringContainsString('"agent.tool_contracts"', $json);
+        $this->assertStringContainsString('"agent.holoscene_comprehension"', $json);
         $this->assertStringContainsString('"query.tool_catalog"', $json);
+    }
+
+    public function testHolosceneFeatureAdvertisesComprehensionClasses(): void
+    {
+        $feature = AgentIntegrationContract::standard()
+            ->feature(AgentIntegrationContract::FEATURE_HOLOSCENE);
+
+        $this->assertContains(Holoscene::class, $feature['classes']);
+        $this->assertContains('reader.to_holoscene', $feature['constructs']);
+        $this->assertContains('holoscene_snapshot', $feature['outputs']);
     }
 
     public function testAgentUsesDevelationPrototypeCarrier(): void
@@ -122,5 +151,22 @@ class AgentIntegrationContractTest extends TestCase
         $agent->useSession($session);
 
         $this->assertSame('contract-session', $agent->snapshot()['properties']['session_id']);
+    }
+
+    public function testAgentSessionScopesHolosceneEpisodes(): void
+    {
+        $agent = new Agent(new IntegrationContractClientStub());
+        $holoscene = new Holoscene('contract-holoscene');
+
+        $agent->useHoloscene($holoscene);
+        $agent->session()->useWorkingMemory(new Abs2Memory());
+        $agent->session()->addHolosceneEpisode('episode_contract', new IntegrationContractSceneStub());
+
+        $snapshot = $agent->session()->holosceneSnapshot();
+
+        $this->assertSame($holoscene, $agent->holoscene());
+        $this->assertSame('contract-holoscene', $agent->snapshot()['properties']['holoscene_id']);
+        $this->assertSame(1, $snapshot['sceneCount']);
+        $this->assertSame('scene', $snapshot['domain_members']['episode_contract']['kind']);
     }
 }

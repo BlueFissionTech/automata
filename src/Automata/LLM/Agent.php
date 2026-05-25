@@ -2,6 +2,7 @@
 namespace BlueFission\Automata\LLM;
 
 use BlueFission\Arr;
+use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\AgentSession;
 use BlueFission\Behavioral\IDispatcher;
@@ -138,6 +139,8 @@ class Agent extends Obj implements IDispatcher
         $this->addStrategy('tool-contracts');
         $this->addStrategy('lifecycle-hooks');
         $this->addStrategy('governed-task-calls');
+        $this->addStrategy('holoscene-comprehension');
+        $this->addTrait('holoscene_compatible', true);
         $this->summary('agent[' . static::class . '] scope=automata.llm.agent');
     }
 
@@ -415,7 +418,7 @@ class Agent extends Obj implements IDispatcher
     {
         $this->session = $session;
         $this->memorySessionId = $session->id();
-        $this->property('session_id', $session->id());
+        $this->syncPrototypeSessionScope();
     }
 
     /**
@@ -429,18 +432,47 @@ class Agent extends Obj implements IDispatcher
     /**
      * Attach deterministic memory logging and optional context injection to the agent session.
      */
-    public function enableMemory(IMemoryEventStore $store, ?IMemoryInjector $injector = null, ?string $sessionId = null, ?IWorkingMemory $workingMemory = null): void
+    public function enableMemory(IMemoryEventStore $store, ?IMemoryInjector $injector = null, ?string $sessionId = null, ?IWorkingMemory $workingMemory = null, ?Holoscene $holoscene = null): void
     {
         $this->memoryEventStore = $store;
         $this->memoryInjector = $injector;
-        $this->session = new AgentSession($sessionId, $this->session->context(['client' => 'automata']), $workingMemory);
+        $this->session = new AgentSession($sessionId, $this->session->context(['client' => 'automata']), $workingMemory, $holoscene);
         $this->memorySessionId = $this->session->id();
         $this->memorySequence = 0;
-        $this->property('session_id', $this->session->id());
+        $this->syncPrototypeSessionScope();
 
         $this->emitMemoryEvent(AgentHook::SESSION_START, [
             'session_context' => $this->memoryInjector ? $this->memoryInjector->sessionContext($this->memoryContext()) : '',
         ]);
+    }
+
+    /**
+     * Attach a Holoscene to the active session scope.
+     */
+    public function useHoloscene(?Holoscene $holoscene): void
+    {
+        $this->session->useHoloscene($holoscene);
+        $this->syncPrototypeSessionScope();
+    }
+
+    /**
+     * Return the Holoscene attached to the active session scope.
+     */
+    public function holoscene(): ?Holoscene
+    {
+        return $this->session->holoscene();
+    }
+
+    /**
+     * Keep DevElation prototype metadata aligned with session-level scope.
+     */
+    protected function syncPrototypeSessionScope(): void
+    {
+        $memory = $this->session->workingMemory();
+
+        $this->property('session_id', $this->session->id());
+        $this->property('holoscene_id', $this->session->holoscene()?->protoId());
+        $this->property('working_memory', $memory ? get_class($memory) : null);
     }
 
     /**

@@ -73,7 +73,9 @@ The monitor emits lifecycle hooks, applies policy, asks for review when configur
 
 ## Session Scope And Memory
 
-`AgentSession` is the boundary for shared scope. An agent can keep its own prompt context, while the session decides what context, permissions, tools, uploaded inputs, and working memory are available to one or more agents. The session can attach an Automata `IWorkingMemory` implementation, including `Abs2Memory`, so durable memory and Holoscene-compatible working-memory implementations are reached through existing Automata contracts instead of a separate memory silo.
+`AgentSession` is the boundary for shared scope. An agent can keep its own prompt context, while the session decides what context, permissions, tools, uploaded inputs, working memory, and Holoscene episodes are available to one or more agents. The session can attach an Automata `IWorkingMemory` implementation, including `Abs2Memory`, so durable memory and Holoscene-compatible working-memory implementations are reached through existing Automata contracts instead of a separate memory silo.
+
+Sessions can also attach a `Holoscene` directly. This lets interpreter adapters project sensory data, statements, scenes, and narrative episodes into the comprehension layer while still keeping access scoped by the session. Agents expose that Holoscene through prototype metadata by `holoscene_id`, so downstream runtimes can inspect the association without forcing raw scene data into prompt context.
 
 Lifecycle memory logging is intentionally tied to `AgentHook` names rather than memory-specific hook constants. Memory event stores persist hook activity, but the lifecycle belongs to the agent. `InMemoryEventStore` is process-local for tests and short runs. `FileMemoryEventStore` uses DevElation `Disk` storage through `StorageMemoryEventStore`, so applications can replace the storage adapter with another DevElation storage implementation without overriding file and JSON logic.
 
@@ -103,6 +105,7 @@ The first contract version covers:
 - tool contracts, catalog filtering, and structured results
 - lifecycle hooks for deterministic adapter behavior
 - session scope, permissions, context, and working memory
+- Holoscene comprehension, scenes, episodes, assessments, and narrative logs
 - governance, human review, MCP/RPC/API task-call monitoring
 - orchestration patterns, nested orchestrations, and PIANO flows
 - behavioral state, goals, criteria, expectations, and bounded decisions
