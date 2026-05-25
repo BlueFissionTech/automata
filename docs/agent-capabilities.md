@@ -2,6 +2,8 @@
 
 Automata agents treat language models as reasoning components and keep execution in deterministic PHP boundaries. The `BlueFission\Automata\LLM\Agent` class coordinates model prompts, registered tools, lifecycle hooks, and later memory or orchestration layers without requiring external agent harnesses.
 
+`Agent` is also a DevElation prototype carrier: it extends `Obj` and uses the shared `Proto` and `Prototypes\Agent` traits. That gives interpreter adapters a consistent way to inspect agent role, scope, autonomy, control, goals, strategies, decision history, and snapshot metadata without inventing a parallel identity structure. Automata-specific runtime work still lives in the Agent, session, tool, governance, memory, orchestration, state, and telemetry classes below.
+
 ## Tool Contracts
 
 Tools are registered through `ToolCatalog` and described by `ToolDefinition`. A definition is a DevElation-configurable contract with:

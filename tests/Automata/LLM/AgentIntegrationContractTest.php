@@ -2,10 +2,41 @@
 
 namespace BlueFission\Tests\Automata\LLM;
 
+use BlueFission\Automata\LLM\Agent;
+use BlueFission\Automata\LLM\Agent\AgentSession;
 use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\Integration\AgentIntegrationContract;
 use BlueFission\Automata\LLM\Agent\ToolCatalog;
+use BlueFission\Automata\LLM\Clients\IClient;
+use BlueFission\Automata\LLM\Reply;
+use BlueFission\Obj;
 use PHPUnit\Framework\TestCase;
+
+class IntegrationContractClientStub implements IClient
+{
+    public function generate($input, $config = [], ?callable $callback = null): Reply
+    {
+        return $this->reply('generated');
+    }
+
+    public function complete($input, $config = []): Reply
+    {
+        return $this->reply('completed');
+    }
+
+    public function respond($input, $config = []): Reply
+    {
+        return $this->reply('responded');
+    }
+
+    protected function reply(string $message): Reply
+    {
+        $reply = new Reply();
+        $reply->addMessage($message, true);
+
+        return $reply;
+    }
+}
 
 class AgentIntegrationContractTest extends TestCase
 {
@@ -60,5 +91,36 @@ class AgentIntegrationContractTest extends TestCase
         $this->assertStringContainsString('"version":"1.0.0"', $json);
         $this->assertStringContainsString('"agent.tool_contracts"', $json);
         $this->assertStringContainsString('"query.tool_catalog"', $json);
+    }
+
+    public function testAgentUsesDevelationPrototypeCarrier(): void
+    {
+        $agent = new Agent(new IntegrationContractClientStub());
+
+        $this->assertInstanceOf(Obj::class, $agent);
+        $this->assertSame('agent', $agent->kind());
+        $this->assertSame('llm-runtime', $agent->role());
+        $this->assertSame('automata.llm.agent', $agent->scope());
+        $this->assertSame('configurable', $agent->autonomy());
+        $this->assertContains('answer-user-visible-tasks', $agent->goals());
+
+        $agent->decide(['feature' => AgentIntegrationContract::FEATURE_TOOLS]);
+        $snapshot = $agent->snapshot();
+
+        $this->assertSame($agent->session()->id(), $snapshot['properties']['session_id']);
+        $this->assertSame(
+            AgentIntegrationContract::FEATURE_TOOLS,
+            $snapshot['lastDecision']['feature']
+        );
+    }
+
+    public function testAgentPrototypeTracksExternalSessionScope(): void
+    {
+        $agent = new Agent(new IntegrationContractClientStub());
+        $session = new AgentSession('contract-session');
+
+        $agent->useSession($session);
+
+        $this->assertSame('contract-session', $agent->snapshot()['properties']['session_id']);
     }
 }

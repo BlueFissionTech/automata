@@ -5,7 +5,6 @@ use BlueFission\Arr;
 use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\AgentSession;
 use BlueFission\Behavioral\IDispatcher;
-use BlueFission\Behavioral\Dispatches;
 use BlueFission\Automata\LLM\Tools\ITool;
 use BlueFission\Automata\LLM\Agent\ToolCatalog;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
@@ -40,13 +39,15 @@ use BlueFission\Automata\LLM\MCP\Tools\MCPRegisterServerTool;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\DevElation as Dev;
 use BlueFission\Net\HTTP;
+use BlueFission\Obj;
+use BlueFission\Prototypes\Agent as PrototypeAgent;
+use BlueFission\Prototypes\Proto;
 use BlueFission\Str;
 // https://bootcamp.uxdesign.cc/a-comprehensive-and-hands-on-guide-to-autonomous-agents-with-gpt-b58d54724d50
-class Agent implements IDispatcher
+class Agent extends Obj implements IDispatcher
 {
-    use Dispatches {
-        Dispatches::__construct as private __dispatchesConstruct;
-    }
+    use Proto;
+    use PrototypeAgent;
 
     protected $tools = [];
     protected $llm;
@@ -70,10 +71,11 @@ class Agent implements IDispatcher
     protected ?HumanReviewGate $humanReviewGate = null;
 
     public function __construct($llm) {
-        $this->__dispatchesConstruct();
+        parent::__construct();
 
         $this->llm = $llm;
         $this->session = new AgentSession(null, ['client' => 'automata']);
+        $this->bootstrapPrototype();
         $this->toolCatalog = new ToolCatalog();
         $this->toolExecutor = new ToolExecutor();
         $this->agentState = new AgentState();
@@ -116,6 +118,27 @@ class Agent implements IDispatcher
         Dev::do(AgentHook::SESSION_START, [
             'agent' => static::class,
         ]);
+    }
+
+    /**
+     * Seed DevElation prototype metadata for shared agent inspection.
+     */
+    protected function bootstrapPrototype(): void
+    {
+        $this->protoId(TaskTraceSpan::id('agent'));
+        $this->name(static::class);
+        $this->role('llm-runtime');
+        $this->scope('automata.llm.agent');
+        $this->awareness('context-tools-memory-goals');
+        $this->efficacy('deterministic-execution-boundary');
+        $this->autonomy('configurable');
+        $this->control('agent-session');
+        $this->property('session_id', $this->session->id());
+        $this->addGoal('answer-user-visible-tasks');
+        $this->addStrategy('tool-contracts');
+        $this->addStrategy('lifecycle-hooks');
+        $this->addStrategy('governed-task-calls');
+        $this->summary('agent[' . static::class . '] scope=automata.llm.agent');
     }
 
     /**
@@ -392,6 +415,7 @@ class Agent implements IDispatcher
     {
         $this->session = $session;
         $this->memorySessionId = $session->id();
+        $this->property('session_id', $session->id());
     }
 
     /**
@@ -412,6 +436,7 @@ class Agent implements IDispatcher
         $this->session = new AgentSession($sessionId, $this->session->context(['client' => 'automata']), $workingMemory);
         $this->memorySessionId = $this->session->id();
         $this->memorySequence = 0;
+        $this->property('session_id', $this->session->id());
 
         $this->emitMemoryEvent(AgentHook::SESSION_START, [
             'session_context' => $this->memoryInjector ? $this->memoryInjector->sessionContext($this->memoryContext()) : '',
