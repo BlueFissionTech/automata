@@ -30,11 +30,6 @@ class AgentIntegrationContract extends Obj
 {
     public const VERSION = '1.0.0';
 
-    public const CONSUMER_JENSS = 'jenss';
-    public const CONSUMER_JENERATOR = 'jenerator';
-    public const CONSUMER_LINQR = 'linqr';
-    public const CONSUMER_CHAINLINQ = 'chainlinq';
-
     public const FEATURE_AGENT = 'agent.runtime';
     public const FEATURE_TOOLS = 'agent.tool_contracts';
     public const FEATURE_HOOKS = 'agent.lifecycle_hooks';
@@ -48,8 +43,21 @@ class AgentIntegrationContract extends Obj
     public const FEATURE_TELEMETRY = 'agent.cpct_telemetry';
     public const FEATURE_SECURITY = 'agent.runtime_security';
 
+    public const TEMPLATE_AGENT = 'agent';
+    public const TEMPLATE_TOOL = 'tool';
+    public const TEMPLATE_HOOK = 'hook';
+    public const TEMPLATE_SESSION = 'session';
+    public const TEMPLATE_MEMORY = 'memory';
+    public const TEMPLATE_HOLOSCENE = 'holoscene';
+    public const TEMPLATE_GOVERNANCE = 'governance';
+    public const TEMPLATE_MCP = 'mcp';
+    public const TEMPLATE_ORCHESTRATION = 'orchestration';
+    public const TEMPLATE_GOAL = 'goal';
+    public const TEMPLATE_TRACE = 'trace';
+    public const TEMPLATE_SECURITY = 'security';
+
     /**
-     * Build the standard Automata integration surface for interpreter adapters.
+     * Build the standard Automata integration surface for adapter contracts.
      */
     public function __construct(array $overrides = [])
     {
@@ -58,7 +66,7 @@ class AgentIntegrationContract extends Obj
     }
 
     /**
-     * Create the default contract advertised to JenSS and query runtimes.
+     * Create the default upstream contract template for Automata agent features.
      */
     public static function standard(array $overrides = []): self
     {
@@ -74,21 +82,20 @@ class AgentIntegrationContract extends Obj
     }
 
     /**
-     * Return deterministic feature descriptors, optionally filtered by consumer.
+     * Return deterministic feature descriptors, optionally filtered by feature id.
      */
-    public function features(?string $consumer = null): array
+    public function features(?array $featureIds = null): array
     {
         $features = Arr::make($this->field('features') ?? [])->toArray();
 
-        if (!$consumer) {
+        if (!$featureIds) {
             return $features;
         }
 
         $filtered = [];
-        foreach ($features as $name => $feature) {
-            $consumers = Arr::make($feature['consumers'] ?? [])->toArray();
-            if (Arr::contains($consumers, $consumer, true)) {
-                $filtered[$name] = $feature;
+        foreach (Arr::make($featureIds)->toArray() as $featureId) {
+            if (Arr::hasKey($features, $featureId)) {
+                $filtered[$featureId] = $features[$featureId];
             }
         }
 
@@ -114,17 +121,33 @@ class AgentIntegrationContract extends Obj
     }
 
     /**
-     * Return target-language binding names for one consumer or all consumers.
+     * Return the template other libraries can use to publish adapter contracts upstream.
      */
-    public function bindings(?string $consumer = null): array
+    public function contractTemplate(): array
     {
-        $bindings = Arr::make($this->field('bindings') ?? [])->toArray();
+        return Arr::make($this->field('contract_template') ?? [])->toArray();
+    }
 
-        if (!$consumer) {
-            return $bindings;
+    /**
+     * Return neutral construct-to-feature hints for adapter-owned bindings.
+     */
+    public function bindingTemplate(?string $construct = null): array
+    {
+        $template = Arr::make($this->field('binding_template') ?? [])->toArray();
+
+        if (!$construct) {
+            return $template;
         }
 
-        return Arr::make($bindings[$consumer] ?? [])->toArray();
+        return Arr::make($template[$construct] ?? [])->toArray();
+    }
+
+    /**
+     * Return neutral binding hints for callers that still use the older method name.
+     */
+    public function bindings(?string $construct = null): array
+    {
+        return $this->bindingTemplate($construct);
     }
 
     /**
@@ -144,7 +167,7 @@ class AgentIntegrationContract extends Obj
     }
 
     /**
-     * Return production integration checks that downstream adapters should satisfy.
+     * Return production integration checks that adapter contracts should satisfy.
      */
     public function acceptanceCriteria(): array
     {
@@ -168,17 +191,10 @@ class AgentIntegrationContract extends Obj
             'name' => 'automata.agent.integration',
             'version' => self::VERSION,
             'owner' => 'automata',
-            'consumers' => [
-                self::CONSUMER_JENSS,
-                self::CONSUMER_JENERATOR,
-                self::CONSUMER_LINQR,
-                self::CONSUMER_CHAINLINQ,
-            ],
             'features' => [
                 self::FEATURE_AGENT => [
                     'summary' => 'Agent runtime entry point and configured execution boundary.',
                     'classes' => [Agent::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR],
                     'constructs' => ['agent', 'agent.run', 'agent.configure'],
                     'inputs' => ['prompt', 'template', 'task_id', 'session'],
                     'outputs' => ['reply', 'trace', 'events'],
@@ -186,7 +202,6 @@ class AgentIntegrationContract extends Obj
                 self::FEATURE_TOOLS => [
                     'summary' => 'Deterministic tool definitions, catalog retrieval, execution, and structured results.',
                     'classes' => [ToolDefinition::class, ToolCatalog::class, ToolExecutor::class, ToolExecutionResult::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR, self::CONSUMER_LINQR, self::CONSUMER_CHAINLINQ],
                     'constructs' => ['tool', 'tool.catalog', 'tool.call', 'tool.result'],
                     'inputs' => ['definition', 'catalog_filters', 'arguments', 'permission_context'],
                     'outputs' => ['definition_array', 'prompt_catalog', 'execution_result'],
@@ -194,7 +209,6 @@ class AgentIntegrationContract extends Obj
                 self::FEATURE_HOOKS => [
                     'summary' => 'Lifecycle hooks for deterministic adapter logging, memory capture, telemetry, and governance.',
                     'classes' => [AgentHook::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR, self::CONSUMER_CHAINLINQ],
                     'constructs' => ['on.session_start', 'on.user_prompt_submit', 'on.pre_tool_use', 'on.post_tool_use', 'on.turn_stop'],
                     'inputs' => ['event_name', 'payload'],
                     'outputs' => ['event_payload', 'adapter_side_effect'],
@@ -202,7 +216,6 @@ class AgentIntegrationContract extends Obj
                 self::FEATURE_SESSION => [
                     'summary' => 'Shared session scope for permissions, context, uploaded inputs, tools, and working memory.',
                     'classes' => [AgentSession::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR],
                     'constructs' => ['session', 'session.context', 'session.allow', 'session.memory'],
                     'inputs' => ['session_id', 'context', 'permissions', 'working_memory'],
                     'outputs' => ['scoped_context', 'permission_result', 'memory_handle'],
@@ -210,7 +223,6 @@ class AgentIntegrationContract extends Obj
                 self::FEATURE_MEMORY => [
                     'summary' => 'Memory and context injection through Automata working-memory contracts and lifecycle stores.',
                     'classes' => [AgentSession::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR],
                     'constructs' => ['memory.remember', 'memory.recall', 'memory.inject'],
                     'inputs' => ['label', 'context', 'edges', 'injector'],
                     'outputs' => ['context', 'memory_events'],
@@ -218,7 +230,6 @@ class AgentIntegrationContract extends Obj
                 self::FEATURE_HOLOSCENE => [
                     'summary' => 'Holoscene comprehension for scoped sensory, narrative, scene, and episode context.',
                     'classes' => [Holoscene::class, Scene::class, Reader::class, IWorkingMemory::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR, self::CONSUMER_LINQR, self::CONSUMER_CHAINLINQ],
                     'constructs' => ['holoscene', 'scene', 'episode', 'reader.to_holoscene', 'holoscene.narrate'],
                     'inputs' => ['statements', 'episode_id', 'scene', 'working_memory', 'session_scope'],
                     'outputs' => ['holoscene_snapshot', 'assessment', 'narrative_log', 'working_memory_context'],
@@ -226,7 +237,6 @@ class AgentIntegrationContract extends Obj
                 self::FEATURE_GOVERNANCE => [
                     'summary' => 'Human review, steering, policy gates, and governed task calls for tools, APIs, RPC, and MCP.',
                     'classes' => [TaskCallMonitor::class, HumanReviewGate::class, GovernanceDecision::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR, self::CONSUMER_CHAINLINQ],
                     'constructs' => ['review.request', 'review.decision', 'task.call', 'task.policy'],
                     'inputs' => ['call', 'policy', 'reviewer'],
                     'outputs' => ['decision', 'call_result', 'trace_span'],
@@ -234,7 +244,6 @@ class AgentIntegrationContract extends Obj
                 self::FEATURE_MCP => [
                     'summary' => 'Observed and governed MCP discovery, resource, request, and tool-call surfaces.',
                     'classes' => [MCPClient::class, TaskCallMonitor::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR, self::CONSUMER_CHAINLINQ],
                     'constructs' => ['mcp.server', 'mcp.resource', 'mcp.request', 'mcp.tool'],
                     'inputs' => ['server', 'resource', 'request', 'tool_arguments'],
                     'outputs' => ['mcp_result', 'trace_span', 'governance_decision'],
@@ -242,7 +251,6 @@ class AgentIntegrationContract extends Obj
                 self::FEATURE_ORCHESTRATION => [
                     'summary' => 'Sequential, fan-out, hierarchical, reflexive, and PIANO orchestration patterns.',
                     'classes' => [Orchestrator::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR],
                     'constructs' => ['orchestrate', 'orchestrate.sequential', 'orchestrate.hierarchical', 'orchestrate.piano'],
                     'inputs' => ['pattern', 'workers', 'context', 'session'],
                     'outputs' => ['orchestration_result', 'worker_results', 'trace'],
@@ -250,7 +258,6 @@ class AgentIntegrationContract extends Obj
                 self::FEATURE_STATE_GOALS => [
                     'summary' => 'Behavioral state channels, cognitive controller seams, goals, criteria, and expectations.',
                     'classes' => [AgentState::class, GoalManager::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR],
                     'constructs' => ['state.channel', 'goal', 'criterion', 'expectation', 'decision.option'],
                     'inputs' => ['state', 'goal', 'criteria', 'context'],
                     'outputs' => ['state_snapshot', 'goal_decisions', 'expectation_updates'],
@@ -258,7 +265,6 @@ class AgentIntegrationContract extends Obj
                 self::FEATURE_TELEMETRY => [
                     'summary' => 'Task-scoped CPCT traces for model, tool, MCP, batch, cache, and routing economics.',
                     'classes' => [TaskTrace::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR, self::CONSUMER_CHAINLINQ, self::CONSUMER_LINQR],
                     'constructs' => ['trace.task', 'trace.span', 'trace.cpct', 'trace.routing'],
                     'inputs' => ['task_id', 'span', 'usage', 'outcome'],
                     'outputs' => ['trace_snapshot', 'cpct_report'],
@@ -266,47 +272,36 @@ class AgentIntegrationContract extends Obj
                 self::FEATURE_SECURITY => [
                     'summary' => 'Runtime logic validation and LPCI-oriented sanitization before content re-enters context.',
                     'classes' => [RuntimeLogicValidator::class],
-                    'consumers' => [self::CONSUMER_JENSS, self::CONSUMER_JENERATOR],
                     'constructs' => ['security.scan', 'security.validate', 'security.sanitize'],
                     'inputs' => ['content', 'tool_result', 'memory_event'],
                     'outputs' => ['finding', 'sanitized_content', 'blocked_result'],
                 ],
             ],
-            'bindings' => [
-                self::CONSUMER_JENSS => [
-                    'agent' => self::FEATURE_AGENT,
-                    'tool' => self::FEATURE_TOOLS,
-                    'on' => self::FEATURE_HOOKS,
-                    'session' => self::FEATURE_SESSION,
-                    'memory' => self::FEATURE_MEMORY,
-                    'holoscene' => self::FEATURE_HOLOSCENE,
-                    'review' => self::FEATURE_GOVERNANCE,
-                    'mcp' => self::FEATURE_MCP,
-                    'orchestrate' => self::FEATURE_ORCHESTRATION,
-                    'goal' => self::FEATURE_STATE_GOALS,
-                    'trace' => self::FEATURE_TELEMETRY,
-                    'security' => self::FEATURE_SECURITY,
+            'contract_template' => [
+                'name' => 'family.adapter.contract',
+                'direction' => 'adapter-to-upstream-runtime',
+                'required_fields' => ['name', 'version', 'owner', 'target', 'feature_bindings', 'acceptance_criteria'],
+                'feature_binding_shape' => [
+                    'construct' => '<local language or adapter construct>',
+                    'feature' => '<stable Automata feature id>',
+                    'inputs' => '<adapter-owned input mapping>',
+                    'outputs' => '<adapter-owned output mapping>',
                 ],
-                self::CONSUMER_JENERATOR => [
-                    'runtime.agent' => self::FEATURE_AGENT,
-                    'runtime.tool' => self::FEATURE_TOOLS,
-                    'runtime.hook' => self::FEATURE_HOOKS,
-                    'runtime.session' => self::FEATURE_SESSION,
-                    'runtime.holoscene' => self::FEATURE_HOLOSCENE,
-                    'runtime.trace' => self::FEATURE_TELEMETRY,
-                ],
-                self::CONSUMER_LINQR => [
-                    'query.tool_catalog' => self::FEATURE_TOOLS,
-                    'query.holoscene' => self::FEATURE_HOLOSCENE,
-                    'query.trace' => self::FEATURE_TELEMETRY,
-                ],
-                self::CONSUMER_CHAINLINQ => [
-                    'adapter.tool_catalog' => self::FEATURE_TOOLS,
-                    'adapter.task_call' => self::FEATURE_GOVERNANCE,
-                    'adapter.mcp' => self::FEATURE_MCP,
-                    'adapter.holoscene' => self::FEATURE_HOLOSCENE,
-                    'adapter.trace' => self::FEATURE_TELEMETRY,
-                ],
+                'boundary' => 'Automata owns runtime feature ids and class contracts; adapter libraries own syntax, query language, ingestion, and generated bindings.',
+            ],
+            'binding_template' => [
+                self::TEMPLATE_AGENT => ['feature' => self::FEATURE_AGENT, 'constructs' => ['agent', 'agent.run', 'agent.configure']],
+                self::TEMPLATE_TOOL => ['feature' => self::FEATURE_TOOLS, 'constructs' => ['tool', 'tool.catalog', 'tool.call', 'tool.result']],
+                self::TEMPLATE_HOOK => ['feature' => self::FEATURE_HOOKS, 'constructs' => ['on.session_start', 'on.pre_tool_use', 'on.post_tool_use']],
+                self::TEMPLATE_SESSION => ['feature' => self::FEATURE_SESSION, 'constructs' => ['session', 'session.context', 'session.allow']],
+                self::TEMPLATE_MEMORY => ['feature' => self::FEATURE_MEMORY, 'constructs' => ['memory.remember', 'memory.recall', 'memory.inject']],
+                self::TEMPLATE_HOLOSCENE => ['feature' => self::FEATURE_HOLOSCENE, 'constructs' => ['holoscene', 'scene', 'episode']],
+                self::TEMPLATE_GOVERNANCE => ['feature' => self::FEATURE_GOVERNANCE, 'constructs' => ['review.request', 'review.decision', 'task.call']],
+                self::TEMPLATE_MCP => ['feature' => self::FEATURE_MCP, 'constructs' => ['mcp.server', 'mcp.resource', 'mcp.tool']],
+                self::TEMPLATE_ORCHESTRATION => ['feature' => self::FEATURE_ORCHESTRATION, 'constructs' => ['orchestrate', 'orchestrate.hierarchical', 'orchestrate.piano']],
+                self::TEMPLATE_GOAL => ['feature' => self::FEATURE_STATE_GOALS, 'constructs' => ['state.channel', 'goal', 'criterion', 'expectation']],
+                self::TEMPLATE_TRACE => ['feature' => self::FEATURE_TELEMETRY, 'constructs' => ['trace.task', 'trace.span', 'trace.cpct']],
+                self::TEMPLATE_SECURITY => ['feature' => self::FEATURE_SECURITY, 'constructs' => ['security.scan', 'security.validate', 'security.sanitize']],
             ],
             'hooks' => AgentHook::all(),
             'tool_catalog_filters' => [

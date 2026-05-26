@@ -11,8 +11,13 @@ $contract = AgentIntegrationContract::standard();
 
 print HTTP::jsonEncode([
     'version' => $contract->version(),
-    'jenss_bindings' => $contract->bindings(AgentIntegrationContract::CONSUMER_JENSS),
-    'linqr_features' => $contract->features(AgentIntegrationContract::CONSUMER_LINQR),
+    'contract_template' => $contract->contractTemplate(),
+    'binding_template' => $contract->bindingTemplate(),
+    'features' => $contract->features([
+        AgentIntegrationContract::FEATURE_TOOLS,
+        AgentIntegrationContract::FEATURE_HOLOSCENE,
+        AgentIntegrationContract::FEATURE_TELEMETRY,
+    ]),
     'catalog_filters' => $contract->toolCatalogFilters(),
     'production_checks' => $contract->acceptanceCriteria(),
 ]) . PHP_EOL;

@@ -75,7 +75,7 @@ The monitor emits lifecycle hooks, applies policy, asks for review when configur
 
 `AgentSession` is the boundary for shared scope. An agent can keep its own prompt context, while the session decides what context, permissions, tools, uploaded inputs, working memory, and Holoscene episodes are available to one or more agents. The session can attach an Automata `IWorkingMemory` implementation, including `Abs2Memory`, so durable memory and Holoscene-compatible working-memory implementations are reached through existing Automata contracts instead of a separate memory silo.
 
-Sessions can also attach a `Holoscene` directly. This lets interpreter adapters project sensory data, statements, scenes, and narrative episodes into the comprehension layer while still keeping access scoped by the session. Agents expose that Holoscene through prototype metadata by `holoscene_id`, so downstream runtimes can inspect the association without forcing raw scene data into prompt context.
+Sessions can also attach a `Holoscene` directly. This lets interpreter adapters project sensory data, statements, scenes, and narrative episodes into the comprehension layer while still keeping access scoped by the session. Agents expose that Holoscene through prototype metadata by `holoscene_id`, so adapter runtimes can inspect the association without forcing raw scene data into prompt context.
 
 Lifecycle memory logging is intentionally tied to `AgentHook` names rather than memory-specific hook constants. Memory event stores persist hook activity, but the lifecycle belongs to the agent. `InMemoryEventStore` is process-local for tests and short runs. `FileMemoryEventStore` uses DevElation `Disk` storage through `StorageMemoryEventStore`, so applications can replace the storage adapter with another DevElation storage implementation without overriding file and JSON logic.
 
@@ -95,9 +95,9 @@ Goal reasoning lives in Automata's `Goal` namespace instead of inside the cognit
 
 The default classes are dependency-injection examples as much as concrete implementations. `GoalManager` implements `IGoalManager` and uses `ManagesGoals`; custom managers can implement the same interface and import the trait when they only need to adjust persistence, weighting, or constructor policy. `CognitiveController` implements `IStateController` and uses `ControlsAgentState`; custom controllers can import that trait to keep the standard bottleneck, goal recommendation, and state-write behavior while overriding only the decision context or option selection. `AgentState` accepts an `IGoalManager`, and `Agent::setCognitiveController()` accepts an `IStateController`, so applications can swap either side through normal dependency injection.
 
-## Interpreter Integration Contract
+## Integration Contract Template
 
-`AgentIntegrationContract` exposes Automata's stable agent feature surface as deterministic metadata for JenSS, Jenerator, Chainlinq, and linqr adapters. It does not execute tools or prompts. Instead, it names the supported feature ids, owning classes, lifecycle hooks, tool catalog filter constants, language binding hints, and production acceptance checks that downstream runtimes can use to generate syntax bindings and conformance fixtures.
+`AgentIntegrationContract` exposes Automata's stable agent feature surface as deterministic metadata for external adapters. It does not execute tools or prompts, and it does not know which descendant or application library will consume it. Instead, it names supported feature ids, owning classes, lifecycle hooks, tool catalog filter constants, neutral construct hints, a reusable contract template, and production acceptance checks that other libraries can use to publish their own upstream-facing contracts.
 
 The first contract version covers:
 
@@ -111,7 +111,7 @@ The first contract version covers:
 - behavioral state, goals, criteria, expectations, and bounded decisions
 - CPCT telemetry and runtime security validation
 
-Adapters should bind to the contract's feature ids rather than hard-coding prompt text or concrete class internals. For example, JenSS can map a `tool` construct to `agent.tool_contracts`, while linqr can map query catalog retrieval to the same feature through `query.tool_catalog`. This keeps syntax design in JenSS and linqr while Automata owns the runtime contract.
+Adapters should bind to the contract's feature ids rather than hard-coding prompt text or concrete class internals. Automata provides `contractTemplate()` and `bindingTemplate()` so adapter libraries can decide their own construct names, syntax, query language, ingestion flow, and conformance fixtures while pointing back to stable Automata feature ids. Sibling libraries may coordinate with one another, but Automata should not carry descendant-specific binding maps.
 
 ## Integration Notes
 

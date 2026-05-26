@@ -68,10 +68,14 @@ class AgentIntegrationContractTest extends TestCase
         );
     }
 
-    public function testConsumerFilteringKeepsLinqrFocusedOnQueryRelevantSurfaces(): void
+    public function testFeatureSelectionUsesCallerOwnedFeatureIds(): void
     {
         $contract = AgentIntegrationContract::standard();
-        $features = $contract->features(AgentIntegrationContract::CONSUMER_LINQR);
+        $features = $contract->features([
+            AgentIntegrationContract::FEATURE_TOOLS,
+            AgentIntegrationContract::FEATURE_HOLOSCENE,
+            AgentIntegrationContract::FEATURE_TELEMETRY,
+        ]);
 
         $this->assertArrayHasKey(AgentIntegrationContract::FEATURE_TOOLS, $features);
         $this->assertArrayHasKey(AgentIntegrationContract::FEATURE_HOLOSCENE, $features);
@@ -79,17 +83,26 @@ class AgentIntegrationContractTest extends TestCase
         $this->assertArrayNotHasKey(AgentIntegrationContract::FEATURE_HOOKS, $features);
     }
 
-    public function testBindingsMapLanguageConstructsToAutomataFeatures(): void
+    public function testBindingTemplateMapsNeutralConstructsToAutomataFeatures(): void
     {
         $contract = AgentIntegrationContract::standard();
-        $jenss = $contract->bindings(AgentIntegrationContract::CONSUMER_JENSS);
-        $chainlinq = $contract->bindings(AgentIntegrationContract::CONSUMER_CHAINLINQ);
+        $template = $contract->bindingTemplate();
 
-        $this->assertSame(AgentIntegrationContract::FEATURE_TOOLS, $jenss['tool']);
-        $this->assertSame(AgentIntegrationContract::FEATURE_HOLOSCENE, $jenss['holoscene']);
-        $this->assertSame(AgentIntegrationContract::FEATURE_ORCHESTRATION, $jenss['orchestrate']);
-        $this->assertSame(AgentIntegrationContract::FEATURE_HOLOSCENE, $chainlinq['adapter.holoscene']);
-        $this->assertSame(AgentIntegrationContract::FEATURE_MCP, $chainlinq['adapter.mcp']);
+        $this->assertSame(AgentIntegrationContract::FEATURE_TOOLS, $template['tool']['feature']);
+        $this->assertSame(AgentIntegrationContract::FEATURE_HOLOSCENE, $template['holoscene']['feature']);
+        $this->assertSame(AgentIntegrationContract::FEATURE_ORCHESTRATION, $template['orchestration']['feature']);
+        $this->assertSame(AgentIntegrationContract::FEATURE_MCP, $template['mcp']['feature']);
+        $this->assertSame($template['tool'], $contract->bindings(AgentIntegrationContract::TEMPLATE_TOOL));
+    }
+
+    public function testContractTemplateDefinesAdapterOwnedUpstreamShape(): void
+    {
+        $template = AgentIntegrationContract::standard()->contractTemplate();
+
+        $this->assertSame('family.adapter.contract', $template['name']);
+        $this->assertSame('adapter-to-upstream-runtime', $template['direction']);
+        $this->assertContains('feature_bindings', $template['required_fields']);
+        $this->assertStringContainsString('adapter libraries own syntax', $template['boundary']);
     }
 
     public function testLifecycleHooksAndCatalogFiltersAreDiscoverable(): void
@@ -109,7 +122,11 @@ class AgentIntegrationContractTest extends TestCase
         $this->assertStringContainsString('"version":"1.0.0"', $json);
         $this->assertStringContainsString('"agent.tool_contracts"', $json);
         $this->assertStringContainsString('"agent.holoscene_comprehension"', $json);
-        $this->assertStringContainsString('"query.tool_catalog"', $json);
+        $this->assertStringContainsString('"contract_template"', $json);
+        $this->assertStringNotContainsString('"jenss"', $json);
+        $this->assertStringNotContainsString('"jenerator"', $json);
+        $this->assertStringNotContainsString('"linqr"', $json);
+        $this->assertStringNotContainsString('"chainlinq"', $json);
     }
 
     public function testHolosceneFeatureAdvertisesComprehensionClasses(): void
