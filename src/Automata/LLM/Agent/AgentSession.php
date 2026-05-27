@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\LLM\Agent;
 
 use BlueFission\Arr;
+use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\Context;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTraceSpan;
 use BlueFission\Automata\Memory\IWorkingMemory;
@@ -24,15 +25,18 @@ class AgentSession implements IDispatcher
 
     protected ?IWorkingMemory $workingMemory = null;
 
+    protected ?Holoscene $holoscene = null;
+
     /**
      * Create a scope boundary for one or more agents.
      */
-    public function __construct(?string $sessionId = null, array $context = [], ?IWorkingMemory $workingMemory = null)
+    public function __construct(?string $sessionId = null, array $context = [], ?IWorkingMemory $workingMemory = null, ?Holoscene $holoscene = null)
     {
         $this->__dispatchesConstruct();
         $this->sessionId = $sessionId ?: TaskTraceSpan::id('session');
         $this->context = $context;
         $this->workingMemory = $workingMemory;
+        $this->holoscene = $holoscene;
         $this->trigger(Event::STARTED);
     }
 
@@ -101,6 +105,46 @@ class AgentSession implements IDispatcher
     public function workingMemory(): ?IWorkingMemory
     {
         return $this->workingMemory;
+    }
+
+    /**
+     * Attach a Holoscene narrative container to this session scope.
+     */
+    public function useHoloscene(?Holoscene $holoscene): self
+    {
+        $this->holoscene = $holoscene;
+        $this->trigger(Event::CHANGE);
+
+        return $this;
+    }
+
+    /**
+     * Return the attached Holoscene, if any.
+     */
+    public function holoscene(): ?Holoscene
+    {
+        return $this->holoscene;
+    }
+
+    /**
+     * Store a scene-like episode in the attached Holoscene.
+     */
+    public function addHolosceneEpisode(string $episodeId, mixed $scene): self
+    {
+        if ($this->holoscene) {
+            $this->holoscene->push($episodeId, $scene);
+            $this->trigger(Event::CHANGE);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Return the attached Holoscene snapshot without exposing mutable internals.
+     */
+    public function holosceneSnapshot(): ?array
+    {
+        return $this->holoscene?->snapshot();
     }
 
     /**

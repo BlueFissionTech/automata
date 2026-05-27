@@ -2,6 +2,8 @@
 
 Automata agents treat language models as reasoning components and keep execution in deterministic PHP boundaries. The `BlueFission\Automata\LLM\Agent` class coordinates model prompts, registered tools, lifecycle hooks, and later memory or orchestration layers without requiring external agent harnesses.
 
+`Agent` is also a DevElation prototype carrier: it extends `Obj` and uses the shared `Proto` and `Prototypes\Agent` traits. That gives interpreter adapters a consistent way to inspect agent role, scope, autonomy, control, goals, strategies, decision history, and snapshot metadata without inventing a parallel identity structure. Automata-specific runtime work still lives in the Agent, session, tool, governance, memory, orchestration, state, and telemetry classes below.
+
 ## Tool Contracts
 
 Tools are registered through `ToolCatalog` and described by `ToolDefinition`. A definition is a DevElation-configurable contract with:
@@ -71,7 +73,9 @@ The monitor emits lifecycle hooks, applies policy, asks for review when configur
 
 ## Session Scope And Memory
 
-`AgentSession` is the boundary for shared scope. An agent can keep its own prompt context, while the session decides what context, permissions, tools, uploaded inputs, and working memory are available to one or more agents. The session can attach an Automata `IWorkingMemory` implementation, including `Abs2Memory`, so durable memory and Holoscene-compatible working-memory implementations are reached through existing Automata contracts instead of a separate memory silo.
+`AgentSession` is the boundary for shared scope. An agent can keep its own prompt context, while the session decides what context, permissions, tools, uploaded inputs, working memory, and Holoscene episodes are available to one or more agents. The session can attach an Automata `IWorkingMemory` implementation, including `Abs2Memory`, so durable memory and Holoscene-compatible working-memory implementations are reached through existing Automata contracts instead of a separate memory silo.
+
+Sessions can also attach a `Holoscene` directly. This lets interpreter adapters project sensory data, statements, scenes, and narrative episodes into the comprehension layer while still keeping access scoped by the session. Agents expose that Holoscene through prototype metadata by `holoscene_id`, so adapter runtimes can inspect the association without forcing raw scene data into prompt context.
 
 Lifecycle memory logging is intentionally tied to `AgentHook` names rather than memory-specific hook constants. Memory event stores persist hook activity, but the lifecycle belongs to the agent. `InMemoryEventStore` is process-local for tests and short runs. `FileMemoryEventStore` uses DevElation `Disk` storage through `StorageMemoryEventStore`, so applications can replace the storage adapter with another DevElation storage implementation without overriding file and JSON logic.
 
@@ -90,6 +94,24 @@ PIANO is modeled as orchestration because the cognitive controller produces a bo
 Goal reasoning lives in Automata's `Goal` namespace instead of inside the cognitive controller. `GoalManager` holds active `Initiative` objects, checks `Condition` and `Criterion` satisfaction from deterministic context, tracks expectations, scores behavior options, and returns bounded `GoalDecision` options. `CognitiveController` now applies a bottleneck over state channels, asks the goal manager for ranked options, and writes the selected option back into state. This keeps prompt/inference work focused on choosing among bounded options rather than inventing every possible next action from raw context.
 
 The default classes are dependency-injection examples as much as concrete implementations. `GoalManager` implements `IGoalManager` and uses `ManagesGoals`; custom managers can implement the same interface and import the trait when they only need to adjust persistence, weighting, or constructor policy. `CognitiveController` implements `IStateController` and uses `ControlsAgentState`; custom controllers can import that trait to keep the standard bottleneck, goal recommendation, and state-write behavior while overriding only the decision context or option selection. `AgentState` accepts an `IGoalManager`, and `Agent::setCognitiveController()` accepts an `IStateController`, so applications can swap either side through normal dependency injection.
+
+## Integration Contract Template
+
+`AgentIntegrationContract` exposes Automata's stable agent feature surface as deterministic metadata for external adapters. It does not execute tools or prompts, and it does not know which descendant or application library will consume it. Instead, it names supported feature ids, owning classes, lifecycle hooks, tool catalog filter constants, neutral construct hints, a reusable contract template, and production acceptance checks that other libraries can use to publish their own upstream-facing contracts.
+
+The first contract version covers:
+
+- agent runtime configuration and execution
+- tool contracts, catalog filtering, and structured results
+- lifecycle hooks for deterministic adapter behavior
+- session scope, permissions, context, and working memory
+- Holoscene comprehension, scenes, episodes, assessments, and narrative logs
+- governance, human review, MCP/RPC/API task-call monitoring
+- orchestration patterns, nested orchestrations, and PIANO flows
+- behavioral state, goals, criteria, expectations, and bounded decisions
+- CPCT telemetry and runtime security validation
+
+Adapters should bind to the contract's feature ids rather than hard-coding prompt text or concrete class internals. Automata provides `contractTemplate()` and `bindingTemplate()` so adapter libraries can decide their own construct names, syntax, query language, ingestion flow, and conformance fixtures while pointing back to stable Automata feature ids. Sibling libraries may coordinate with one another, but Automata should not carry descendant-specific binding maps.
 
 ## Integration Notes
 
