@@ -31,9 +31,7 @@ foreach ($sentences as $s) {
 }
 
 $trigram = new TrigramMarkovPredictor();
-foreach ($sentences as $s) {
-    $trigram->addSentence($s);
-}
+$trigram->addSentences($sentences);
 
 mt_srand(123);
 $nextHub = $unigram->predictNextWord('hub');
@@ -50,6 +48,7 @@ echo "Trigram Markov: after 'hub road' -> '$nextHubRoad'\n";
 mt_srand(1011);
 $nextShelterIntake = $trigram->predictNextWord('shelter intake');
 echo "Trigram Markov: after 'shelter intake' -> '$nextShelterIntake'\n";
+echo "Trigram states trained: " . $trigram->stateCount() . "\n";
 
 echo "\nExample completed.\n";
 

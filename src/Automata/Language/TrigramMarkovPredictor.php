@@ -2,64 +2,283 @@
 
 namespace BlueFission\Automata\Language;
 
-use BlueFission\Automata\Collections\OrganizedCollection;
+use BlueFission\Arr;
+use BlueFission\DevElation as Dev;
+use BlueFission\Num;
+use BlueFission\Str;
+use BlueFission\Val;
 
 class TrigramMarkovPredictor {
-    protected $states;
-    protected $beginnings;
+    public const CONFIG_MAX_STATES = 'max_states';
+    public const CONFIG_MAX_BEGINNINGS = 'max_beginnings';
+    public const CONFIG_MAX_TRANSITIONS = 'max_transitions';
 
-    public function __construct() {
-        $this->states = new OrganizedCollection();
-        $this->states->setMax(10000); // Set max states to keep
-        $this->states->setDecay(true, 0.001); // Enable decay with a specific rate
-        $this->beginnings = new OrganizedCollection();
-        $this->beginnings->setMax(1000); // Manage the size of beginnings similarly
+    protected array $states = [];
+    protected array $beginnings = [];
+    protected int $maxStates;
+    protected int $maxBeginnings;
+    protected int $maxTransitions;
+
+    /**
+     * Configure bounded trigram storage for lightweight local prediction.
+     *
+     * @param array<string,mixed> $config
+     */
+    public function __construct(array $config = []) {
+        $this->maxStates = $this->normalizeLimit($config[self::CONFIG_MAX_STATES] ?? 10000, 10000);
+        $this->maxBeginnings = $this->normalizeLimit($config[self::CONFIG_MAX_BEGINNINGS] ?? 1000, 1000);
+        $this->maxTransitions = $this->normalizeLimit($config[self::CONFIG_MAX_TRANSITIONS] ?? 500, 500);
+
+        Dev::do('language.trigram.construct', [
+            'max_states' => $this->maxStates,
+            'max_beginnings' => $this->maxBeginnings,
+            'max_transitions' => $this->maxTransitions,
+        ]);
     }
 
-    public function addSentence($sentence) {
-        $words = $this->tokenize($sentence);
-        if (count($words) < 3) {
-            return; // Skip sentences that are too short to form a trigram
+    /**
+     * Add one sentence while preserving the legacy training entrypoint.
+     */
+    public function addSentence($sentence): self {
+        return $this->addSentences([$sentence]);
+    }
+
+    /**
+     * Add many sentences without per-transition collection sorting.
+     *
+     * @param iterable<int|string,mixed> $sentences
+     */
+    public function addSentences(iterable $sentences): self {
+        $added = 0;
+
+        foreach ($sentences as $sentence) {
+            if ($this->addTokenSequence($this->tokenize($sentence))) {
+                $added++;
+            }
         }
 
-        // Add the first word sequence to beginnings for potential initial states
-        $this->beginnings->add($words[0] . ' ' . $words[1]);
+        $this->prune();
 
-        for ($i = 2; $i < count($words); $i++) {
+        Dev::do('language.trigram.sentences_added', [
+            'count' => $added,
+            'states' => $this->stateCount(),
+            'beginnings' => $this->beginningCount(),
+        ]);
+
+        return $this;
+    }
+
+    /**
+     * Alias bulk training for strategy-style callers.
+     *
+     * @param iterable<int|string,mixed> $sentences
+     */
+    public function train(iterable $sentences): self {
+        return $this->addSentences($sentences);
+    }
+
+    /**
+     * Normalize a sentence into lowercase word tokens.
+     *
+     * @return array<int,string>
+     */
+    public function tokenize($sentence): array {
+        $sentence = Dev::apply('language.trigram.tokenize_sentence', $sentence);
+        $normalized = Str::make((string)$sentence)
+            ->lower()
+            ->trim()
+            ->replacePattern('/\s+/', ' ');
+
+        $tokens = [];
+        foreach ($normalized->split(' ')->toArray() as $token) {
+            if (Val::isNotEmpty($token)) {
+                $tokens[] = (string)$token;
+            }
+        }
+
+        Dev::do('language.trigram.tokenized', ['tokens' => $tokens]);
+
+        return $tokens;
+    }
+
+    /**
+     * Predict the next word from the last two words in the provided input.
+     */
+    public function predictNextWord($sentence) {
+        $sentence = Dev::apply('language.trigram.predict_input', $sentence);
+        $words = $this->tokenize($sentence);
+        $count = Arr::count($words);
+
+        if ($count < 2) {
+            return Dev::apply('language.trigram.predict_none', null);
+        }
+
+        $previousTwoWords = $words[$count - 2] . ' ' . $words[$count - 1];
+
+        if (!Arr::hasKey($this->states, $previousTwoWords)) {
+            return Dev::apply('language.trigram.predict_none', null);
+        }
+
+        $nextWords = $this->states[$previousTwoWords];
+        $total = $this->sumWeights($nextWords);
+
+        if ($total < 1) {
+            return Dev::apply('language.trigram.predict_none', null);
+        }
+
+        $rand = mt_rand(1, $total);
+
+        foreach ($nextWords as $word => $weight) {
+            $rand -= $weight;
+            if ($rand <= 0) {
+                $word = Dev::apply('language.trigram.predict_word', $word);
+                Dev::do('language.trigram.predicted', ['word' => $word, 'context' => $previousTwoWords]);
+                return $word;
+            }
+        }
+
+        return Dev::apply('language.trigram.predict_none', null);
+    }
+
+    /**
+     * Return the learned trigram state table.
+     *
+     * @return array<string,array<string,int>>
+     */
+    public function states(): array {
+        return Arr::make($this->states)->toArray();
+    }
+
+    /**
+     * Return tracked sentence-start contexts.
+     *
+     * @return array<string,int>
+     */
+    public function beginnings(): array {
+        return Arr::make($this->beginnings)->toArray();
+    }
+
+    /**
+     * Count trained trigram contexts.
+     */
+    public function stateCount(): int {
+        return Arr::count($this->states);
+    }
+
+    /**
+     * Count tracked beginning contexts.
+     */
+    public function beginningCount(): int {
+        return Arr::count($this->beginnings);
+    }
+
+    /**
+     * Clear trained state while preserving configured bounds.
+     */
+    public function reset(): self {
+        $this->states = [];
+        $this->beginnings = [];
+
+        return $this;
+    }
+
+    /**
+     * Add transitions from an already-tokenized sentence.
+     *
+     * @param array<int,string> $words
+     */
+    protected function addTokenSequence(array $words): bool {
+        $count = Arr::count($words);
+        if ($count < 3) {
+            return false;
+        }
+
+        $this->rememberBeginning($words[0] . ' ' . $words[1]);
+
+        for ($i = 2; $i < $count; $i++) {
             $trigram = $words[$i - 2] . ' ' . $words[$i - 1];
             $nextWord = $words[$i];
 
-            if (!$this->states->has($trigram)) {
-                $this->states->add([], $trigram);
+            if (!Arr::hasKey($this->states, $trigram)) {
+                $this->states[$trigram] = [];
             }
-            $currentData = $this->states->get($trigram);
-            if (!isset($currentData[$nextWord])) {
-                $currentData[$nextWord] = 0;
+
+            $this->states[$trigram][$nextWord] = ($this->states[$trigram][$nextWord] ?? 0) + 1;
+            $this->pruneTransitions($trigram);
+        }
+
+        return true;
+    }
+
+    /**
+     * Track a starting two-word context for possible future generation.
+     */
+    protected function rememberBeginning(string $context): void {
+        $this->beginnings[$context] = ($this->beginnings[$context] ?? 0) + 1;
+    }
+
+    /**
+     * Enforce global state and beginning limits after a bulk operation.
+     */
+    protected function prune(): void {
+        while (Arr::count($this->states) > $this->maxStates) {
+            foreach ($this->states as $key => $value) {
+                unset($this->states[$key]);
+                break;
             }
-            $currentData[$nextWord]++;
-            $this->states->add($currentData, $trigram);
+        }
+
+        while (Arr::count($this->beginnings) > $this->maxBeginnings) {
+            foreach ($this->beginnings as $key => $value) {
+                unset($this->beginnings[$key]);
+                break;
+            }
         }
     }
 
-    public function tokenize($sentence) {
-        // Simple tokenizer (consider improving or using a library for better tokenization)
-        return preg_split('/\s+/', strtolower($sentence));
-    }
+    /**
+     * Enforce per-context transition limits by dropping the lowest-weight terms.
+     */
+    protected function pruneTransitions(string $trigram): void {
+        if (Arr::count($this->states[$trigram]) <= $this->maxTransitions) {
+            return;
+        }
 
-    public function predictNextWord($sentence) {
-        $previousTwoWords = implode(' ', array_slice($this->tokenize($sentence), -2));
+        asort($this->states[$trigram]);
 
-        if ($this->states->has($previousTwoWords)) {
-            $nextWords = $this->states->get($previousTwoWords);
-            $total = array_sum($nextWords);
-            $rand = mt_rand(0, $total - 1);
-
-            foreach ($nextWords as $word => $count) {
-                if (($rand -= $count) < 0) {
-                    return $word;
-                }
+        while (Arr::count($this->states[$trigram]) > $this->maxTransitions) {
+            foreach ($this->states[$trigram] as $word => $weight) {
+                unset($this->states[$trigram][$word]);
+                break;
             }
         }
-        return null; // No next word found if no suitable transition exists
+    }
+
+    /**
+     * Sum integer transition weights without requiring collection conversion.
+     *
+     * @param array<string,int> $weights
+     */
+    protected function sumWeights(array $weights): int {
+        $total = 0;
+
+        foreach ($weights as $weight) {
+            $total += (int)$weight;
+        }
+
+        return $total;
+    }
+
+    /**
+     * Normalize a user-supplied positive integer limit.
+     */
+    protected function normalizeLimit(mixed $value, int $fallback): int {
+        if (!Num::is($value)) {
+            return $fallback;
+        }
+
+        $limit = (int)$value;
+
+        return $limit > 0 ? $limit : $fallback;
     }
 }
