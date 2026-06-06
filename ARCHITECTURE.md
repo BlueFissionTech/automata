@@ -246,6 +246,9 @@ Responsibilities:
   - response interpretation and routing.
 - Bridge between symbolic NLP (Language) and sub‑symbolic systems (LLMs and
   embeddings).
+- Keep local Markov-style prediction bounded and inspectable so moderate
+  catalogs can be trained synchronously without turning setup into hidden
+  inference work.
 
 ## 3. Representative Data Flows
 

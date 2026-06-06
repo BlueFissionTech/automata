@@ -198,6 +198,13 @@ It is already used in other libraries (e.g. `bluefissiontech/synthetiq`), so:
 Documenter, Grammar, Interpreter, Tokenizer, Walker, and related classes should
 be treated as production‑critical components.
 
+The lightweight Markov predictors are intended for local phrase continuity and
+small-to-moderate catalogs. Use `MarkovPredictor` when a single previous token
+is enough context. Use `TrigramMarkovPredictor::addSentence()` for incremental
+updates, and `TrigramMarkovPredictor::addSentences()` or `train()` when loading
+a catalog in bulk. Configure trigram bounds when training should remain memory
+and setup-time predictable.
+
 ### 3.7 Expert Systems
 
 The `Expert` folder focuses on **fact‑based expert systems**:
