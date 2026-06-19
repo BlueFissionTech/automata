@@ -62,6 +62,7 @@ class AgentIntegrationContractTest extends TestCase
         $this->assertSame(AgentIntegrationContract::VERSION, $contract->version());
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_TOOLS));
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_TELEMETRY));
+        $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_LANE_PRESSURE));
         $this->assertSame(
             'Deterministic tool definitions, catalog retrieval, execution, and structured results.',
             $contract->feature(AgentIntegrationContract::FEATURE_TOOLS)['summary']
@@ -119,9 +120,10 @@ class AgentIntegrationContractTest extends TestCase
     {
         $json = AgentIntegrationContract::standard()->toJson();
 
-        $this->assertStringContainsString('"version":"1.0.0"', $json);
+        $this->assertStringContainsString('"version":"1.1.0"', $json);
         $this->assertStringContainsString('"agent.tool_contracts"', $json);
         $this->assertStringContainsString('"agent.holoscene_comprehension"', $json);
+        $this->assertStringContainsString('"agent.lane_pressure"', $json);
         $this->assertStringContainsString('"contract_template"', $json);
         $this->assertStringNotContainsString('"jenss"', $json);
         $this->assertStringNotContainsString('"jenerator"', $json);
