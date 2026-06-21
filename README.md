@@ -19,6 +19,7 @@ The `bluefission/automata` library is a comprehensive PHP framework designed to 
 - **Bounded Language Prediction**: Lightweight Markov and trigram predictors support single-sentence updates and bounded bulk training for moderate local catalogs without requiring a hosted model.
 - **Large Language Models (LLM)**: Facilitate prompting and generating responses using large pre-trained models, integrating with tools like GPT for advanced text generation.
 - **Agent Capabilities**: Register deterministic tool contracts, scoped tool catalogs, permission checks, lifecycle hooks, session memory, Holoscene comprehension, orchestration patterns, DevElation-backed agent state/goal decisions, interpreter-facing integration contracts, and persona orchestration contracts around LLM agent loops. See [Agent Capabilities](docs/agent-capabilities.md) and [Agent Persona Orchestration Contracts](docs/agent-persona-orchestration-contracts.md).
+- **LLM Lane Pressure Management**: Assess semantic, operational, and execution pressure in provider-neutral agent workflows, with deterministic recommendations and a read-only LLM tool wrapper.
 - **Feature Engineering**: Provides robust tools for transforming raw data into features that better represent the underlying processes to predictive models.
 - **Data Science**: Basic machine learning functionalities alongside data manipulation, preparation, and visualization tools.
 - **Input Management**: Sophisticated input type detection and handling, ensuring that data flows seamlessly through processing pipelines.

@@ -95,6 +95,20 @@ Goal reasoning lives in Automata's `Goal` namespace instead of inside the cognit
 
 The default classes are dependency-injection examples as much as concrete implementations. `GoalManager` implements `IGoalManager` and uses `ManagesGoals`; custom managers can implement the same interface and import the trait when they only need to adjust persistence, weighting, or constructor policy. `CognitiveController` implements `IStateController` and uses `ControlsAgentState`; custom controllers can import that trait to keep the standard bottleneck, goal recommendation, and state-write behavior while overriding only the decision context or option selection. `AgentState` accepts an `IGoalManager`, and `Agent::setCognitiveController()` accepts an `IStateController`, so applications can swap either side through normal dependency injection.
 
+## Lane Pressure Management
+
+Agent runtimes often separate meaning, policy, and concrete action even when they use different labels for those layers. Automata models that pattern as provider-neutral lanes rather than as a vendor-specific contract:
+
+- semantic: intent, context, ambiguity, and meaning pressure
+- operational: policy, permission, runbook, budget, and coordination pressure
+- execution: tool, sandbox, mutation, runtime, and validation pressure
+
+`AgentLane` describes the stable lane metadata. `LanePressureManager` accepts normalized lane metrics and returns the dominant lane, pressure levels, dominant signals, and bounded recommendations. `LanePressure` exposes the same assessment as a deterministic read-only LLM tool for agents that want the model to ask for a lane-pressure report without letting the model perform the assessment itself.
+
+`LanePressureProfile::longHorizonTask()` seeds metrics from common long-running-agent scaffolding: spec clarity, source maps, durable memory, runbooks, milestones, audit logs, verification, observability, isolated workspaces, repair loops, rollback plans, local governance, and tool failures. Missing or weak scaffolding becomes pressure in the lane that can actually reduce the risk.
+
+Use this when an application needs to decide whether to summarize context, request approval, split execution into smaller calls, or stop mutations until a lane pressure is resolved. Do not use it as proof that every provider shares the same internal architecture; it is an Automata utility for a common agent-design pressure pattern.
+
 ## Integration Contract Template
 
 `AgentIntegrationContract` exposes Automata's stable agent feature surface as deterministic metadata for external adapters. It does not execute tools or prompts, and it does not know which descendant or application library will consume it. Instead, it names supported feature ids, owning classes, lifecycle hooks, tool catalog filter constants, neutral construct hints, a reusable contract template, and production acceptance checks that other libraries can use to publish their own upstream-facing contracts.
@@ -115,6 +129,7 @@ The first contract version covers:
 - orchestration patterns, nested orchestrations, and PIANO flows
 - behavioral state, goals, criteria, expectations, and bounded decisions
 - CPCT telemetry and runtime security validation
+- provider-neutral lane pressure assessment
 
 Adapters should bind to the contract's feature ids rather than hard-coding prompt text or concrete class internals. Automata provides `contractTemplate()` and `bindingTemplate()` so adapter libraries can decide their own construct names, syntax, query language, ingestion flow, and conformance fixtures while pointing back to stable Automata feature ids. Sibling libraries may coordinate with one another, but Automata should not carry descendant-specific binding maps.
 

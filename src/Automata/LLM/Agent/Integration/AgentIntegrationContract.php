@@ -13,6 +13,9 @@ use BlueFission\Automata\LLM\Agent\AgentSession;
 use BlueFission\Automata\LLM\Agent\Governance\GovernanceDecision;
 use BlueFission\Automata\LLM\Agent\Governance\HumanReviewGate;
 use BlueFission\Automata\LLM\Agent\Governance\TaskCallMonitor;
+use BlueFission\Automata\LLM\Agent\Lanes\AgentLane;
+use BlueFission\Automata\LLM\Agent\Lanes\LanePressureManager;
+use BlueFission\Automata\LLM\Agent\Lanes\LanePressureProfile;
 use BlueFission\Automata\LLM\Agent\Orchestration\Orchestrator;
 use BlueFission\Automata\LLM\Agent\Security\RuntimeLogicValidator;
 use BlueFission\Automata\LLM\Agent\State\AgentState;
@@ -28,7 +31,7 @@ use BlueFission\Obj;
 
 class AgentIntegrationContract extends Obj
 {
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.1.0';
 
     public const FEATURE_AGENT = 'agent.runtime';
     public const FEATURE_TOOLS = 'agent.tool_contracts';
@@ -42,6 +45,7 @@ class AgentIntegrationContract extends Obj
     public const FEATURE_STATE_GOALS = 'agent.state_goals';
     public const FEATURE_TELEMETRY = 'agent.cpct_telemetry';
     public const FEATURE_SECURITY = 'agent.runtime_security';
+    public const FEATURE_LANE_PRESSURE = 'agent.lane_pressure';
 
     public const TEMPLATE_AGENT = 'agent';
     public const TEMPLATE_TOOL = 'tool';
@@ -55,6 +59,7 @@ class AgentIntegrationContract extends Obj
     public const TEMPLATE_GOAL = 'goal';
     public const TEMPLATE_TRACE = 'trace';
     public const TEMPLATE_SECURITY = 'security';
+    public const TEMPLATE_LANES = 'lanes';
 
     /**
      * Build the standard Automata integration surface for adapter contracts.
@@ -276,6 +281,13 @@ class AgentIntegrationContract extends Obj
                     'inputs' => ['content', 'tool_result', 'memory_event'],
                     'outputs' => ['finding', 'sanitized_content', 'blocked_result'],
                 ],
+                self::FEATURE_LANE_PRESSURE => [
+                    'summary' => 'Provider-neutral semantic, operational, and execution lane pressure assessment.',
+                    'classes' => [AgentLane::class, LanePressureManager::class, LanePressureProfile::class],
+                    'constructs' => ['lane.semantic', 'lane.operational', 'lane.execution', 'lane.pressure', 'lane.profile.long_horizon'],
+                    'inputs' => ['lane_metrics', 'task_context', 'readiness_profile'],
+                    'outputs' => ['dominant_lane', 'overall_level', 'recommendations'],
+                ],
             ],
             'contract_template' => [
                 'name' => 'family.adapter.contract',
@@ -302,6 +314,7 @@ class AgentIntegrationContract extends Obj
                 self::TEMPLATE_GOAL => ['feature' => self::FEATURE_STATE_GOALS, 'constructs' => ['state.channel', 'goal', 'criterion', 'expectation']],
                 self::TEMPLATE_TRACE => ['feature' => self::FEATURE_TELEMETRY, 'constructs' => ['trace.task', 'trace.span', 'trace.cpct']],
                 self::TEMPLATE_SECURITY => ['feature' => self::FEATURE_SECURITY, 'constructs' => ['security.scan', 'security.validate', 'security.sanitize']],
+                self::TEMPLATE_LANES => ['feature' => self::FEATURE_LANE_PRESSURE, 'constructs' => ['lane.semantic', 'lane.operational', 'lane.execution', 'lane.pressure', 'lane.profile.long_horizon']],
             ],
             'hooks' => AgentHook::all(),
             'tool_catalog_filters' => [
