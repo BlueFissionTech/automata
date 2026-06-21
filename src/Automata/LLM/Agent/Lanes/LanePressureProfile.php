@@ -70,8 +70,8 @@ class LanePressureProfile
             return $invertReadiness ? 0.0 : 0.0;
         }
 
-        $normalized = max(0.0, min(1.0, (float)$value));
+        $normalized = Num::max(0.0, Num::min((float)$value, 1.0));
 
-        return $invertReadiness ? round(1.0 - $normalized, 4) : $normalized;
+        return $invertReadiness ? Num::round(1.0 - $normalized, 4) : $normalized;
     }
 }

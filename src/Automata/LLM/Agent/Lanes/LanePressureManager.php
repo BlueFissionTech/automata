@@ -137,7 +137,7 @@ class LanePressureManager
             return 0.0;
         }
 
-        return max(0.0, min(1.0, (float)$value));
+        return Num::max(0.0, Num::min((float)$value, 1.0));
     }
 
     protected function scoreSignals(array $signals): float
@@ -152,15 +152,15 @@ class LanePressureManager
 
         foreach ($signals as $signal) {
             $value = (float)($signal['value'] ?? 0.0);
-            $weight = max(0.0, (float)($signal['weight'] ?? 1.0));
+            $weight = Num::max(0.0, (float)($signal['weight'] ?? 1.0));
             $weighted += $value * $weight;
             $weightTotal += $weight;
-            $max = max($max, $value);
+            $max = Num::max($max, $value);
         }
 
         $average = $weightTotal > 0.0 ? $weighted / $weightTotal : 0.0;
 
-        return round(max($average, $max), 4);
+        return Num::round(Num::max($average, $max), 4);
     }
 
     protected function dominantSignal(array $signals): ?array
