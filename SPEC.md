@@ -325,6 +325,8 @@ The `LLM` module integrates:
 
 - Template and parsing systems (via Develation and other libraries).
 - HTTP clients and remote APIs (e.g., OpenAI, Gemini).
+- Provider-neutral agent lane pressure utilities for semantic, operational, and
+  execution load.
 
 Intent:
 
@@ -332,6 +334,13 @@ Intent:
 - Allow LLMs to configure and supervise other, cheaper models:
   - e.g., use an LLM to configure an expert system or Bayesian classifier, then
     route matching intents to the smaller model.
+- Help agent runtimes decide whether pressure belongs to meaning/context,
+  policy/runbook, or concrete execution lanes without coupling Automata to one
+  provider's internal terminology.
+- Seed pressure metrics from long-horizon task readiness, including specs,
+  source maps, durable memory, runbooks, checkpoints, audit logs, verification,
+  observability, isolated workspaces, repair loops, rollback plans, local
+  governance, and tool failures.
 
 ### 3.14 Intelligence Hub (Multi-Strategy Insights)
 
