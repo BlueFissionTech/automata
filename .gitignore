@@ -7,3 +7,6 @@
 /AGENTS.md
 /harness.json
 /templates/
+
+# Operator-local harness behavior
+/AGENTS.behavior.md
