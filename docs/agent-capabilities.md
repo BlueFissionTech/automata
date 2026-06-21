@@ -99,6 +99,11 @@ The default classes are dependency-injection examples as much as concrete implem
 
 `AgentIntegrationContract` exposes Automata's stable agent feature surface as deterministic metadata for external adapters. It does not execute tools or prompts, and it does not know which descendant or application library will consume it. Instead, it names supported feature ids, owning classes, lifecycle hooks, tool catalog filter constants, neutral construct hints, a reusable contract template, and production acceptance checks that other libraries can use to publish their own upstream-facing contracts.
 
+Control-surface and persona adapters should also bind to the
+[Agent Persona Orchestration Contracts](agent-persona-orchestration-contracts.md)
+for neutral persona, intent, task, tool, result, confidence, and guardrail
+shapes.
+
 The first contract version covers:
 
 - agent runtime configuration and execution
