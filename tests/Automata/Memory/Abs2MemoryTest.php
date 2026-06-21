@@ -86,4 +86,31 @@ class Abs2MemoryTest extends TestCase
         $this->assertArrayHasKey('near_2', $results);
         $this->assertArrayNotHasKey('far', $results);
     }
+
+    public function testRecallWithAssociationsHonorsLimitWithoutStaticArrayCount(): void
+    {
+        $memory = new Abs2Memory();
+
+        $memory->addMemory('hub', (new Context())->set('label', 'hub'));
+        $memory->addMemory('a', (new Context())->set('label', 'a'));
+        $memory->addMemory('b', (new Context())->set('label', 'b'));
+        $memory->associate('hub', 'a');
+        $memory->associate('hub', 'b');
+
+        $related = $memory->recallWithAssociations('hub', 1);
+
+        $this->assertCount(1, $related);
+    }
+
+    public function testMemoryNodeSimilarityHandlesEmptyAndScalarContextsWithoutStaticArrayCount(): void
+    {
+        $empty = new MemoryNode('empty', [], new Context());
+
+        $this->assertSame(1.0, $empty->similarity(new Context()));
+
+        $left = new MemoryNode('left', [], (new Context())->set('summary', 'deliver medical kit'));
+        $right = (new Context())->set('summary', 'deliver medical kits');
+
+        $this->assertGreaterThan(0.8, $left->similarity($right));
+    }
 }
