@@ -2,7 +2,16 @@
     "name": "bluefission/automata",
     "description": "Machine learning / communication systems",
     "license": "MIT",
-    "keywords": ["automata, ai, nlp, machine learning, chatbot, bot, communication, natural language processing"],
+    "keywords": [
+        "automata",
+        "ai",
+        "nlp",
+        "machine learning",
+        "chatbot",
+        "bot",
+        "communication",
+        "natural language processing"
+    ],
     "authors": [
         {
             "name": "Devon Scott",
@@ -25,13 +34,13 @@
     "require": {
         "bluefission/develation": "^1.2.0-alpha",
         "bluefission/simpleclients": "dev-master",
-        "google-gemini-php/client": "*",
+        "google-gemini-php/client": "dev-main",
         "orhanerday/open-ai": "^2.2",
         "php-ai/php-ml": "^0.10.0",
-        "symfony/http-client": "7.4.x-dev"
+        "symfony/http-client": "^7.4@dev"
     },
     "require-dev": {
-        "phpunit/phpunit": "^12.5@dev",
+        "phpunit/phpunit": "^11.5",
         "php": ">=8.0.0"
     },
     "suggest": {
