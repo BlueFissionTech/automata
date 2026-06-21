@@ -146,7 +146,7 @@ class MemoryNode extends GraphNode
 
     private function countValues(array $values): int
     {
-        return count($values);
+        return Arr::count($values);
     }
 
     /**
