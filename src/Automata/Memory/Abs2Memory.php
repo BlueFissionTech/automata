@@ -239,6 +239,6 @@ class Abs2Memory extends Graph implements IWorkingMemory
 
     protected function countValues(array $values): int
     {
-        return Arr::count($values);
+        return Arr::make($values)->count();
     }
 }
