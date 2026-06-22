@@ -8,5 +8,5 @@
 /harness.json
 /templates/
 
-# Blue Fission Codex harness
+# Operator-local harness behavior
 /AGENTS.behavior.md
