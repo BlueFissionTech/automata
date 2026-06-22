@@ -5,8 +5,16 @@ namespace BlueFission\Automata\LLM\Agent\Integration;
 use BlueFission\Arr;
 use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\Comprehension\Scene;
+use BlueFission\Automata\Classification\Result as ClassificationResult;
+use BlueFission\Automata\Feedback\Assessment;
+use BlueFission\Automata\Feedback\FeedbackSignal;
+use BlueFission\Automata\Feedback\Observation;
+use BlueFission\Automata\Feedback\Projection;
+use BlueFission\Automata\Goal\Condition;
+use BlueFission\Automata\Goal\GoalDecision;
 use BlueFission\Automata\Goal\GoalManager;
 use BlueFission\Automata\Language\Reader;
+use BlueFission\Automata\Language\Statement;
 use BlueFission\Automata\LLM\Agent;
 use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\AgentSession;
@@ -31,7 +39,7 @@ use BlueFission\Obj;
 
 class AgentIntegrationContract extends Obj
 {
-    public const VERSION = '1.1.0';
+    public const VERSION = '1.2.0';
 
     public const FEATURE_AGENT = 'agent.runtime';
     public const FEATURE_TOOLS = 'agent.tool_contracts';
@@ -46,6 +54,7 @@ class AgentIntegrationContract extends Obj
     public const FEATURE_TELEMETRY = 'agent.cpct_telemetry';
     public const FEATURE_SECURITY = 'agent.runtime_security';
     public const FEATURE_LANE_PRESSURE = 'agent.lane_pressure';
+    public const FEATURE_CAPABILITY_VOCABULARY = 'agent.capability_vocabulary';
 
     public const TEMPLATE_AGENT = 'agent';
     public const TEMPLATE_TOOL = 'tool';
@@ -60,6 +69,7 @@ class AgentIntegrationContract extends Obj
     public const TEMPLATE_TRACE = 'trace';
     public const TEMPLATE_SECURITY = 'security';
     public const TEMPLATE_LANES = 'lanes';
+    public const TEMPLATE_CAPABILITY = 'capability';
 
     /**
      * Build the standard Automata integration surface for adapter contracts.
@@ -153,6 +163,20 @@ class AgentIntegrationContract extends Obj
     public function bindings(?string $construct = null): array
     {
         return $this->bindingTemplate($construct);
+    }
+
+    /**
+     * Return package-neutral capability terms for adapter contract fixtures.
+     */
+    public function capabilityVocabulary(?string $capability = null): array
+    {
+        $vocabulary = Arr::make($this->field('capability_vocabulary') ?? [])->toArray();
+
+        if (!$capability) {
+            return $vocabulary;
+        }
+
+        return Arr::make($vocabulary[$capability] ?? [])->toArray();
     }
 
     /**
@@ -288,6 +312,75 @@ class AgentIntegrationContract extends Obj
                     'inputs' => ['lane_metrics', 'task_context', 'readiness_profile'],
                     'outputs' => ['dominant_lane', 'overall_level', 'recommendations'],
                 ],
+                self::FEATURE_CAPABILITY_VOCABULARY => [
+                    'summary' => 'Package-neutral vocabulary for goal, statement, feedback, domain evaluation, and lane-pressure adapter contracts.',
+                    'classes' => [GoalManager::class, Statement::class, Assessment::class, ClassificationResult::class, AgentLane::class],
+                    'constructs' => ['capability.goal', 'capability.statement', 'capability.feedback', 'capability.domain_evaluation', 'capability.lane_pressure'],
+                    'inputs' => ['capability_term', 'adapter_contract', 'fixture_payload'],
+                    'outputs' => ['term_definition', 'stable_fields', 'aliases', 'compatibility_constraints'],
+                ],
+            ],
+            'capability_vocabulary' => [
+                'goal' => [
+                    'feature' => self::FEATURE_STATE_GOALS,
+                    'definition' => 'A desired outcome with criteria, context, expectations, and bounded decision options.',
+                    'classes' => [GoalManager::class, Condition::class, GoalDecision::class],
+                    'stable_fields' => ['id', 'objective', 'criteria', 'context', 'status', 'expectations', 'decision_options', 'score'],
+                    'aliases' => ['objective', 'initiative', 'desired_outcome'],
+                    'constraints' => [
+                        'Use goal for desired outcomes, not for every executable task.',
+                        'Use task for runtime work items that may satisfy one or more goals.',
+                        'Use criterion or condition for deterministic satisfaction checks.',
+                    ],
+                ],
+                'statement' => [
+                    'feature' => self::FEATURE_HOLOSCENE,
+                    'definition' => 'A normalized semantic assertion or command fragment with subject, behavior, object, context, and relation data.',
+                    'classes' => [Statement::class, Reader::class],
+                    'stable_fields' => ['type', 'context', 'priority', 'subject', 'negation', 'modality', 'behavior', 'condition', 'object', 'relationship', 'indirect_object', 'position'],
+                    'aliases' => ['utterance', 'semantic_statement', 'claim'],
+                    'constraints' => [
+                        'Adapters may keep parser internals private when they emit this normalized shape.',
+                        'Subject, behavior, and object remain the primary satisfaction fields.',
+                        'Context carries scope and normalization metadata; it should not become provider prompt text.',
+                    ],
+                ],
+                'feedback' => [
+                    'feature' => self::FEATURE_GOVERNANCE,
+                    'definition' => 'Review, correction, or training-signal evidence attached to a projection, observation, decision, or generated value.',
+                    'classes' => [Assessment::class, FeedbackSignal::class, Projection::class, Observation::class],
+                    'stable_fields' => ['original_value', 'corrected_value', 'actor', 'reason', 'confidence', 'timestamp', 'trace', 'policy_strategy'],
+                    'aliases' => ['review', 'correction', 'training_signal'],
+                    'constraints' => [
+                        'Policy gates may stay outside Automata when the host owns the execution boundary.',
+                        'Correction records should preserve the original value and the evidence that justified the change.',
+                        'Training signals should identify their strategy and trace instead of only storing a score.',
+                    ],
+                ],
+                'domain_evaluation' => [
+                    'feature' => self::FEATURE_STATE_GOALS,
+                    'definition' => 'A bounded assessment of inputs against domain criteria that returns scores, tags, decisions, or unmet conditions.',
+                    'classes' => [ClassificationResult::class, Assessment::class, Condition::class],
+                    'stable_fields' => ['domain', 'subject', 'criteria', 'input', 'result', 'score', 'confidence', 'unmet_conditions', 'trace'],
+                    'aliases' => ['evaluation', 'assessment', 'classification_result'],
+                    'constraints' => [
+                        'Use domain as a reusable scope label, not a downstream package name.',
+                        'Evaluation should return a result envelope and should not perform host-specific side effects.',
+                        'Scores and confidence are advisory unless policy or goal criteria bind them to a threshold.',
+                    ],
+                ],
+                'lane_pressure' => [
+                    'feature' => self::FEATURE_LANE_PRESSURE,
+                    'definition' => 'A provider-neutral pressure assessment across semantic, operational, and execution lanes.',
+                    'classes' => [AgentLane::class, LanePressureManager::class, LanePressureProfile::class],
+                    'stable_fields' => ['lane', 'signals', 'score', 'level', 'dominant_signal', 'recommendations', 'context'],
+                    'aliases' => ['semantic_operational_execution_pressure', 'task_pressure', 'agent_readiness'],
+                    'constraints' => [
+                        'Use lanes as an Automata risk-management utility, not as proof of a provider internal architecture.',
+                        'Semantic pressure belongs to meaning and context, operational pressure belongs to policy and runbooks, and execution pressure belongs to tools and verification.',
+                        'Critical pressure should stop or defer mutations until the named gap is resolved.',
+                    ],
+                ],
             ],
             'contract_template' => [
                 'name' => 'family.adapter.contract',
@@ -315,6 +408,7 @@ class AgentIntegrationContract extends Obj
                 self::TEMPLATE_TRACE => ['feature' => self::FEATURE_TELEMETRY, 'constructs' => ['trace.task', 'trace.span', 'trace.cpct']],
                 self::TEMPLATE_SECURITY => ['feature' => self::FEATURE_SECURITY, 'constructs' => ['security.scan', 'security.validate', 'security.sanitize']],
                 self::TEMPLATE_LANES => ['feature' => self::FEATURE_LANE_PRESSURE, 'constructs' => ['lane.semantic', 'lane.operational', 'lane.execution', 'lane.pressure', 'lane.profile.long_horizon']],
+                self::TEMPLATE_CAPABILITY => ['feature' => self::FEATURE_CAPABILITY_VOCABULARY, 'constructs' => ['capability.goal', 'capability.statement', 'capability.feedback', 'capability.domain_evaluation', 'capability.lane_pressure']],
             ],
             'hooks' => AgentHook::all(),
             'tool_catalog_filters' => [
@@ -335,6 +429,7 @@ class AgentIntegrationContract extends Obj
                 'Tool and MCP calls emit task trace spans and governance outcomes.',
                 'Session scope controls shared context instead of agents sharing full context windows.',
                 'Holoscene episodes use scoped working memory and snapshots rather than raw prompt-only memory coupling.',
+                'Capability vocabulary stays package-neutral and maps to stable Automata-owned classes or feature ids.',
                 'Conformance fixtures cover successful execution, blocked execution, review steering, and trace export.',
             ],
         ];
