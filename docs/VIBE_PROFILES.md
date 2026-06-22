@@ -20,6 +20,13 @@ The runtime contract is:
 - When `profile` is absent, Automata uses the default generation client.
 - When `profile` points to a resolvable `.vibe` file, that file is loaded and prepended to the prompt context.
 - When a named override is registered, the host can replace the generation driver, the prompt, or both without changing templates.
+- When a profile value is blank or the referenced file cannot be resolved, Automata raises an actionable profile diagnostic instead of silently falling back.
+
+Profile diagnostics:
+
+- Blank profile names raise `Profile attribute was provided but no profile name or path was given.`
+- Missing profile files raise `Unable to resolve profile file '<profile>'.`
+- Registered overrides with unsupported values raise `Invalid profile override registered for '<profile>'.`
 
 Runnable example:
 

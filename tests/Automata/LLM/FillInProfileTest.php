@@ -8,6 +8,7 @@ use BlueFission\Automata\LLM\Reply;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\Meta;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 class RecordingClient implements IClient
 {
@@ -128,6 +129,30 @@ class FillInProfileTest extends TestCase
         $this->assertSame('Hello profiled', $fillIn->output());
         $this->assertCount(1, $client->prompts);
         $this->assertStringStartsWith("You are an editorial book agent.\n\nHello ", $client->prompts[0]);
+    }
+
+    public function testMissingProfileFileRaisesActionableDiagnostic(): void
+    {
+        $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'automata_fillin_missing_' . uniqid();
+        mkdir($dir, 0777, true);
+
+        $fillIn = new FillIn(new RecordingClient('unused'), 'Hello {=content}');
+        $fillIn->setProfilePaths([$dir]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage("Unable to resolve profile file 'missing.vibe'.");
+
+        $fillIn->resolveProfile('missing.vibe');
+    }
+
+    public function testBlankProfileNameRaisesActionableDiagnostic(): void
+    {
+        $fillIn = new FillIn(new RecordingClient('unused'), 'Hello {=content}');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Profile attribute was provided but no profile name or path was given.');
+
+        $fillIn->resolveProfile(' ');
     }
 
     public function testNamedProfileOverrideCanSwapGenerationDriver(): void
