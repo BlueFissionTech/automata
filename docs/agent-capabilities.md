@@ -118,6 +118,10 @@ Control-surface and persona adapters should also bind to the
 for neutral persona, intent, task, tool, result, confidence, and guardrail
 shapes.
 
+Runtime contract adapters should use the
+[Runtime Capability Vocabulary](runtime-capability-vocabulary.md) for neutral
+goal, statement, feedback, domain evaluation, and lane-pressure terms.
+
 The first contract version covers:
 
 - agent runtime configuration and execution
@@ -130,6 +134,7 @@ The first contract version covers:
 - behavioral state, goals, criteria, expectations, and bounded decisions
 - CPCT telemetry and runtime security validation
 - provider-neutral lane pressure assessment
+- package-neutral runtime capability vocabulary
 
 Adapters should bind to the contract's feature ids rather than hard-coding prompt text or concrete class internals. Automata provides `contractTemplate()` and `bindingTemplate()` so adapter libraries can decide their own construct names, syntax, query language, ingestion flow, and conformance fixtures while pointing back to stable Automata feature ids. Sibling libraries may coordinate with one another, but Automata should not carry descendant-specific binding maps.
 
