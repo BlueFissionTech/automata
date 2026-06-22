@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Path;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Adapters\StateAdapter;
 use BlueFission\Automata\Support\Evaluates;
 use BlueFission\Func;
@@ -94,7 +95,7 @@ class RoutePlanner extends Obj
             ] + $context);
         });
 
-        if (empty($path)) {
+        if (Arr::isEmpty($path)) {
             $this->dispatch(new Event('graph.route_unreachable', [
                 'start' => $start,
                 'end' => $end,
@@ -105,10 +106,11 @@ class RoutePlanner extends Obj
         }
 
         $cost = 0;
+        $pathCount = Arr::count($path);
 
-        for ($i = 0; $i < count($path) - 1; $i++) {
+        for ($i = 0; $i < $pathCount - 1; $i++) {
             $edge = $this->graph->getEdgeAttributes($path[$i], $path[$i + 1]);
-            if (!is_array($edge)) {
+            if (!Arr::is($edge)) {
                 continue;
             }
             $edgeCost = $this->edgeCost($edge, [

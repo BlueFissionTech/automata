@@ -2,10 +2,12 @@
 
 namespace BlueFission\Automata\Anomaly\Strategies;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Anomaly\Detector;
 use BlueFission\Automata\Context;
 use BlueFission\Data\Graph\Graph;
 use BlueFission\DevElation as Dev;
+use BlueFission\Num;
 
 class GraphPathDetector extends Detector
 {
@@ -39,14 +41,15 @@ class GraphPathDetector extends Detector
 
         $fitness = $this->fitness;
         $path = $this->graph->shortestPath((string)$start, (string)$end, $fitness);
-        if (empty($path)) {
+        if (Arr::isEmpty($path)) {
             return 1.0;
         }
 
         $cost = 0.0;
-        for ($i = 0; $i < count($path) - 1; $i++) {
+        $pathCount = Arr::count($path);
+        for ($i = 0; $i < $pathCount - 1; $i++) {
             $edge = $this->graph->getEdgeAttributes($path[$i], $path[$i + 1]);
-            if (!is_array($edge)) {
+            if (!Arr::is($edge)) {
                 continue;
             }
             $cost += $fitness($edge);
@@ -59,6 +62,6 @@ class GraphPathDetector extends Detector
 
         $normalized = $cost / $maxCost;
         $normalized = Dev::apply('anomaly.detector.graphpath.score', $normalized);
-        return min(1.0, max(0.0, $normalized));
+        return Num::min(1.0, Num::max(0.0, $normalized));
     }
 }
