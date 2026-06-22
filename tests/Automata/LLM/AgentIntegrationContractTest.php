@@ -11,6 +11,7 @@ use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
 use BlueFission\Automata\Memory\Abs2Memory;
+use BlueFission\Automata\Feedback\ReviewRecord;
 use BlueFission\Obj;
 use PHPUnit\Framework\TestCase;
 
@@ -160,6 +161,7 @@ class AgentIntegrationContractTest extends TestCase
         );
         $this->assertContains('subject', $contract->capabilityVocabulary('statement')['stable_fields']);
         $this->assertContains('corrected_value', $contract->capabilityVocabulary('feedback')['stable_fields']);
+        $this->assertContains(ReviewRecord::class, $contract->capabilityVocabulary('feedback')['classes']);
         $this->assertContains('unmet_conditions', $contract->capabilityVocabulary('domain_evaluation')['stable_fields']);
         $this->assertStringContainsString(
             'provider internal architecture',
