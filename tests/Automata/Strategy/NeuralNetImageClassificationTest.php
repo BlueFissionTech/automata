@@ -71,4 +71,18 @@ class NeuralNetImageClassificationTest extends TestCase
 
         unlink($path);
     }
+
+    public function testConstructorAllowsBoundedFixtureTopology()
+    {
+        $classifier = new NeuralNetImageClassification(4, [2], [0, 1], 3);
+        $samples = [
+            [0.0, 0.0, 0.0, 0.0],
+            [1.0, 1.0, 1.0, 1.0],
+        ];
+        $targets = [0, 1];
+
+        $classifier->train($samples, $targets, 0.2);
+
+        $this->assertIsInt($classifier->predict([0.0, 0.0, 0.0, 0.0]));
+    }
 }

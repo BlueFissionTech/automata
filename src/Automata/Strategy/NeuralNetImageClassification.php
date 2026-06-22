@@ -15,11 +15,14 @@ class NeuralNetImageClassification extends Strategy
     protected $_testTargets;
     private $_modelManager;
 
-    public function __construct()
+    public function __construct(int $inputSize = 784, array $hiddenLayers = [8], ?array $classes = null, int $iterations = 25)
     {
-        // Initialize the MLP classifier with explicit class list (0-9) compatible with php-ml
-        $classes = range(0, 9);
-        $this->_classifier = new MLPClassifier(784, [100], $classes, 1000, new Sigmoid());
+        $inputSize = max(1, $inputSize);
+        $hiddenLayers = $this->normalizeHiddenLayers($hiddenLayers);
+        $classes = $classes !== null && count($classes) > 0 ? array_values($classes) : range(0, 9);
+        $iterations = max(1, $iterations);
+
+        $this->_classifier = new MLPClassifier($inputSize, $hiddenLayers, $classes, $iterations, new Sigmoid());
         $this->_modelManager = new ModelManager();
     }
 
@@ -146,5 +149,18 @@ class NeuralNetImageClassification extends Strategy
             Dev::do('automata.strategy.neuralnetimageclassification.loadModel.action4', ['path' => $path, 'loaded' => false, 'error' => $e]);
             return false;
         }
+    }
+
+    private function normalizeHiddenLayers(array $hiddenLayers): array
+    {
+        $layers = [];
+        foreach ($hiddenLayers as $size) {
+            $size = (int)$size;
+            if ($size > 0) {
+                $layers[] = $size;
+            }
+        }
+
+        return count($layers) > 0 ? $layers : [8];
     }
 }
