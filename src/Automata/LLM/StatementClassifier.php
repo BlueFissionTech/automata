@@ -1,6 +1,7 @@
 <?php
 namespace BlueFission\Automata\LLM;
 
+use BlueFission\Arr;
 use BlueFission\Automata\LLM\Prompts\StatementClassification;
 use Phpml\ModelManager;
 use Phpml\Classification\NaiveBayes;
@@ -116,7 +117,7 @@ class StatementClassifier
         }
 
         $classification = strtolower(trim((string)$text));
-        if (in_array($classification, ['question', 'statement', 'stop'], true)) {
+        if (Arr::make(['question', 'statement', 'stop'])->contains($classification, true)) {
             return $classification;
         }
 
