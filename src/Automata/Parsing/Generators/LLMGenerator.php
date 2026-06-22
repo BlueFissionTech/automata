@@ -548,11 +548,11 @@ class LLMGenerator implements IGenerator, IDispatcher {
         }
 
         $output = Str::trim($last);
-        if (!empty($options) && !$this->matchPrefixOption($output, $options) && !Arr::make($options)->contains($output, true)) {
+        if (!Val::isEmpty($options) && !$this->matchPrefixOption($output, $options) && !Arr::make($options)->contains($output, true)) {
             return;
         }
 
-        if (!empty($pattern) && !preg_match($pattern, $output)) {
+        if (!Val::isEmpty($pattern) && !preg_match($pattern, $output)) {
             return;
         }
 
