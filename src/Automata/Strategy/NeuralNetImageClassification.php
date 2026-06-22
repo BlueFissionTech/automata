@@ -2,7 +2,9 @@
 
 namespace BlueFission\Automata\Strategy;
 
+use BlueFission\Arr;
 use BlueFission\DevElation as Dev;
+use BlueFission\Num;
 use Phpml\NeuralNetwork\ActivationFunction\Sigmoid;
 use Phpml\Classification\MLPClassifier;
 use Phpml\Metric\Accuracy;
@@ -17,10 +19,10 @@ class NeuralNetImageClassification extends Strategy
 
     public function __construct(int $inputSize = 784, array $hiddenLayers = [8], ?array $classes = null, int $iterations = 25)
     {
-        $inputSize = max(1, $inputSize);
+        $inputSize = (int)Num::max(1, $inputSize);
         $hiddenLayers = $this->normalizeHiddenLayers($hiddenLayers);
-        $classes = $classes !== null && count($classes) > 0 ? array_values($classes) : range(0, 9);
-        $iterations = max(1, $iterations);
+        $classes = $classes !== null && Arr::count($classes) > 0 ? Arr::values($classes) : range(0, 9);
+        $iterations = (int)Num::max(1, $iterations);
 
         $this->_classifier = new MLPClassifier($inputSize, $hiddenLayers, $classes, $iterations, new Sigmoid());
         $this->_modelManager = new ModelManager();
@@ -161,6 +163,6 @@ class NeuralNetImageClassification extends Strategy
             }
         }
 
-        return count($layers) > 0 ? $layers : [8];
+        return Arr::count($layers) > 0 ? $layers : [8];
     }
 }
