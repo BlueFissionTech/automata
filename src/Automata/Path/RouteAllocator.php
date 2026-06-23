@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Path;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Support\Evaluates;
 use BlueFission\Func;
 use BlueFission\Num;
@@ -97,7 +98,7 @@ class RouteAllocator extends Obj
                 $path = $this->graph->shortestPath($start, $end, fn ($edge) => $this->numericValue(
                     $this->invokeFunc($this->fitness, [$edge, $asset, $demand, $this])
                 ));
-                if (empty($path)) {
+                if (Arr::isEmpty($path)) {
                     continue;
                 }
 
@@ -157,8 +158,9 @@ class RouteAllocator extends Obj
     protected function pathResidualCapacity(array $path, array $edgeCapacities, array $used): float
     {
         $minResidual = null;
+        $pathCount = Arr::count($path);
 
-        for ($i = 0; $i < count($path) - 1; $i++) {
+        for ($i = 0; $i < $pathCount - 1; $i++) {
             $from = $path[$i];
             $to = $path[$i + 1];
             $key = $this->edgeKey($from, $to);
@@ -184,7 +186,9 @@ class RouteAllocator extends Obj
      */
     protected function applyAllocationUsage(array $path, float $amount, array &$used): void
     {
-        for ($i = 0; $i < count($path) - 1; $i++) {
+        $pathCount = Arr::count($path);
+
+        for ($i = 0; $i < $pathCount - 1; $i++) {
             $from = $path[$i];
             $to = $path[$i + 1];
             $key = $this->edgeKey($from, $to);
