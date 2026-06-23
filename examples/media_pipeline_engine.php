@@ -10,7 +10,7 @@ use BlueFission\Automata\Media\Processing\Image\SimpleClientsOcrHandler;
 use BlueFission\Automata\Media\Processing\Text\TextPipeline;
 use BlueFission\Automata\Strategy\NaiveBayesTextClassification;
 
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/bootstrap.php';
 
 $input = $argv[1] ?? 'Flooded roadway near bridge; volunteers needed.';
 

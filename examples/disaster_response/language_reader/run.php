@@ -8,7 +8,7 @@ use BlueFission\Automata\Language\Reader;
 use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\Memory\Abs2Memory;
 
-require __DIR__ . '/../../../vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
 DevElation::up();
 

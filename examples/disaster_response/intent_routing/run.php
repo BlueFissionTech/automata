@@ -10,7 +10,7 @@ use BlueFission\Automata\Intent\Skill\BaseSkill;
 use BlueFission\Automata\Analysis\IAnalyzer;
 use BlueFission\Arr;
 
-require __DIR__ . '/../../../vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
 DevElation::up();
 

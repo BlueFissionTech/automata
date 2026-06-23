@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+
 require_once dirname(__DIR__) . '/tests/bootstrap.php';
 
 function automata_example_require(string ...$relativePaths): void

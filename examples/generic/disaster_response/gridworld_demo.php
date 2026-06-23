@@ -1,6 +1,6 @@
 <?php
 
-require dirname(__DIR__, 3) . '/vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 require_once __DIR__ . '/sim/Cell.php';
 require_once __DIR__ . '/sim/Position.php';
 require_once __DIR__ . '/sim/Grid.php';

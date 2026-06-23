@@ -7,7 +7,7 @@ use BlueFission\Automata\Encoding\CategoricalEncoder;
 use BlueFission\Automata\Normalization\NumericalScaler;
 use BlueFission\Automata\Feature\InteractionFeatures;
 
-require __DIR__ . '/../../../vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
 DevElation::up();
 

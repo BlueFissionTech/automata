@@ -1,6 +1,6 @@
 <?php
 
-require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
+require_once dirname(__DIR__) . '/bootstrap.php';
 
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\FillIn;
