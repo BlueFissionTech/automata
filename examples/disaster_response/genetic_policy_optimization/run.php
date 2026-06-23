@@ -9,7 +9,7 @@ use BlueFission\Automata\Genetic\UniformCrossover;
 use BlueFission\Automata\Genetic\RandomMutation;
 use BlueFission\Automata\Genetic\FitnessFunction;
 
-require __DIR__ . '/../../../vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
 // Seeded randomness for determinism.
 $seed = 123;

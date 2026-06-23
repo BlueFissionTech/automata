@@ -6,7 +6,7 @@ use BlueFission\Automata\Context;
 use BlueFission\Automata\Memory\Abs2Memory;
 use BlueFission\DevElation;
 
-require __DIR__ . '/../../../vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
 // Seeded randomness for reproducibility.
 $seed = 123;

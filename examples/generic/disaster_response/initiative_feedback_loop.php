@@ -1,6 +1,6 @@
 <?php
 
-require dirname(__DIR__, 3) . '/vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
 use BlueFission\Automata\Goal\Initiative;
 use BlueFission\Automata\Goal\Objective;
@@ -14,6 +14,7 @@ use BlueFission\Automata\Feedback\FeedbackRegistry;
 use BlueFission\Automata\Feedback\Strategies\LabelOverlapStrategy;
 use BlueFission\Automata\Feedback\Strategies\TimeWindowMatchStrategy;
 use BlueFission\Automata\Feedback\Strategies\ContextSimilarityStrategy;
+use BlueFission\Arr;
 use BlueFission\Cli\Args;
 use BlueFission\Cli\Args\OptionDefinition;
 
@@ -28,7 +29,10 @@ $parser->addOptions([
 ]);
 $parser->parse($argv ?? []);
 $options = $parser->options();
-if (!empty($options['help'])) {
+$showHelp = Arr::hasKey($options, 'help') && (bool)$options['help'];
+$verbose = Arr::hasKey($options, 'verbose') && (bool)$options['verbose'];
+
+if ($showHelp) {
     echo $parser->usage() . PHP_EOL;
     exit(0);
 }
@@ -71,7 +75,7 @@ $observations = [
     ]),
 ];
 
-if ($options['verbose']) {
+if ($verbose) {
     echo "Initiative: " . $initiative->field('name') . "\n";
     foreach ($projections as $projection) {
         $tags = implode(',', $projection->tags());
@@ -89,7 +93,7 @@ foreach ($projections as $projection) {
             : FeedbackSignal::negative(0.1);
 
         $registry->apply('initiative:' . $initiative->field('name'), $signal);
-        if ($options['verbose']) {
+        if ($verbose) {
             $tags = implode(',', $observation->tags());
             $projectionTags = implode(',', $projection->tags());
             echo "Observation tags={$tags} vs Projection tags={$projectionTags} => {$assessment->strategy()} score={$assessment->score()}\n";

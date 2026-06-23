@@ -14,7 +14,7 @@ use BlueFission\Automata\Memory\Abs2Memory;
 use BlueFission\Automata\Intelligence;
 use BlueFission\Automata\Strategy\IStrategy;
 
-require __DIR__ . '/../../../vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
 DevElation::up();
 

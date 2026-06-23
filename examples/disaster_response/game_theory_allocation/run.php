@@ -5,7 +5,7 @@ declare(strict_types=1);
 use BlueFission\DevElation;
 use BlueFission\Automata\GameTheory\PayoffMatrix;
 
-require __DIR__ . '/../../../vendor/autoload.php';
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
 // Optional seed for future stochastic strategies (currently deterministic).
 $seed = 123;

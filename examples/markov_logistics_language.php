@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/bootstrap.php';
 
 use BlueFission\Automata\Language\MarkovPredictor;
 use BlueFission\Automata\Language\TrigramMarkovPredictor;
