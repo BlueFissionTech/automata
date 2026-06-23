@@ -72,6 +72,37 @@ class StatementTest extends TestCase
         $this->assertStringContainsString('Hospital A', $snapshot['summary']);
     }
 
+    public function testStatementBundleCarriesAdapterResolutionMetadataInContext(): void
+    {
+        $statement = new Statement();
+        $statement->assign([
+            'subject' => ['name' => 'account.balance', 'description' => 'Resolved account balance field'],
+            'behavior' => 'filters',
+            'relationship' => 'where',
+            'object' => ['name' => 'minimum_threshold', 'description' => 'Resolved comparison value'],
+            'context' => [
+                'confidence' => 0.91,
+                'phase' => 'resolved',
+                'scope' => 'query.result',
+                'provenance' => [
+                    'source' => 'fixture',
+                    'grammar' => 'adapter-owned',
+                ],
+                'status' => 'resolved',
+            ],
+        ]);
+
+        $snapshot = $statement->snapshot();
+
+        $this->assertSame('account.balance filters minimum_threshold', $snapshot['name']);
+        $this->assertSame('where', array_key_first($snapshot['relations']));
+        $this->assertSame(0.91, $snapshot['context']['data']['confidence']);
+        $this->assertSame('resolved', $snapshot['context']['data']['phase']);
+        $this->assertSame('query.result', $snapshot['context']['data']['scope']);
+        $this->assertSame('fixture', $snapshot['context']['data']['provenance']['source']);
+        $this->assertSame('resolved', $snapshot['context']['data']['status']);
+    }
+
     public function testStatementAcceptsPositionLikeObjects(): void
     {
         $statement = new Statement();
