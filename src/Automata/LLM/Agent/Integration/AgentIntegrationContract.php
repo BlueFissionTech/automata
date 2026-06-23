@@ -10,6 +10,7 @@ use BlueFission\Automata\Feedback\Assessment;
 use BlueFission\Automata\Feedback\FeedbackSignal;
 use BlueFission\Automata\Feedback\Observation;
 use BlueFission\Automata\Feedback\Projection;
+use BlueFission\Automata\Feedback\ReviewRecord;
 use BlueFission\Automata\Goal\Condition;
 use BlueFission\Automata\Goal\GoalDecision;
 use BlueFission\Automata\Goal\GoalManager;
@@ -348,7 +349,7 @@ class AgentIntegrationContract extends Obj
                 'feedback' => [
                     'feature' => self::FEATURE_GOVERNANCE,
                     'definition' => 'Review, correction, or training-signal evidence attached to a projection, observation, decision, or generated value.',
-                    'classes' => [Assessment::class, FeedbackSignal::class, Projection::class, Observation::class],
+                    'classes' => [Assessment::class, FeedbackSignal::class, Projection::class, Observation::class, ReviewRecord::class],
                     'stable_fields' => ['original_value', 'corrected_value', 'actor', 'reason', 'confidence', 'timestamp', 'trace', 'policy_strategy'],
                     'aliases' => ['review', 'correction', 'training_signal'],
                     'constraints' => [

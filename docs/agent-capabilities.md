@@ -71,6 +71,11 @@ The monitor emits lifecycle hooks, applies policy, asks for review when configur
 
 `MCPClient` can use the same monitor, so MCP discovery, resource reads, raw requests, and tool calls are governed and observed instead of bypassing the agent's task accounting. Critical local tools can use the same human gate before `ToolExecutor` runs them.
 
+Feedback, correction, and training-signal evidence should use
+[Feedback Review Records](feedback-review-records.md) when adapters need a
+durable review envelope. Policy gates may still live in the host runtime or
+Automata governance layer; the review record stores the outcome and evidence.
+
 ## Session Scope And Memory
 
 `AgentSession` is the boundary for shared scope. An agent can keep its own prompt context, while the session decides what context, permissions, tools, uploaded inputs, working memory, and Holoscene episodes are available to one or more agents. The session can attach an Automata `IWorkingMemory` implementation, including `Abs2Memory`, so durable memory and Holoscene-compatible working-memory implementations are reached through existing Automata contracts instead of a separate memory silo.
