@@ -409,7 +409,7 @@ class Intelligence extends Obj
             $profile = $this->_strategyProfiles[$name] ?? [];
             $types = $profile['types'] ?? [];
 
-            if (!empty($types) && !in_array($type, $types, true)) {
+            if (!empty($types) && !Arr::make($types)->contains($type, true)) {
                 continue;
             }
 

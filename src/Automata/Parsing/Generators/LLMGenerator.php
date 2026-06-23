@@ -290,7 +290,7 @@ class LLMGenerator implements IGenerator, IDispatcher {
 
         $requestedStrategy = Str::lower(Str::trim((string)($element->getAttribute('context_strategy') ?? 'prefix')));
         $requestedStrategy = $requestedStrategy === '' ? 'prefix' : $requestedStrategy;
-        $supported = in_array($requestedStrategy, ['none', 'prefix', 'windowed-prefix'], true);
+        $supported = Arr::make(['none', 'prefix', 'windowed-prefix'])->contains($requestedStrategy, true);
         $strategy = $supported ? $requestedStrategy : 'prefix';
         $context = '';
 
@@ -548,11 +548,11 @@ class LLMGenerator implements IGenerator, IDispatcher {
         }
 
         $output = Str::trim($last);
-        if (!empty($options) && !$this->matchPrefixOption($output, $options) && !in_array($output, $options, true)) {
+        if (!Val::isEmpty($options) && !$this->matchPrefixOption($output, $options) && !Arr::make($options)->contains($output, true)) {
             return;
         }
 
-        if (!empty($pattern) && !preg_match($pattern, $output)) {
+        if (!Val::isEmpty($pattern) && !preg_match($pattern, $output)) {
             return;
         }
 

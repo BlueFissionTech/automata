@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Media\Ingestion;
 
+use BlueFission\Arr;
 use BlueFission\Automata\InputType;
 use BlueFission\Automata\Media\MediaItem;
 use BlueFission\DevElation as Dev;
@@ -53,6 +54,6 @@ class TextIngestor extends AbstractIngestor
             return true;
         }
 
-        return in_array($mime, ['application/json', 'application/xml', 'application/xhtml+xml'], true);
+        return Arr::make(['application/json', 'application/xml', 'application/xhtml+xml'])->contains($mime, true);
     }
 }

@@ -19,4 +19,20 @@ class IngestionGatewayTest extends TestCase
         $this->assertSame(InputType::TEXT, $item->type());
         $this->assertSame('Hello world', $item->content());
     }
+
+    public function testTextIngestorSupportsJsonMimeWithoutRawMembershipCheck(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'automata-json-');
+        file_put_contents($path, '{"status":"ok"}');
+
+        try {
+            $ingestor = new TextIngestor();
+
+            $this->assertTrue($ingestor->supports($path));
+        } finally {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+    }
 }
