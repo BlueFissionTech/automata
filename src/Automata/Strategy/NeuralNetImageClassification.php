@@ -2,7 +2,9 @@
 
 namespace BlueFission\Automata\Strategy;
 
+use BlueFission\Arr;
 use BlueFission\DevElation as Dev;
+use BlueFission\Num;
 use Phpml\NeuralNetwork\ActivationFunction\Sigmoid;
 use Phpml\Classification\MLPClassifier;
 use Phpml\Metric\Accuracy;
@@ -15,11 +17,14 @@ class NeuralNetImageClassification extends Strategy
     protected $_testTargets;
     private $_modelManager;
 
-    public function __construct()
+    public function __construct(int $inputSize = 784, array $hiddenLayers = [8], ?array $classes = null, int $iterations = 25)
     {
-        // Initialize the MLP classifier with explicit class list (0-9) compatible with php-ml
-        $classes = range(0, 9);
-        $this->_classifier = new MLPClassifier(784, [100], $classes, 1000, new Sigmoid());
+        $inputSize = (int)Num::max(1, $inputSize);
+        $hiddenLayers = $this->normalizeHiddenLayers($hiddenLayers);
+        $classes = $classes !== null && Arr::count($classes) > 0 ? Arr::values($classes) : range(0, 9);
+        $iterations = (int)Num::max(1, $iterations);
+
+        $this->_classifier = new MLPClassifier($inputSize, $hiddenLayers, $classes, $iterations, new Sigmoid());
         $this->_modelManager = new ModelManager();
     }
 
@@ -146,5 +151,18 @@ class NeuralNetImageClassification extends Strategy
             Dev::do('automata.strategy.neuralnetimageclassification.loadModel.action4', ['path' => $path, 'loaded' => false, 'error' => $e]);
             return false;
         }
+    }
+
+    private function normalizeHiddenLayers(array $hiddenLayers): array
+    {
+        $layers = [];
+        foreach ($hiddenLayers as $size) {
+            $size = (int)$size;
+            if ($size > 0) {
+                $layers[] = $size;
+            }
+        }
+
+        return Arr::count($layers) > 0 ? $layers : [8];
     }
 }
