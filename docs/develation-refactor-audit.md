@@ -45,6 +45,8 @@ Raw PHP helpers still appear in the codebase. They fall into three categories:
 
 Automata issue #76 should remain open for the actual shared-structure migration. Chronicler PR #8 is expected to preserve the short root public class names: `BlueFission\Vec`, `BlueFission\Set`, `BlueFission\Dict`, `BlueFission\Deq`, `BlueFission\Pri`, and `BlueFission\Pile`.
 
+Those root classes are intended to remain `Val` / `IVal` primitive-style structures with php-ds backing when available and array fallback when not. They should be treated as dependency-injectable traversable value primitives for larger dataset work, not as Obj/IObj storage structures.
+
 Chronicler storage internals such as `WeightedCollection`, `PriorityQueue`, and descriptive storage structure classes remain under the Chronicler storage namespace. Automata should target the short root classes for primitive-style DS migration, and use Chronicler storage/ranking internals only where the behavior is actually storage-oriented.
 
 Until that upstream boundary lands, Automata should keep algorithm-specific behavior local and route new generic structure construction through `IStructureFactory` so the eventual migration is adapter work rather than algorithm surgery.
