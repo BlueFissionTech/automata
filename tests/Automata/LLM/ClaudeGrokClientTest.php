@@ -6,12 +6,27 @@ use PHPUnit\Framework\TestCase;
 use BlueFission\SimpleClients\ClaudeClient;
 use BlueFission\SimpleClients\GrokClient;
 use BlueFission\Automata\LLM\Prompts\Prompt;
+use BlueFission\Net\HTTP;
 
 class ClaudeGrokClientTest extends TestCase
 {
     public function testClaudeClientReturnsMockReply(): void
     {
-        $client = new ClaudeClient('test-key');
+        $transport = new class {
+            public function request(string $method, string $url, array $headers = [], $body = null): array
+            {
+                return [
+                    'status' => 200,
+                    'body' => HTTP::jsonEncode([
+                        'content' => [
+                            ['text' => 'Claude mock completion for local contract test'],
+                        ],
+                    ]),
+                    'headers' => [],
+                ];
+            }
+        };
+        $client = new ClaudeClient('test-key', 'https://api.anthropic.com', $transport);
         $prompt = new Prompt('Test input');
 
         $reply = $client->complete($prompt);
@@ -23,7 +38,25 @@ class ClaudeGrokClientTest extends TestCase
 
     public function testGrokClientReturnsMockReply(): void
     {
-        $client = new GrokClient('test-key');
+        $transport = new class {
+            public function request(string $method, string $url, array $headers = [], $body = null): array
+            {
+                return [
+                    'status' => 200,
+                    'body' => HTTP::jsonEncode([
+                        'choices' => [
+                            [
+                                'message' => [
+                                    'content' => 'Grok mock response for local contract test',
+                                ],
+                            ],
+                        ],
+                    ]),
+                    'headers' => [],
+                ];
+            }
+        };
+        $client = new GrokClient('test-key', 'https://api.x.ai', $transport);
         $prompt = new Prompt('Another test input');
 
         $reply = $client->respond($prompt);

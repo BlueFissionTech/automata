@@ -20,7 +20,9 @@ class CategoricalEncoderTest extends TestCase
         $this->assertIsInt($encoded[0]);
         $this->assertIsInt($encoded[1]);
         $this->assertIsInt($encoded[2]);
-        $this->assertSame($encoded[2], $encoded[1], 'Unseen category should map to default index');
+        $this->assertSame(0, $encoded[0]);
+        $this->assertSame(2, $encoded[1]);
+        $this->assertSame(3, $encoded[2], 'Unseen category should map to default index');
     }
 
     public function testOneHotEncoding(): void

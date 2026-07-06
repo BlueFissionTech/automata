@@ -25,5 +25,13 @@ class KNearestAnomalyTest extends TestCase
         $this->assertGreaterThan($near, $far);
         $this->assertTrue($anomaly->isAnomalous([10, 10], 2, ($near + $far) / 2));
     }
+
+    public function testEmptyNeighborsScoreAsZero(): void
+    {
+        $anomaly = new KNearestAnomaly(new KNearestExplorer());
+
+        $this->assertSame(0.0, $anomaly->score([10, 10], 2));
+        $this->assertFalse($anomaly->isAnomalous([10, 10], 2, 0.0));
+    }
 }
 

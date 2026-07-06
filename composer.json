@@ -32,16 +32,17 @@
     ],
     "minimum-stability": "dev",
     "require": {
+        "php": ">=8.2",
         "bluefission/develation": "^1.2.0-alpha",
         "bluefission/simpleclients": "dev-master",
         "google-gemini-php/client": "dev-main",
         "orhanerday/open-ai": "^2.2",
         "php-ai/php-ml": "^0.10.0",
-        "symfony/http-client": "^7.4@dev"
+        "symfony/http-client": "^7.4@dev",
+        "nyholm/psr7": "^1.8@dev"
     },
     "require-dev": {
-        "phpunit/phpunit": "^11.5",
-        "php": ">=8.0.0"
+        "phpunit/phpunit": "^11.5"
     },
     "suggest": {
         "ext-ds": "Improves performance for collection types (Deque, Map, Set, Stack, PriorityQueue, Vector). Optional; Automata falls back when absent."

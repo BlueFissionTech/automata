@@ -34,4 +34,20 @@ class FeatureEncoderTest extends TestCase
         // At minimum we expect scaled numerics preserved plus some encoded categorical slots.
         $this->assertGreaterThanOrEqual(2, $row0->count());
     }
+
+    public function testFeatureEncoderHandlesZeroRangeNumerics(): void
+    {
+        $data = [
+            [10.0, 'truck'],
+            [10.0, 'boat'],
+        ];
+
+        $encoder = new FeatureEncoder([0], [1]);
+        $encoder->fit($data);
+
+        $transformed = $encoder->transform($data);
+
+        $this->assertSame(0.0, $transformed[0]->get(0));
+        $this->assertSame(0.0, $transformed[1]->get(0));
+    }
 }

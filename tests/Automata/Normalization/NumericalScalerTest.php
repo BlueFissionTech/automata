@@ -18,5 +18,21 @@ class NumericalScalerTest extends TestCase
 
         $this->assertEquals(0.0, $mean, '', 1e-10);
     }
+
+    public function testFitTransformHandlesZeroVariance(): void
+    {
+        $scaler = new NumericalScaler();
+
+        $scaled = $scaler->fitTransform([5, 5, 5]);
+
+        $this->assertSame([0, 0, 0], $scaled);
+    }
+
+    public function testFitTransformHandlesEmptyData(): void
+    {
+        $scaler = new NumericalScaler();
+
+        $this->assertSame([], $scaler->fitTransform([]));
+    }
 }
 

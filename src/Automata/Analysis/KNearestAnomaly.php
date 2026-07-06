@@ -2,6 +2,9 @@
 
 namespace BlueFission\Automata\Analysis;
 
+use BlueFission\Arr;
+use BlueFission\Num;
+use BlueFission\Val;
 use BlueFission\Obj;
 
 /**
@@ -30,16 +33,16 @@ class KNearestAnomaly extends Obj
     public function score(array $features, int $k): float
     {
         $neighbors = $this->explorer->neighbors($features, $k);
-        if (empty($neighbors)) {
+        if (Val::isEmpty($neighbors)) {
             return 0.0;
         }
 
-        $sum = 0.0;
+        $sum = Num::make(0.0);
         foreach ($neighbors as $neighbor) {
-            $sum += $neighbor['distance'];
+            $sum->plus($neighbor['distance']);
         }
 
-        return $sum / count($neighbors);
+        return $sum->divide(Arr::count($neighbors))->val();
     }
 
     /**
