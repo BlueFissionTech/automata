@@ -4,6 +4,7 @@ namespace BlueFission\Tests\Automata\Analysis;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Automata\Analysis\KNearestExplorer;
+use BlueFission\Tests\Automata\Support\RecordingStructureFactory;
 
 class KNearestExplorerTest extends TestCase
 {
@@ -47,5 +48,17 @@ class KNearestExplorerTest extends TestCase
 
         $this->assertSame(1, $neighbors[0]['id']);
         $this->assertSame(0, $neighbors[1]['id']);
+    }
+
+    public function testExplorerUsesInjectedStructureFactory(): void
+    {
+        $factory = new RecordingStructureFactory();
+        $explorer = new KNearestExplorer([[0, 0], [1, 1]], null, $factory);
+
+        $neighbors = $explorer->neighbors([0, 0], 1);
+
+        $this->assertSame(0, $neighbors[0]['id']);
+        $this->assertGreaterThanOrEqual(1, $factory->valuesCalls);
+        $this->assertGreaterThanOrEqual(1, $factory->arrCalls);
     }
 }

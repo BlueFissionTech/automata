@@ -2,7 +2,12 @@
 
 namespace BlueFission\Automata\Strategy;
 
+use BlueFission\Arr;
+use BlueFission\Automata\Support\IStructureFactory;
+use BlueFission\Automata\Support\StructureFactory;
 use BlueFission\DevElation as Dev;
+use BlueFission\Num;
+use BlueFission\Val;
 use Phpml\Classification\KNearestNeighbors;
 use Phpml\Dataset\ArrayDataset;
 use Phpml\Metric\Accuracy;
@@ -24,12 +29,20 @@ class KNearestPrediction extends Strategy
 
     private $_modelManager;
 
-    public function __construct(int $k = 3)
+    private IStructureFactory $_structures;
+
+    public function __construct(
+        int $k = 3,
+        ?KNearestNeighbors $knn = null,
+        ?ModelManager $modelManager = null,
+        ?IStructureFactory $structures = null
+    )
     {
         // Initialize the KNN classifier with k neighbors
-        $this->_knn = new KNearestNeighbors($k);
+        $this->_knn = $knn ?? new KNearestNeighbors($k);
         // Initialize the ModelManager for saving and loading models
-        $this->_modelManager = new ModelManager();
+        $this->_modelManager = $modelManager ?? new ModelManager();
+        $this->_structures = $structures ?? new StructureFactory();
     }
 
     /**
@@ -49,14 +62,16 @@ class KNearestPrediction extends Strategy
         $samples = $dataset->getSamples();
         $targets = $dataset->getTargets();
 
-        $count = count($samples);
+        $count = Arr::count($samples);
         $testCount = (int)($count * $testSize);
         $trainCount = $count - $testCount;
 
-        $trainSamples = array_slice($samples, 0, $trainCount);
-        $trainLabels = array_slice($targets, 0, $trainCount);
-        $this->_testSamples = array_slice($samples, $trainCount);
-        $this->_testLabels = array_slice($targets, $trainCount);
+        $sampleSet = $this->_structures->arr($samples);
+        $targetSet = $this->_structures->arr($targets);
+        $trainSamples = $sampleSet->slice(0, $trainCount)->val();
+        $trainLabels = $targetSet->slice(0, $trainCount)->val();
+        $this->_testSamples = $sampleSet->slice($trainCount)->val();
+        $this->_testLabels = $targetSet->slice($trainCount)->val();
 
         // Train the KNN classifier
         $this->_knn->train($trainSamples, $trainLabels);
@@ -89,12 +104,16 @@ class KNearestPrediction extends Strategy
      */
     public function accuracy(): float
     {
+        if (Val::isEmpty($this->_testSamples) || Val::isEmpty($this->_testLabels)) {
+            return 0.0;
+        }
+
         $predictedLabels = [];
         foreach ($this->_testSamples as $sample) {
             $predictedLabels[] = $this->_knn->predict($sample);
         }
 
-        $accuracy = Accuracy::score($this->_testLabels, $predictedLabels);
+        $accuracy = Num::make(Accuracy::score($this->_testLabels, $predictedLabels))->val();
         $accuracy = Dev::apply('automata.strategy.knearestprediction.accuracy.1', $accuracy);
         Dev::do('automata.strategy.knearestprediction.accuracy.action1', ['accuracy' => $accuracy]);
 

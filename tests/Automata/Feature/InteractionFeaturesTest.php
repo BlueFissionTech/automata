@@ -4,6 +4,7 @@ namespace BlueFission\Tests\Automata\Feature;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Automata\Feature\InteractionFeatures;
+use BlueFission\Tests\Automata\Support\RecordingStructureFactory;
 
 class InteractionFeaturesTest extends TestCase
 {
@@ -28,6 +29,17 @@ class InteractionFeaturesTest extends TestCase
         $this->assertSame(2, $row->get(3));
         $this->assertSame(3, $row->get(4));
         $this->assertSame(6, $row->get(5));
+    }
+
+    public function testUsesInjectedStructureFactory(): void
+    {
+        $factory = new RecordingStructureFactory();
+        $features = new InteractionFeatures($factory);
+
+        $result = $features->transform([[2, 3]]);
+
+        $this->assertSame(6, $result->get(0)->get(2));
+        $this->assertGreaterThanOrEqual(3, $factory->vecCalls);
     }
 }
 

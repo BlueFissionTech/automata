@@ -3,6 +3,8 @@
 namespace BlueFission\Automata\Analysis;
 
 use BlueFission\Arr;
+use BlueFission\Automata\Support\IStructureFactory;
+use BlueFission\Automata\Support\StructureFactory;
 use BlueFission\Num;
 use BlueFission\Obj;
 
@@ -22,16 +24,19 @@ class KNearestExplorer extends Obj
     /** @var array<int,string|int> */
     protected array $ids = [];
 
+    protected IStructureFactory $structures;
+
     /**
      * @param array<int,array<float|int>> $samples
      * @param array<int,string|int>|null  $ids
      */
-    public function __construct(array $samples = [], ?array $ids = null)
+    public function __construct(array $samples = [], ?array $ids = null, ?IStructureFactory $structures = null)
     {
         parent::__construct();
-        $this->samples = Arr::make($samples)->values()->val();
+        $this->structures = $structures ?? new StructureFactory();
+        $this->samples = $this->structures->values($samples);
         $this->ids = $ids !== null
-            ? Arr::make($ids)->values()->val()
+            ? $this->structures->values($ids)
             : $this->defaultIds($samples);
     }
 
@@ -43,9 +48,9 @@ class KNearestExplorer extends Obj
      */
     public function setData(array $samples, ?array $ids = null): void
     {
-        $this->samples = Arr::make($samples)->values()->val();
+        $this->samples = $this->structures->values($samples);
         $this->ids = $ids !== null
-            ? Arr::make($ids)->values()->val()
+            ? $this->structures->values($ids)
             : $this->defaultIds($samples);
     }
 
@@ -68,7 +73,7 @@ class KNearestExplorer extends Obj
             ];
         }
 
-        return Arr::make($distances)->sort(function ($a, $b) {
+        return $this->structures->arr($distances)->sort(function ($a, $b) {
             return $a['distance'] <=> $b['distance'];
         })->slice(0, Num::make($k)->max(0))->val();
     }

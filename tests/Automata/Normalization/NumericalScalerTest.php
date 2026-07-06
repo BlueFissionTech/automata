@@ -4,6 +4,7 @@ namespace BlueFission\Tests\Automata\Normalization;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Automata\Normalization\NumericalScaler;
+use BlueFission\Tests\Automata\Support\RecordingStructureFactory;
 
 class NumericalScalerTest extends TestCase
 {
@@ -33,6 +34,17 @@ class NumericalScalerTest extends TestCase
         $scaler = new NumericalScaler();
 
         $this->assertSame([], $scaler->fitTransform([]));
+    }
+
+    public function testScalerUsesInjectedStructureFactory(): void
+    {
+        $factory = new RecordingStructureFactory();
+        $scaler = new NumericalScaler($factory);
+
+        $scaled = $scaler->fitTransform([1, 2, 3]);
+
+        $this->assertCount(3, $scaled);
+        $this->assertGreaterThanOrEqual(2, $factory->arrCalls);
     }
 }
 

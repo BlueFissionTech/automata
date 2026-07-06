@@ -4,6 +4,7 @@ namespace BlueFission\Tests\Automata\Feature\Selection;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Automata\Feature\Selection\VarianceThresholdSelector;
+use BlueFission\Tests\Automata\Support\RecordingStructureFactory;
 
 class VarianceThresholdSelectorTest extends TestCase
 {
@@ -21,6 +22,29 @@ class VarianceThresholdSelectorTest extends TestCase
 
         $this->assertCount(3, $filtered);
         $this->assertCount(2, $filtered[0]); // one feature dropped
+    }
+
+    public function testSelectorUsesInjectedStructureFactory(): void
+    {
+        $factory = new RecordingStructureFactory();
+        $selector = new VarianceThresholdSelector(0.01, $factory);
+
+        $filtered = $selector->fitTransform([
+            [1, 1],
+            [3, 1],
+        ]);
+
+        $this->assertSame([[1], [3]], $filtered);
+        $this->assertGreaterThanOrEqual(2, $factory->fillCalls);
+        $this->assertGreaterThanOrEqual(2, $factory->arrCalls);
+    }
+
+    public function testSelectorHandlesEmptyAndSingleRowData(): void
+    {
+        $selector = new VarianceThresholdSelector(0.01);
+
+        $this->assertSame([], $selector->fitTransform([]));
+        $this->assertSame([[]], $selector->fitTransform([[5, 5]]));
     }
 }
 

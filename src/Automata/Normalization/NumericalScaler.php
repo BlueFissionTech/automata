@@ -3,6 +3,8 @@
 namespace BlueFission\Automata\Normalization;
 
 use BlueFission\Arr;
+use BlueFission\Automata\Support\IStructureFactory;
+use BlueFission\Automata\Support\StructureFactory;
 use BlueFission\Num;
 use BlueFission\Val;
 use BlueFission\DevElation as Dev;
@@ -10,6 +12,12 @@ use BlueFission\DevElation as Dev;
 class NumericalScaler {
     private $mean = 0;
     private $std = 1;
+    private IStructureFactory $_structures;
+
+    public function __construct(?IStructureFactory $structures = null)
+    {
+        $this->_structures = $structures ?? new StructureFactory();
+    }
 
     public function fit($data) {
         $data = Dev::apply('normalization.scaler.fit_input', $data);
@@ -22,7 +30,7 @@ class NumericalScaler {
 
         $count = Arr::count($data);
         $this->mean = Num::make(array_sum($data))->divide($count)->val();
-        $sumOfSquares = array_sum(Arr::make($data)->map(function($item) {
+        $sumOfSquares = array_sum($this->_structures->arr($data)->map(function($item) {
             return Num::make($item)->minus($this->mean)->pow(2)->val();
         })->val());
         $this->std = Num::make($sumOfSquares)->divide($count)->sqrt()->val();
@@ -34,7 +42,7 @@ class NumericalScaler {
 
     public function transform($data) {
         $data = Dev::apply('normalization.scaler.transform_input', $data);
-        return Arr::make($data)->map(function($item) {
+        return $this->_structures->arr($data)->map(function($item) {
             return Num::make($item)->minus($this->mean)->divide($this->std)->val();
         })->values()->val();
     }
