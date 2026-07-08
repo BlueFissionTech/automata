@@ -22,71 +22,18 @@
     ],
     "repositories": [
         {
-            "type": "package",
-            "package": {
-                "name": "bluefission/chronicler",
-                "version": "dev-main",
-                "source": {
-                    "type": "git",
-                    "url": "https://github.com/BlueFissionTech/chronicler.git",
-                    "reference": "450582e557a86cdf049e1bf6c324ac30d286c49e"
-                },
-                "require": {
-                    "php": ">=8.2",
-                    "ext-json": "*",
-                    "bluefission/develation": "^1.3.39"
-                },
-                "require-dev": {
-                    "phpunit/phpunit": "^10.5"
-                },
-                "suggest": {
-                    "ext-ds": "Provides native Vector, Set, Map, Deque, Stack, and PriorityQueue backing stores for root data-structure primitives."
-                },
-                "autoload": {
-                    "psr-4": {
-                        "BlueFission\\": "src/"
-                    }
-                },
-                "description": "DevElation-oriented storage objects, connectors, and query helpers for Kafka, Neo4j, GraphQL, and related data systems.",
-                "license": [
-                    "MIT"
-                ],
-                "support": {
-                    "source": "https://github.com/BlueFissionTech/chronicler/tree/main",
-                    "issues": "https://github.com/BlueFissionTech/chronicler/issues"
-                }
-            }
+            "type": "vcs",
+            "url": "https://github.com/bluefissiontech/develation"
         },
         {
-            "type": "package",
-            "package": {
-                "name": "bluefission/simpleclients",
-                "version": "dev-master",
-                "source": {
-                    "type": "git",
-                    "url": "https://github.com/BlueFissionTech/simpleclients.git",
-                    "reference": "858ea3575b5eb725879c0066d152e07538019392"
-                },
-                "require": {
-                    "bluefission/develation": "^1.0.0-alpha",
-                    "simplehtmldom/simplehtmldom": "^2.0@RC"
-                },
-                "autoload": {
-                    "psr-4": {
-                        "BlueFission\\": "src/"
-                    },
-                    "classmap": [
-                        "src/"
-                    ]
-                }
-            }
+            "type": "vcs",
+            "url": "https://github.com/BlueFissionTech/simpleclients"
         }
     ],
     "minimum-stability": "dev",
     "require": {
         "php": ">=8.2",
         "bluefission/develation": "^1.3.39",
-        "bluefission/chronicler": "dev-main",
         "bluefission/simpleclients": "dev-master",
         "google-gemini-php/client": "dev-main",
         "orhanerday/open-ai": "^2.2",
@@ -98,6 +45,7 @@
         "phpunit/phpunit": "^11.5"
     },
     "suggest": {
+        "bluefission/chronicler": "Future shared storage structure provider for ranked and primitive data structures once it is publicly installable.",
         "ext-ds": "Improves performance for collection types (Deque, Map, Set, Stack, PriorityQueue, Vector). Optional; Automata falls back when absent."
     },
     "autoload": {

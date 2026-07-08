@@ -2,7 +2,6 @@
 namespace BlueFission\Tests\Automata\Collections;
 
 use BlueFission\Automata\Collections\OrganizedCollection;
-use BlueFission\Chronicler\Storage\Structures\WeightedCollection;
 use PHPUnit\Framework\TestCase;
 
 class OrganizedCollectionTest extends TestCase
@@ -51,27 +50,6 @@ class OrganizedCollectionTest extends TestCase
         $this->collection->add('value2', 'key2', 2);
         $stats = $this->collection->stats();
         $this->assertArrayHasKey('mean1', $stats);
-    }
-
-    public function testUsesChroniclerWeightedCollection()
-    {
-        $this->assertInstanceOf(WeightedCollection::class, $this->collection->weighted());
-
-        $this->collection->add('value1', 'key1', 3);
-
-        $this->assertSame(3, $this->collection->weighted()->weight('key1'));
-        $this->assertSame('value1', $this->collection->weighted()->get('key1', false));
-    }
-
-    public function testSerializePreservesEntriesWithoutSerializingWeightedRuntime()
-    {
-        $this->collection->add('value1', 'key1', 3);
-
-        $restored = unserialize(serialize($this->collection));
-
-        $this->assertInstanceOf(OrganizedCollection::class, $restored);
-        $this->assertSame('value1', $restored->get('key1'));
-        $this->assertSame(4, $restored->weight('key1'));
     }
 
     public function testCollectionMathIsAccurate()

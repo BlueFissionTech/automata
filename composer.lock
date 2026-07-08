@@ -4,42 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7806d81d0fe3754a3c3f9fb8f80fa838",
+    "content-hash": "37aaa40ab1eef6801b29b1374f6ea0cd",
     "packages": [
-        {
-            "name": "bluefission/chronicler",
-            "version": "dev-main",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/BlueFissionTech/chronicler.git",
-                "reference": "450582e557a86cdf049e1bf6c324ac30d286c49e"
-            },
-            "require": {
-                "bluefission/develation": "^1.3.39",
-                "ext-json": "*",
-                "php": ">=8.2"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "^10.5"
-            },
-            "suggest": {
-                "ext-ds": "Provides native Vector, Set, Map, Deque, Stack, and PriorityQueue backing stores for root data-structure primitives."
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "BlueFission\\": "src/"
-                }
-            },
-            "license": [
-                "MIT"
-            ],
-            "description": "DevElation-oriented storage objects, connectors, and query helpers for Kafka, Neo4j, GraphQL, and related data systems.",
-            "support": {
-                "source": "https://github.com/BlueFissionTech/chronicler/tree/main",
-                "issues": "https://github.com/BlueFissionTech/chronicler/issues"
-            }
-        },
         {
             "name": "bluefission/develation",
             "version": "v1.3.39",
@@ -71,17 +37,50 @@
             },
             "type": "library",
             "autoload": {
-                "files": [
-                    "src/functions.php"
-                ],
                 "psr-4": {
                     "BlueFission\\": "src"
                 },
                 "classmap": [
                     "src/"
+                ],
+                "files": [
+                    "src/functions.php"
                 ]
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "BlueFission\\Tests\\": "tests/"
+                }
+            },
+            "archive": {
+                "exclude": [
+                    "/.codex",
+                    "/.github",
+                    "/.idea",
+                    "/.phpunit.cache",
+                    "/.phpunit.result.cache",
+                    "/AGENTS.behavior.md",
+                    "/AGENTS.md",
+                    "/SPEC.md",
+                    "/artifacts",
+                    "/composer.lock",
+                    "/docker",
+                    "/examples",
+                    "/harness.json",
+                    "/phpunit.xml",
+                    "/scripts",
+                    "/tests",
+                    "/tests.md"
+                ]
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/phpunit --do-not-cache-result"
+                ],
+                "test:services": [
+                    "vendor/bin/phpunit --do-not-cache-result tests/Services"
+                ]
+            },
             "license": [
                 "MIT"
             ],
@@ -120,11 +119,22 @@
                 "url": "https://github.com/BlueFissionTech/simpleclients.git",
                 "reference": "858ea3575b5eb725879c0066d152e07538019392"
             },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/BlueFissionTech/simpleclients/zipball/858ea3575b5eb725879c0066d152e07538019392",
+                "reference": "858ea3575b5eb725879c0066d152e07538019392",
+                "shasum": ""
+            },
             "require": {
                 "bluefission/develation": "^1.0.0-alpha",
                 "simplehtmldom/simplehtmldom": "^2.0@RC"
             },
-            "type": "library",
+            "require-dev": {
+                "php": ">=8.0.0",
+                "phpunit/phpunit": "^11.1@dev"
+            },
+            "default-branch": true,
+            "type": "package",
             "autoload": {
                 "psr-4": {
                     "BlueFission\\": "src/"
@@ -132,7 +142,30 @@
                 "classmap": [
                     "src/"
                 ]
-            }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Devon Scott",
+                    "email": "dscott@bluefission.com",
+                    "homepage": "https://bluefission.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Simple Client Wrappers For BlueFission",
+            "keywords": [
+                "api",
+                "clients",
+                "http",
+                "services"
+            ],
+            "support": {
+                "source": "https://github.com/BlueFissionTech/simpleclients/tree/master",
+                "issues": "https://github.com/BlueFissionTech/simpleclients/issues"
+            },
+            "time": "2026-06-22T02:58:21+00:00"
         },
         {
             "name": "google-gemini-php/client",
@@ -1322,12 +1355,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser.git",
-                "reference": "10d6a90b7b6d9300d0b08d398a13f00acaa56377"
+                "reference": "044a6a392ff8ad0d61f14370a5fbbd0a0107152f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/10d6a90b7b6d9300d0b08d398a13f00acaa56377",
-                "reference": "10d6a90b7b6d9300d0b08d398a13f00acaa56377",
+                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/044a6a392ff8ad0d61f14370a5fbbd0a0107152f",
+                "reference": "044a6a392ff8ad0d61f14370a5fbbd0a0107152f",
                 "shasum": ""
             },
             "require": {
@@ -1372,7 +1405,7 @@
                 "issues": "https://github.com/nikic/PHP-Parser/issues",
                 "source": "https://github.com/nikic/PHP-Parser/tree/master"
             },
-            "time": "2026-07-08T13:19:15+00:00"
+            "time": "2026-07-04T14:30:18+00:00"
         },
         {
             "name": "phar-io/manifest",
@@ -1846,12 +1879,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "851479b57ac54546827a6116e84523b3305bc4f3"
+                "reference": "dd50743c793fa13dfacc377506ebb81653fd910f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/851479b57ac54546827a6116e84523b3305bc4f3",
-                "reference": "851479b57ac54546827a6116e84523b3305bc4f3",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/dd50743c793fa13dfacc377506ebb81653fd910f",
+                "reference": "dd50743c793fa13dfacc377506ebb81653fd910f",
                 "shasum": ""
             },
             "require": {
@@ -1932,7 +1965,7 @@
                     "type": "other"
                 }
             ],
-            "time": "2026-07-08T09:01:17+00:00"
+            "time": "2026-07-04T08:24:21+00:00"
         },
         {
             "name": "sebastian/cli-parser",
@@ -3052,7 +3085,6 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "bluefission/chronicler": 20,
         "bluefission/simpleclients": 20,
         "google-gemini-php/client": 20,
         "symfony/http-client": 20,

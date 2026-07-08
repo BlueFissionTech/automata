@@ -6,6 +6,7 @@ use BlueFission\Arr;
 use BlueFission\DevElation as Dev;
 use BlueFission\Num;
 use BlueFission\Str;
+use BlueFission\Val;
 
 class TrigramMarkovPredictor {
     public const CONFIG_MAX_STATES = 'max_states';
@@ -88,7 +89,12 @@ class TrigramMarkovPredictor {
             ->trim()
             ->replacePattern('/\s+/', ' ');
 
-        $tokens = preg_split('/\s+/', $normalized->val(), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $tokens = [];
+        foreach ($normalized->split(' ')->toArray() as $token) {
+            if (Val::isNotEmpty($token)) {
+                $tokens[] = (string)$token;
+            }
+        }
 
         Dev::do('language.trigram.tokenized', ['tokens' => $tokens]);
 
