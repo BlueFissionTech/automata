@@ -22,8 +22,40 @@
     ],
     "repositories": [
         {
-            "type": "vcs",
-            "url": "https://github.com/BlueFissionTech/chronicler"
+            "type": "package",
+            "package": {
+                "name": "bluefission/chronicler",
+                "version": "dev-main",
+                "source": {
+                    "type": "git",
+                    "url": "https://github.com/BlueFissionTech/chronicler.git",
+                    "reference": "450582e557a86cdf049e1bf6c324ac30d286c49e"
+                },
+                "require": {
+                    "php": ">=8.2",
+                    "ext-json": "*",
+                    "bluefission/develation": "^1.3.39"
+                },
+                "require-dev": {
+                    "phpunit/phpunit": "^10.5"
+                },
+                "suggest": {
+                    "ext-ds": "Provides native Vector, Set, Map, Deque, Stack, and PriorityQueue backing stores for root data-structure primitives."
+                },
+                "autoload": {
+                    "psr-4": {
+                        "BlueFission\\": "src/"
+                    }
+                },
+                "description": "DevElation-oriented storage objects, connectors, and query helpers for Kafka, Neo4j, GraphQL, and related data systems.",
+                "license": [
+                    "MIT"
+                ],
+                "support": {
+                    "source": "https://github.com/BlueFissionTech/chronicler/tree/main",
+                    "issues": "https://github.com/BlueFissionTech/chronicler/issues"
+                }
+            }
         },
         {
             "type": "package",

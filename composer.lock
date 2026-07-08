@@ -4,21 +4,15 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9d9a535dfed2e4a6b28388b3a797ec8e",
+    "content-hash": "7806d81d0fe3754a3c3f9fb8f80fa838",
     "packages": [
         {
             "name": "bluefission/chronicler",
             "version": "dev-main",
             "source": {
                 "type": "git",
-                "url": "git@github.com:BlueFissionTech/chronicler.git",
+                "url": "https://github.com/BlueFissionTech/chronicler.git",
                 "reference": "450582e557a86cdf049e1bf6c324ac30d286c49e"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/BlueFissionTech/chronicler/zipball/450582e557a86cdf049e1bf6c324ac30d286c49e",
-                "reference": "450582e557a86cdf049e1bf6c324ac30d286c49e",
-                "shasum": ""
             },
             "require": {
                 "bluefission/develation": "^1.3.39",
@@ -31,22 +25,11 @@
             "suggest": {
                 "ext-ds": "Provides native Vector, Set, Map, Deque, Stack, and PriorityQueue backing stores for root data-structure primitives."
             },
-            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
                     "BlueFission\\": "src/"
                 }
-            },
-            "autoload-dev": {
-                "psr-4": {
-                    "BlueFission\\Chronicler\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "vendor/bin/phpunit --do-not-cache-result"
-                ]
             },
             "license": [
                 "MIT"
@@ -55,8 +38,7 @@
             "support": {
                 "source": "https://github.com/BlueFissionTech/chronicler/tree/main",
                 "issues": "https://github.com/BlueFissionTech/chronicler/issues"
-            },
-            "time": "2026-07-08T17:16:34+00:00"
+            }
         },
         {
             "name": "bluefission/develation",
@@ -1340,12 +1322,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser.git",
-                "reference": "044a6a392ff8ad0d61f14370a5fbbd0a0107152f"
+                "reference": "10d6a90b7b6d9300d0b08d398a13f00acaa56377"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/044a6a392ff8ad0d61f14370a5fbbd0a0107152f",
-                "reference": "044a6a392ff8ad0d61f14370a5fbbd0a0107152f",
+                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/10d6a90b7b6d9300d0b08d398a13f00acaa56377",
+                "reference": "10d6a90b7b6d9300d0b08d398a13f00acaa56377",
                 "shasum": ""
             },
             "require": {
@@ -1390,7 +1372,7 @@
                 "issues": "https://github.com/nikic/PHP-Parser/issues",
                 "source": "https://github.com/nikic/PHP-Parser/tree/master"
             },
-            "time": "2026-07-04T14:30:18+00:00"
+            "time": "2026-07-08T13:19:15+00:00"
         },
         {
             "name": "phar-io/manifest",
@@ -1864,12 +1846,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "dd50743c793fa13dfacc377506ebb81653fd910f"
+                "reference": "851479b57ac54546827a6116e84523b3305bc4f3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/dd50743c793fa13dfacc377506ebb81653fd910f",
-                "reference": "dd50743c793fa13dfacc377506ebb81653fd910f",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/851479b57ac54546827a6116e84523b3305bc4f3",
+                "reference": "851479b57ac54546827a6116e84523b3305bc4f3",
                 "shasum": ""
             },
             "require": {
@@ -1950,7 +1932,7 @@
                     "type": "other"
                 }
             ],
-            "time": "2026-07-04T08:24:21+00:00"
+            "time": "2026-07-08T09:01:17+00:00"
         },
         {
             "name": "sebastian/cli-parser",
