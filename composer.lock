@@ -4,20 +4,43 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b074d26deffcb5469438fe8f72a2ce02",
+    "content-hash": "5804db22b576028735943d577bf5870b",
     "packages": [
         {
+            "name": "bluefission/chronicler",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/BlueFissionTech/chronicler.git",
+                "reference": "5d674bed47983404722736656696b541bd7c7172"
+            },
+            "require": {
+                "bluefission/develation": "^1.3.39",
+                "ext-json": "*",
+                "php": ">=8.2"
+            },
+            "suggest": {
+                "ext-ds": "Provides native Vector, Set, Map, Deque, Stack, and PriorityQueue backing stores for root data-structure primitives."
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "BlueFission\\": "src/"
+                }
+            }
+        },
+        {
             "name": "bluefission/develation",
-            "version": "v1.3.38-alpha",
+            "version": "v1.3.39",
             "source": {
                 "type": "git",
                 "url": "https://github.com/BlueFissionTech/develation.git",
-                "reference": "563a31023a3712ba654b1cf0a5cba6f801d261aa"
+                "reference": "ee0a240d2d0cff2f15cb243411e2f1e7d0c0b2c1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/BlueFissionTech/develation/zipball/563a31023a3712ba654b1cf0a5cba6f801d261aa",
-                "reference": "563a31023a3712ba654b1cf0a5cba6f801d261aa",
+                "url": "https://api.github.com/repos/BlueFissionTech/develation/zipball/ee0a240d2d0cff2f15cb243411e2f1e7d0c0b2c1",
+                "reference": "ee0a240d2d0cff2f15cb243411e2f1e7d0c0b2c1",
                 "shasum": ""
             },
             "require": {
@@ -37,21 +60,17 @@
             },
             "type": "library",
             "autoload": {
+                "files": [
+                    "src/functions.php"
+                ],
                 "psr-4": {
                     "BlueFission\\": "src"
                 },
                 "classmap": [
                     "src/"
-                ],
-                "files": [
-                    "src/functions.php"
                 ]
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "BlueFission\\Tests\\": "tests/"
-                }
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -63,20 +82,24 @@
                     "role": "Developer"
                 }
             ],
-            "description": "Core Framework for BlueFission.com internal PHP Projects",
+            "description": "DevElation primitives, behaviors, data, service, and framework utilities for Blue Fission PHP projects",
             "homepage": "https://github.com/BlueFissionTech/develation",
             "keywords": [
+                "behaviors",
                 "bluefission",
-                "core",
+                "data",
                 "develation",
                 "framework",
-                "php"
+                "materia",
+                "php",
+                "primitives",
+                "services"
             ],
             "support": {
                 "issues": "https://github.com/BlueFissionTech/develation/issues",
                 "source": "https://github.com/BlueFissionTech/develation"
             },
-            "time": "2026-07-05T18:25:26+00:00"
+            "time": "2026-07-05T19:08:43+00:00"
         },
         {
             "name": "bluefission/simpleclients",
@@ -86,22 +109,11 @@
                 "url": "https://github.com/BlueFissionTech/simpleclients.git",
                 "reference": "858ea3575b5eb725879c0066d152e07538019392"
             },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/BlueFissionTech/simpleclients/zipball/858ea3575b5eb725879c0066d152e07538019392",
-                "reference": "858ea3575b5eb725879c0066d152e07538019392",
-                "shasum": ""
-            },
             "require": {
                 "bluefission/develation": "^1.0.0-alpha",
                 "simplehtmldom/simplehtmldom": "^2.0@RC"
             },
-            "require-dev": {
-                "php": ">=8.0.0",
-                "phpunit/phpunit": "^11.1@dev"
-            },
-            "default-branch": true,
-            "type": "package",
+            "type": "library",
             "autoload": {
                 "psr-4": {
                     "BlueFission\\": "src/"
@@ -109,30 +121,7 @@
                 "classmap": [
                     "src/"
                 ]
-            },
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Devon Scott",
-                    "email": "dscott@bluefission.com",
-                    "homepage": "https://bluefission.com",
-                    "role": "Developer"
-                }
-            ],
-            "description": "Simple Client Wrappers For BlueFission",
-            "keywords": [
-                "api",
-                "clients",
-                "http",
-                "services"
-            ],
-            "support": {
-                "source": "https://github.com/BlueFissionTech/simpleclients/tree/master",
-                "issues": "https://github.com/BlueFissionTech/simpleclients/issues"
-            },
-            "time": "2026-06-22T02:58:21+00:00"
+            }
         },
         {
             "name": "google-gemini-php/client",
@@ -3052,9 +3041,11 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
+        "bluefission/chronicler": 20,
         "bluefission/simpleclients": 20,
         "google-gemini-php/client": 20,
-        "symfony/http-client": 20
+        "symfony/http-client": 20,
+        "nyholm/psr7": 20
     },
     "prefer-stable": false,
     "prefer-lowest": false,

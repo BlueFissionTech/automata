@@ -22,18 +22,60 @@
     ],
     "repositories": [
         {
-            "type": "vcs",
-            "url": "https://github.com/bluefissiontech/develation"
+            "type": "package",
+            "package": {
+                "name": "bluefission/chronicler",
+                "version": "dev-main",
+                "source": {
+                    "type": "git",
+                    "url": "https://github.com/BlueFissionTech/chronicler.git",
+                    "reference": "5d674bed47983404722736656696b541bd7c7172"
+                },
+                "require": {
+                    "php": ">=8.2",
+                    "ext-json": "*",
+                    "bluefission/develation": "^1.3.39"
+                },
+                "suggest": {
+                    "ext-ds": "Provides native Vector, Set, Map, Deque, Stack, and PriorityQueue backing stores for root data-structure primitives."
+                },
+                "autoload": {
+                    "psr-4": {
+                        "BlueFission\\": "src/"
+                    }
+                }
+            }
         },
         {
-            "type": "vcs",
-            "url": "https://github.com/BlueFissionTech/simpleclients"
+            "type": "package",
+            "package": {
+                "name": "bluefission/simpleclients",
+                "version": "dev-master",
+                "source": {
+                    "type": "git",
+                    "url": "https://github.com/BlueFissionTech/simpleclients.git",
+                    "reference": "858ea3575b5eb725879c0066d152e07538019392"
+                },
+                "require": {
+                    "bluefission/develation": "^1.0.0-alpha",
+                    "simplehtmldom/simplehtmldom": "^2.0@RC"
+                },
+                "autoload": {
+                    "psr-4": {
+                        "BlueFission\\": "src/"
+                    },
+                    "classmap": [
+                        "src/"
+                    ]
+                }
+            }
         }
     ],
     "minimum-stability": "dev",
     "require": {
         "php": ">=8.2",
-        "bluefission/develation": "^1.2.0-alpha",
+        "bluefission/develation": "^1.3.39",
+        "bluefission/chronicler": "dev-main",
         "bluefission/simpleclients": "dev-master",
         "google-gemini-php/client": "dev-main",
         "orhanerday/open-ai": "^2.2",
