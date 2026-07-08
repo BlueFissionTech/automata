@@ -14,7 +14,7 @@ The new `BlueFission\Automata\Support\IStructureFactory` boundary centralizes co
 - normalized value-list extraction
 - filled scalar buffers
 
-The default `StructureFactory` still returns the current Automata/DevElation structures, but the interface intentionally returns `mixed` for structure objects. That keeps the call sites open to future bitset, dense-vector, sparse-vector, or Chronicler-backed adapters as long as they provide the same behavioral methods used by the algorithm.
+The default `StructureFactory` now resolves the root DS primitives through Chronicler-backed classes (`BlueFission\Vec`, `BlueFission\Dict`, and `BlueFission\Set`). The interface intentionally returns `mixed` for structure objects. That keeps the call sites open to future bitset, dense-vector, sparse-vector, or custom training-data adapters as long as they provide the same behavioral methods used by the algorithm.
 
 ## Refactored Paths
 
@@ -43,12 +43,12 @@ Raw PHP helpers still appear in the codebase. They fall into three categories:
 
 ## Chronicler Migration Boundary
 
-Automata issue #76 should remain open for the actual shared-structure migration. The current release-preparation slice keeps Automata publicly installable without requiring the private Chronicler repository. Chronicler should become a runtime dependency only after its shared structures are available through a public, tagged, Composer-installable package.
-
-The future shared-structure boundary is expected to preserve the short root public class names: `BlueFission\Vec`, `BlueFission\Set`, `BlueFission\Dict`, `BlueFission\Deq`, `BlueFission\Pri`, and `BlueFission\Pile`.
+Automata now consumes Chronicler for the shared root public class names: `BlueFission\Vec`, `BlueFission\Set`, `BlueFission\Dict`, `BlueFission\Deq`, `BlueFission\Pri`, and `BlueFission\Pile`.
 
 Those root classes are intended to remain `Val` / `IVal` primitive-style structures with php-ds backing when available and array fallback when not. They should be treated as dependency-injectable traversable value primitives for larger dataset work, not as Obj/IObj storage structures.
 
 Chronicler storage internals such as `WeightedCollection`, `PriorityQueue`, and descriptive storage structure classes remain under the Chronicler storage namespace. Automata should target the short root classes for primitive-style DS migration, and use Chronicler storage/ranking internals only where the behavior is actually storage-oriented.
 
-Until that upstream boundary lands, Automata should keep algorithm-specific behavior local and route new generic structure construction through `IStructureFactory` so the eventual migration is adapter work rather than algorithm surgery.
+`BlueFission\Automata\Collections\OrganizedCollection` is now a deprecated compatibility adapter over `BlueFission\Chronicler\Storage\Structures\WeightedCollection`. Existing Automata surfaces that typehint or expose `OrganizedCollection` can stay stable while downstream libraries migrate.
+
+New weighted/ranked storage should use Chronicler `WeightedCollection` directly when callers need generic ranking, reinforcement, decay, statistics, or storage semantics. Keep `OrganizedCollection` only where the Automata API contract already exposes it or where behavior/handler collections still depend on its legacy return shapes. If downstream consumers move off `OrganizedCollection`, it can be sunset in a later major-compatible deprecation plan.

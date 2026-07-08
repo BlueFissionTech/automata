@@ -23,17 +23,38 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "https://github.com/bluefissiontech/develation"
+            "url": "https://github.com/BlueFissionTech/chronicler.git"
         },
         {
-            "type": "vcs",
-            "url": "https://github.com/BlueFissionTech/simpleclients"
+            "type": "package",
+            "package": {
+                "name": "bluefission/simpleclients",
+                "version": "dev-master",
+                "source": {
+                    "type": "git",
+                    "url": "https://github.com/BlueFissionTech/simpleclients.git",
+                    "reference": "858ea3575b5eb725879c0066d152e07538019392"
+                },
+                "require": {
+                    "bluefission/develation": "^1.0.0-alpha",
+                    "simplehtmldom/simplehtmldom": "^2.0@RC"
+                },
+                "autoload": {
+                    "psr-4": {
+                        "BlueFission\\": "src/"
+                    },
+                    "classmap": [
+                        "src/"
+                    ]
+                }
+            }
         }
     ],
     "minimum-stability": "dev",
     "require": {
         "php": ">=8.2",
         "bluefission/develation": "^1.3.39",
+        "bluefission/chronicler": "dev-main",
         "bluefission/simpleclients": "dev-master",
         "google-gemini-php/client": "dev-main",
         "orhanerday/open-ai": "^2.2",
@@ -45,7 +66,6 @@
         "phpunit/phpunit": "^11.5"
     },
     "suggest": {
-        "bluefission/chronicler": "Future shared storage structure provider for ranked and primitive data structures once it is publicly installable.",
         "ext-ds": "Improves performance for collection types (Deque, Map, Set, Stack, PriorityQueue, Vector). Optional; Automata falls back when absent."
     },
     "autoload": {

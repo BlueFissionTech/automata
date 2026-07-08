@@ -4,8 +4,60 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "37aaa40ab1eef6801b29b1374f6ea0cd",
+    "content-hash": "af6dd53d88d7359ac8562cacd0e13ce0",
     "packages": [
+        {
+            "name": "bluefission/chronicler",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/BlueFissionTech/chronicler.git",
+                "reference": "450582e557a86cdf049e1bf6c324ac30d286c49e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/BlueFissionTech/chronicler/zipball/450582e557a86cdf049e1bf6c324ac30d286c49e",
+                "reference": "450582e557a86cdf049e1bf6c324ac30d286c49e",
+                "shasum": ""
+            },
+            "require": {
+                "bluefission/develation": "^1.3.39",
+                "ext-json": "*",
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^10.5"
+            },
+            "suggest": {
+                "ext-ds": "Provides native Vector, Set, Map, Deque, Stack, and PriorityQueue backing stores for root data-structure primitives."
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "BlueFission\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "BlueFission\\Chronicler\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "vendor/bin/phpunit --do-not-cache-result"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "DevElation-oriented storage objects, connectors, and query helpers for Kafka, Neo4j, GraphQL, and related data systems.",
+            "support": {
+                "source": "https://github.com/BlueFissionTech/chronicler/tree/main",
+                "issues": "https://github.com/BlueFissionTech/chronicler/issues"
+            },
+            "time": "2026-07-08T17:16:34+00:00"
+        },
         {
             "name": "bluefission/develation",
             "version": "v1.3.39",
@@ -37,50 +89,17 @@
             },
             "type": "library",
             "autoload": {
+                "files": [
+                    "src/functions.php"
+                ],
                 "psr-4": {
                     "BlueFission\\": "src"
                 },
                 "classmap": [
                     "src/"
-                ],
-                "files": [
-                    "src/functions.php"
                 ]
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "BlueFission\\Tests\\": "tests/"
-                }
-            },
-            "archive": {
-                "exclude": [
-                    "/.codex",
-                    "/.github",
-                    "/.idea",
-                    "/.phpunit.cache",
-                    "/.phpunit.result.cache",
-                    "/AGENTS.behavior.md",
-                    "/AGENTS.md",
-                    "/SPEC.md",
-                    "/artifacts",
-                    "/composer.lock",
-                    "/docker",
-                    "/examples",
-                    "/harness.json",
-                    "/phpunit.xml",
-                    "/scripts",
-                    "/tests",
-                    "/tests.md"
-                ]
-            },
-            "scripts": {
-                "test": [
-                    "vendor/bin/phpunit --do-not-cache-result"
-                ],
-                "test:services": [
-                    "vendor/bin/phpunit --do-not-cache-result tests/Services"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -119,22 +138,11 @@
                 "url": "https://github.com/BlueFissionTech/simpleclients.git",
                 "reference": "858ea3575b5eb725879c0066d152e07538019392"
             },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/BlueFissionTech/simpleclients/zipball/858ea3575b5eb725879c0066d152e07538019392",
-                "reference": "858ea3575b5eb725879c0066d152e07538019392",
-                "shasum": ""
-            },
             "require": {
                 "bluefission/develation": "^1.0.0-alpha",
                 "simplehtmldom/simplehtmldom": "^2.0@RC"
             },
-            "require-dev": {
-                "php": ">=8.0.0",
-                "phpunit/phpunit": "^11.1@dev"
-            },
-            "default-branch": true,
-            "type": "package",
+            "type": "library",
             "autoload": {
                 "psr-4": {
                     "BlueFission\\": "src/"
@@ -142,30 +150,7 @@
                 "classmap": [
                     "src/"
                 ]
-            },
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Devon Scott",
-                    "email": "dscott@bluefission.com",
-                    "homepage": "https://bluefission.com",
-                    "role": "Developer"
-                }
-            ],
-            "description": "Simple Client Wrappers For BlueFission",
-            "keywords": [
-                "api",
-                "clients",
-                "http",
-                "services"
-            ],
-            "support": {
-                "source": "https://github.com/BlueFissionTech/simpleclients/tree/master",
-                "issues": "https://github.com/BlueFissionTech/simpleclients/issues"
-            },
-            "time": "2026-06-22T02:58:21+00:00"
+            }
         },
         {
             "name": "google-gemini-php/client",
@@ -3085,6 +3070,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
+        "bluefission/chronicler": 20,
         "bluefission/simpleclients": 20,
         "google-gemini-php/client": 20,
         "symfony/http-client": 20,
