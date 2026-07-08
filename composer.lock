@@ -4,11 +4,11 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "af6dd53d88d7359ac8562cacd0e13ce0",
+    "content-hash": "1f6aeae58cb7ba7c675cc79bce6a13b6",
     "packages": [
         {
             "name": "bluefission/chronicler",
-            "version": "dev-main",
+            "version": "v0.1.2-alpha",
             "source": {
                 "type": "git",
                 "url": "https://github.com/BlueFissionTech/chronicler.git",
@@ -31,7 +31,6 @@
             "suggest": {
                 "ext-ds": "Provides native Vector, Set, Map, Deque, Stack, and PriorityQueue backing stores for root data-structure primitives."
             },
-            "default-branch": true,
             "type": "library",
             "autoload": {
                 "psr-4": {
@@ -53,10 +52,10 @@
             ],
             "description": "DevElation-oriented storage objects, connectors, and query helpers for Kafka, Neo4j, GraphQL, and related data systems.",
             "support": {
-                "source": "https://github.com/BlueFissionTech/chronicler/tree/main",
+                "source": "https://github.com/BlueFissionTech/chronicler/tree/v0.1.2-alpha",
                 "issues": "https://github.com/BlueFissionTech/chronicler/issues"
             },
-            "time": "2026-07-08T17:16:34+00:00"
+            "time": "2026-07-08T22:05:44+00:00"
         },
         {
             "name": "bluefission/develation",
