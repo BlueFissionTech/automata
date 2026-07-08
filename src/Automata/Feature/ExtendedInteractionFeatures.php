@@ -31,7 +31,7 @@ class ExtendedInteractionFeatures {
                 $this->addAllCombinations($vectorRow, $newRow, $order);
             }
 
-            $interactionData->add($newRow);
+            $interactionData->add($newRow->val());
         }
         $result = Dev::apply('feature.extended.output', $interactionData);
         Dev::do('feature.extended.complete', ['result' => $result]);

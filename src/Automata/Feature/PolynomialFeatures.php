@@ -36,7 +36,7 @@ class PolynomialFeatures {
                     }
                 }
             }
-            $result->add($newRow);
+            $result->add($newRow->val());
         }
 
         $result = Dev::apply('feature.polynomial.output', $result);

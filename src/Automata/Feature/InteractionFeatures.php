@@ -28,7 +28,7 @@ class InteractionFeatures {
                     $newRow->add(Num::make($vectorRow->get($i))->times($vectorRow->get($j))->val());
                 }
             }
-            $interactionData->add($newRow);
+            $interactionData->add($newRow->val());
         }
         $result = Dev::apply('feature.interaction.output', $interactionData);
         Dev::do('feature.interaction.complete', ['result' => $result]);

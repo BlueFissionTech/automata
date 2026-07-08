@@ -21,8 +21,8 @@ class PolynomialFeaturesTest extends TestCase
         $this->assertCount(1, $result->val());
 
         $row = $result->get(0);
-        $this->assertSame(1, $row->get(0)); // x^1
-        $this->assertSame(1, $row->get(1)); // x^2
+        $this->assertSame(1, $row[0]); // x^1
+        $this->assertSame(1, $row[1]); // x^2
     }
 
     public function testUsesInjectedStructureFactory(): void
@@ -32,7 +32,7 @@ class PolynomialFeaturesTest extends TestCase
 
         $result = $features->transform([[2, 3]]);
 
-        $this->assertSame(4, $result->get(0)->get(1));
+        $this->assertSame(4, $result->get(0)[1]);
         $this->assertGreaterThanOrEqual(3, $factory->vecCalls);
     }
 }
