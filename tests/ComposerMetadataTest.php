@@ -43,6 +43,27 @@ final class ComposerMetadataTest extends TestCase
         $this->assertStringContainsString('-alpha', $composer['require']['bluefission/chronicler']);
     }
 
+    public function testOptionalProviderClientsDoNotBlockRuntimePackageInstall(): void
+    {
+        $composer = $this->composer();
+        $require = $composer['require'];
+        $requireDev = $composer['require-dev'];
+        $suggest = $composer['suggest'];
+
+        $this->assertArrayNotHasKey('bluefission/simpleclients', $require);
+        $this->assertArrayNotHasKey('google-gemini-php/client', $require);
+        $this->assertArrayNotHasKey('nyholm/psr7', $require);
+        $this->assertArrayNotHasKey('orhanerday/open-ai', $require);
+        $this->assertArrayNotHasKey('symfony/http-client', $require);
+
+        $this->assertSame('dev-master', $requireDev['bluefission/simpleclients']);
+        $this->assertArrayHasKey('bluefission/simpleclients', $suggest);
+        $this->assertArrayHasKey('google-gemini-php/client', $suggest);
+        $this->assertArrayHasKey('nyholm/psr7', $suggest);
+        $this->assertArrayHasKey('orhanerday/open-ai', $suggest);
+        $this->assertArrayHasKey('symfony/http-client', $suggest);
+    }
+
     public function testPackageArchiveExcludesHarnessAndDevelopmentFiles(): void
     {
         $composer = $this->composer();
