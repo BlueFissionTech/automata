@@ -25,7 +25,7 @@ jobs:
         env:
           PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
           PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
-          PACKAGIST_PACKAGE_URL: https://packagist.org/bluefission/automata
+          PACKAGIST_PACKAGE_URL: https://packagist.org/packages/bluefission/automata
           PACKAGIST_REPOSITORY: https://github.com/BlueFissionTech/automata
         run: |
           set -euo pipefail
@@ -48,9 +48,8 @@ jobs:
               --request POST \
               --user-agent "BlueFissionTech/automata Packagist workflow" \
               --header "Content-Type: application/json" \
-              --header "Authorization: Bearer ${PACKAGIST_USERNAME}:${PACKAGIST_TOKEN}" \
-              --data "{\"repository\":\"${repository}\"}" \
-              "https://packagist.org/api/update-package")"
+              --data "{\"repository\":{\"url\":\"${repository}\"}}" \
+              "https://packagist.org/api/update-package?username=${PACKAGIST_USERNAME}&apiToken=${PACKAGIST_TOKEN}")"
 
             if [ "${http_code}" -ge 200 ] && [ "${http_code}" -lt 300 ]; then
               cat "${response_file}"
