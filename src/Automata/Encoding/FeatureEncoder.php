@@ -3,7 +3,9 @@
 namespace BlueFission\Automata\Encoding;
 
 use BlueFission\Arr;
-use BlueFission\Vec;
+use BlueFission\Automata\Support\IStructureFactory;
+use BlueFission\Automata\Support\StructureFactory;
+use BlueFission\Num;
 use BlueFission\DevElation as Dev;
 
 class FeatureEncoder {
@@ -11,12 +13,14 @@ class FeatureEncoder {
     private $_categoricalFeaturesIndices;
     private $_minMaxData;
     private $_categories;
+    private IStructureFactory $_structures;
 
-    public function __construct($numericalFeaturesIndices, $categoricalFeaturesIndices) {
+    public function __construct($numericalFeaturesIndices, $categoricalFeaturesIndices, ?IStructureFactory $structures = null) {
+        $this->_structures = $structures ?? new StructureFactory();
         $this->_numericalFeaturesIndices = Dev::apply('encoding.feature.numerical', $numericalFeaturesIndices);
         $this->_categoricalFeaturesIndices = Dev::apply('encoding.feature.categorical', $categoricalFeaturesIndices);
-        $this->_minMaxData = new Arr([]);
-        $this->_categories = new Arr([]);
+        $this->_minMaxData = $this->_structures->arr();
+        $this->_categories = $this->_structures->arr();
         Dev::do('encoding.feature.construct', [
             'numerical' => $this->_numericalFeaturesIndices,
             'categorical' => $this->_categoricalFeaturesIndices,
@@ -27,14 +31,15 @@ class FeatureEncoder {
         $data = Dev::apply('encoding.feature.fit_input', $data);
         foreach ($this->_numericalFeaturesIndices as $index) {
             $column = array_column($data, $index);
-            $min = min($column);
-            $max = max($column);
+            $columnValues = $this->_structures->values($column);
+            $min = min($columnValues);
+            $max = max($columnValues);
             $this->_minMaxData->set($index, [$min, $max]);
         }
 
         foreach ($this->_categoricalFeaturesIndices as $index) {
             $column = array_column($data, $index);
-            $this->_categories->set($index, array_values(array_unique($column)));
+            $this->_categories->set($index, $this->_structures->arr($column)->unique()->values()->val());
         }
         Dev::do('encoding.feature.fitted', ['minMax' => $this->_minMaxData, 'categories' => $this->_categories]);
     }
@@ -43,17 +48,18 @@ class FeatureEncoder {
         $data = Dev::apply('encoding.feature.transform_input', $data);
         $transformedData = [];
         foreach ($data as $row) {
-            $newRow = new Vec();
+            $newRow = $this->_structures->vec();
             foreach ($row as $i => $value) {
-                if (in_array($i, $this->_numericalFeaturesIndices)) {
+                if (Arr::has($this->_numericalFeaturesIndices, $i, true)) {
                     $minMax = $this->_minMaxData->get($i);
-                    if (is_array($minMax) && count($minMax) === 2) {
+                    if (is_array($minMax) && Arr::count($minMax) === 2) {
                         [$min, $max] = $minMax;
-                        $newRow->add(($value - $min) / ($max - $min));
+                        $range = Num::make($max)->minus($min)->val();
+                        $newRow->add($range == 0 ? 0.0 : Num::make($value)->minus($min)->divide($range)->val());
                     } else {
                         $newRow->add($value);
                     }
-                } elseif (in_array($i, $this->_categoricalFeaturesIndices)) {
+                } elseif (Arr::has($this->_categoricalFeaturesIndices, $i, true)) {
                     $categories = $this->_categories->get($i);
                     if (!is_array($categories)) {
                         $categories = [];

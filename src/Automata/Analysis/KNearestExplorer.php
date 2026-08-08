@@ -2,6 +2,10 @@
 
 namespace BlueFission\Automata\Analysis;
 
+use BlueFission\Arr;
+use BlueFission\Automata\Support\IStructureFactory;
+use BlueFission\Automata\Support\StructureFactory;
+use BlueFission\Num;
 use BlueFission\Obj;
 
 /**
@@ -20,15 +24,20 @@ class KNearestExplorer extends Obj
     /** @var array<int,string|int> */
     protected array $ids = [];
 
+    protected IStructureFactory $structures;
+
     /**
      * @param array<int,array<float|int>> $samples
      * @param array<int,string|int>|null  $ids
      */
-    public function __construct(array $samples = [], ?array $ids = null)
+    public function __construct(array $samples = [], ?array $ids = null, ?IStructureFactory $structures = null)
     {
         parent::__construct();
-        $this->samples = array_values($samples);
-        $this->ids = $ids !== null ? array_values($ids) : range(0, count($samples) - 1);
+        $this->structures = $structures ?? new StructureFactory();
+        $this->samples = $this->structures->values($samples);
+        $this->ids = $ids !== null
+            ? $this->structures->values($ids)
+            : $this->defaultIds($samples);
     }
 
     /**
@@ -39,8 +48,10 @@ class KNearestExplorer extends Obj
      */
     public function setData(array $samples, ?array $ids = null): void
     {
-        $this->samples = array_values($samples);
-        $this->ids = $ids !== null ? array_values($ids) : range(0, count($samples) - 1);
+        $this->samples = $this->structures->values($samples);
+        $this->ids = $ids !== null
+            ? $this->structures->values($ids)
+            : $this->defaultIds($samples);
     }
 
     /**
@@ -62,24 +73,33 @@ class KNearestExplorer extends Obj
             ];
         }
 
-        usort($distances, function ($a, $b) {
+        return $this->structures->arr($distances)->sort(function ($a, $b) {
             return $a['distance'] <=> $b['distance'];
-        });
-
-        return array_slice($distances, 0, max(0, $k));
+        })->slice(0, Num::make($k)->max(0))->val();
     }
 
     protected function euclideanDistance(array $a, array $b): float
     {
-        $len = max(count($a), count($b));
-        $sum = 0.0;
+        $len = Num::make(Arr::count($a))->max(Arr::count($b));
+        $sum = Num::make(0.0);
         for ($i = 0; $i < $len; $i++) {
             $v1 = (float)($a[$i] ?? 0.0);
             $v2 = (float)($b[$i] ?? 0.0);
-            $diff = $v1 - $v2;
-            $sum += $diff * $diff;
+            $diff = Num::make($v1)->minus($v2)->val();
+            $sum->plus(Num::make($diff)->times($diff)->val());
         }
-        return sqrt($sum);
+        return $sum->sqrt()->val();
+    }
+
+    /**
+     * @param array<int,array<float|int>> $samples
+     * @return array<int,int>
+     */
+    private function defaultIds(array $samples): array
+    {
+        $count = Arr::count($samples);
+
+        return $count > 0 ? range(0, $count - 1) : [];
     }
 }
 

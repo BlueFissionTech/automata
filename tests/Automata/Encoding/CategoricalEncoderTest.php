@@ -4,6 +4,7 @@ namespace BlueFission\Tests\Automata\Encoding;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Automata\Encoding\CategoricalEncoder;
+use BlueFission\Tests\Automata\Support\RecordingStructureFactory;
 
 class CategoricalEncoderTest extends TestCase
 {
@@ -20,7 +21,9 @@ class CategoricalEncoderTest extends TestCase
         $this->assertIsInt($encoded[0]);
         $this->assertIsInt($encoded[1]);
         $this->assertIsInt($encoded[2]);
-        $this->assertSame($encoded[2], $encoded[1], 'Unseen category should map to default index');
+        $this->assertSame(0, $encoded[0]);
+        $this->assertSame(2, $encoded[1]);
+        $this->assertSame(3, $encoded[2], 'Unseen category should map to default index');
     }
 
     public function testOneHotEncoding(): void
@@ -36,6 +39,20 @@ class CategoricalEncoderTest extends TestCase
         $this->assertSame(1, $encoded[0]->get(0));
         $this->assertSame(0, $encoded[0]->get(1));
         $this->assertSame(1, $encoded[1]->get(2));
+    }
+
+    public function testOneHotEncodingUsesInjectedStructureFactory(): void
+    {
+        $factory = new RecordingStructureFactory();
+        $encoder = new CategoricalEncoder(true, null, $factory);
+
+        $encoder->fit(['A', 'B']);
+        $encoded = $encoder->transform(['B']);
+
+        $this->assertSame(1, $encoded[0]->get(1));
+        $this->assertGreaterThanOrEqual(2, $factory->arrCalls);
+        $this->assertSame(1, $factory->vecCalls);
+        $this->assertSame(1, $factory->fillCalls);
     }
 }
 

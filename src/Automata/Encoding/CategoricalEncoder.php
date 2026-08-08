@@ -2,15 +2,19 @@
 
 namespace BlueFission\Automata\Encoding;
 
-use BlueFission\Vec;
+use BlueFission\Arr;
+use BlueFission\Automata\Support\IStructureFactory;
+use BlueFission\Automata\Support\StructureFactory;
 use BlueFission\DevElation as Dev;
 
 class CategoricalEncoder {
     private $_oneHot = false;
     private $_mapping = [];
     private $_defaultCategory = null; // Used for unseen categories
+    private IStructureFactory $_structures;
 
-    public function __construct($oneHot = false, $defaultCategory = null) {
+    public function __construct($oneHot = false, $defaultCategory = null, ?IStructureFactory $structures = null) {
+        $this->_structures = $structures ?? new StructureFactory();
         $this->_oneHot = Dev::apply('encoding.categorical.onehot', $oneHot);
         $this->_defaultCategory = Dev::apply('encoding.categorical.default', $defaultCategory);
         Dev::do('encoding.categorical.construct', [
@@ -21,10 +25,10 @@ class CategoricalEncoder {
 
     public function fit($data) {
         $data = Dev::apply('encoding.categorical.fit_input', $data);
-        $unique = array_unique($data);
+        $unique = $this->_structures->arr($data)->unique()->values()->val();
         $this->_mapping = array_flip($unique);
         if ($this->_defaultCategory !== null) {
-            $this->_mapping[$this->_defaultCategory] = count($this->_mapping);
+            $this->_mapping[$this->_defaultCategory] = Arr::count($this->_mapping);
         }
         Dev::do('encoding.categorical.fit', ['mapping' => $this->_mapping]);
     }
@@ -32,19 +36,19 @@ class CategoricalEncoder {
     public function transform($data) {
         $data = Dev::apply('encoding.categorical.transform_input', $data);
         if ($this->_oneHot) {
-            return array_map(function($item) {
-                $vector = new Vec(array_fill(0, count($this->_mapping), 0));
+            return $this->_structures->arr($data)->map(function($item) {
+                $vector = $this->_structures->vec($this->_structures->fill(Arr::count($this->_mapping), 0));
                 $index = $this->_mapping[$item] ?? $this->_mapping[$this->_defaultCategory] ?? null;
                 if ($index !== null) {
                     $vector->set($index, 1);
                 }
                 return $vector;
-            }, $data);
+            })->values()->val();
         }
 
-        $result = array_map(function($item) {
+        $result = $this->_structures->arr($data)->map(function($item) {
             return $this->_mapping[$item] ?? $this->_mapping[$this->_defaultCategory] ?? null;
-        }, $data);
+        })->values()->val();
         $result = Dev::apply('encoding.categorical.transform_output', $result);
         Dev::do('encoding.categorical.transformed', ['result' => $result]);
         return $result;

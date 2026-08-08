@@ -1,0 +1,42 @@
+name: Packagist
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*.*.*'
+      - 'v*.*.*-*'
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+concurrency:
+  group: packagist-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update Packagist metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update package
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+          PACKAGE_REPOSITORY: https://github.com/BlueFissionTech/automata
+        run: |
+          set -euo pipefail
+
+          if [ -z "${PACKAGIST_USERNAME}" ] || [ -z "${PACKAGIST_TOKEN}" ]; then
+            echo "::error::PACKAGIST_USERNAME and PACKAGIST_TOKEN repository secrets are required to update Packagist."
+            exit 1
+          fi
+
+          curl --fail --show-error --silent \
+            --request POST \
+            --header "Content-Type: application/json" \
+            --header "Authorization: Bearer ${PACKAGIST_USERNAME}:${PACKAGIST_TOKEN}" \
+            --data "{\"repository\":\"${PACKAGE_REPOSITORY}\"}" \
+            "https://packagist.org/api/update-package"

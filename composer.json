@@ -1,6 +1,8 @@
 {
     "name": "bluefission/automata",
+    "type": "library",
     "description": "Machine learning / communication systems",
+    "homepage": "https://github.com/BlueFissionTech/automata",
     "license": "MIT",
     "keywords": [
         "automata",
@@ -23,28 +25,51 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "https://github.com/bluefissiontech/develation"
+            "url": "https://github.com/BlueFissionTech/chronicler.git"
         },
         {
-            "type": "vcs",
-            "url": "https://github.com/BlueFissionTech/simpleclients"
+            "type": "package",
+            "package": {
+                "name": "bluefission/simpleclients",
+                "version": "dev-master",
+                "source": {
+                    "type": "git",
+                    "url": "https://github.com/BlueFissionTech/simpleclients.git",
+                    "reference": "858ea3575b5eb725879c0066d152e07538019392"
+                },
+                "require": {
+                    "bluefission/develation": "^1.0.0-alpha",
+                    "simplehtmldom/simplehtmldom": "^2.0@RC"
+                },
+                "autoload": {
+                    "psr-4": {
+                        "BlueFission\\": "src/"
+                    },
+                    "classmap": [
+                        "src/"
+                    ]
+                }
+            }
         }
     ],
     "minimum-stability": "dev",
     "require": {
-        "bluefission/develation": "^1.2.0-alpha",
-        "bluefission/simpleclients": "dev-master",
-        "google-gemini-php/client": "dev-main",
-        "orhanerday/open-ai": "^2.2",
-        "php-ai/php-ml": "^0.10.0",
-        "symfony/http-client": "^7.4@dev"
+        "php": ">=8.2",
+        "bluefission/develation": "^1.3.39",
+        "bluefission/chronicler": "^0.1.2-alpha",
+        "php-ai/php-ml": "^0.10.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "^11.5",
-        "php": ">=8.0.0"
+        "bluefission/simpleclients": "dev-master",
+        "phpunit/phpunit": "^11.5"
     },
     "suggest": {
-        "ext-ds": "Improves performance for collection types (Deque, Map, Set, Stack, PriorityQueue, Vector). Optional; Automata falls back when absent."
+        "bluefission/simpleclients": "Install for optional provider-backed OCR, transcription, video analysis, Claude, Gemini, Grok, and related client adapters.",
+        "ext-ds": "Improves performance for collection types (Deque, Map, Set, Stack, PriorityQueue, Vector). Optional; Automata falls back when absent.",
+        "google-gemini-php/client": "Install when using SimpleClients Gemini adapters without injecting a custom Gemini-compatible client.",
+        "nyholm/psr7": "Install when using PSR-7 based provider transports that require a concrete PSR-7 implementation.",
+        "orhanerday/open-ai": "Install for applications that prefer the orhanerday OpenAI client over Automata's built-in Curl connector.",
+        "symfony/http-client": "Install when using provider transports that require Symfony's HTTP client implementation."
     },
     "autoload": {
         "psr-4": {
@@ -55,13 +80,43 @@
         ]
     },
     "autoload-dev": {
-        "psr-4": { 
-            "BlueFission\\Tests\\": "tests/" 
+        "psr-4": {
+            "BlueFission\\Tests\\": "tests/"
         }
     },
+    "scripts": {
+        "test": "vendor/bin/phpunit --do-not-cache-result"
+    },
     "config": {
+        "platform-check": true,
         "allow-plugins": {
             "php-http/discovery": true
         }
+    },
+    "archive": {
+        "exclude": [
+            "/.agents",
+            "/.codex",
+            "/.github",
+            "/.phpunit.cache",
+            "/.phpunit.result.cache",
+            "/AGENTS.behavior.md",
+            "/AGENTS.md",
+            "/ARCHITECTURE.md",
+            "/SPEC.md",
+            "/artifacts",
+            "/composer.lock",
+            "/docker",
+            "/examples",
+            "/harness.json",
+            "/phpunit.xml",
+            "/scripts",
+            "/templates",
+            "/tests"
+        ]
+    },
+    "support": {
+        "issues": "https://github.com/BlueFissionTech/automata/issues",
+        "source": "https://github.com/BlueFissionTech/automata"
     }
 }

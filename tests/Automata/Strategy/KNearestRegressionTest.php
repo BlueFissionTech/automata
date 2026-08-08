@@ -4,6 +4,7 @@ namespace BlueFission\Tests\Automata\Strategy;
 
 use PHPUnit\Framework\TestCase;
 use BlueFission\Automata\Strategy\KNearestRegression;
+use BlueFission\Tests\Automata\Support\RecordingStructureFactory;
 
 class KNearestRegressionTest extends TestCase
 {
@@ -53,6 +54,18 @@ class KNearestRegressionTest extends TestCase
 
         $this->assertContains(0, $indices);
         $this->assertContains(1, $indices);
+    }
+
+    public function testRegressionUsesInjectedStructureFactory(): void
+    {
+        $factory = new RecordingStructureFactory();
+        $reg = new KNearestRegression(1, structures: $factory);
+
+        $reg->train([[0, 0], [2, 2]], [0, 4], 0.0);
+
+        $this->assertSame(0.0, $reg->predict([0, 0]));
+        $this->assertGreaterThanOrEqual(2, $factory->valuesCalls);
+        $this->assertGreaterThanOrEqual(1, $factory->arrCalls);
     }
 }
 

@@ -2,6 +2,7 @@
 namespace BlueFission\Tests\Automata\Strategy;
 
 use BlueFission\Automata\Strategy\KNearestPrediction;
+use BlueFission\Tests\Automata\Support\RecordingStructureFactory;
 use PHPUnit\Framework\TestCase;
 
 class KNearestPredictionTest extends TestCase
@@ -52,6 +53,28 @@ class KNearestPredictionTest extends TestCase
 
         $accuracy = $this->knn->accuracy();
         $this->assertGreaterThan(0, $accuracy);
+    }
+
+    public function testTrainUsesInjectedStructureFactory(): void
+    {
+        $factory = new RecordingStructureFactory();
+        $knn = new KNearestPrediction(structures: $factory);
+        $data = [
+            [1, 2], [2, 3], [7, 8], [8, 9],
+        ];
+        $labels = ['a', 'a', 'b', 'b'];
+
+        $knn->train($data, $labels, 0.25);
+
+        $this->assertSame('a', $knn->predict([1, 2]));
+        $this->assertGreaterThanOrEqual(2, $factory->arrCalls);
+    }
+
+    public function testAccuracyReturnsZeroWithoutTestSplit(): void
+    {
+        $this->knn->train([[1, 2], [2, 3]], ['a', 'a'], 0.0);
+
+        $this->assertSame(0.0, $this->knn->accuracy());
     }
 
     public function testSaveLoadModel()
