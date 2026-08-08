@@ -24,10 +24,6 @@
     ],
     "repositories": [
         {
-            "type": "vcs",
-            "url": "https://github.com/BlueFissionTech/chronicler.git"
-        },
-        {
             "type": "package",
             "package": {
                 "name": "bluefission/simpleclients",
