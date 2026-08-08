@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9c3dd98ed8b3d6e34ea7b401308187b4",
+    "content-hash": "8aa703771888a5e43288ba74c4f14d9f",
     "packages": [
         {
             "name": "bluefission/chronicler",
@@ -37,38 +37,29 @@
                     "BlueFission\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "BlueFission\\Chronicler\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "vendor/bin/phpunit --do-not-cache-result"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
             "description": "DevElation-oriented storage objects, connectors, and query helpers for Kafka, Neo4j, GraphQL, and related data systems.",
             "support": {
-                "source": "https://github.com/BlueFissionTech/chronicler/tree/v0.1.2-alpha",
-                "issues": "https://github.com/BlueFissionTech/chronicler/issues"
+                "issues": "https://github.com/BlueFissionTech/chronicler/issues",
+                "source": "https://github.com/BlueFissionTech/chronicler/tree/v0.1.2-alpha"
             },
-            "time": "2026-07-08T22:05:44+00:00"
+            "time": "2026-07-08T17:16:34+00:00"
         },
         {
             "name": "bluefission/develation",
-            "version": "v1.3.39",
+            "version": "v1.3.41",
             "source": {
                 "type": "git",
                 "url": "https://github.com/BlueFissionTech/develation.git",
-                "reference": "ee0a240d2d0cff2f15cb243411e2f1e7d0c0b2c1"
+                "reference": "25bdd65152ef39a83524b30eb47cba2c061ded91"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/BlueFissionTech/develation/zipball/ee0a240d2d0cff2f15cb243411e2f1e7d0c0b2c1",
-                "reference": "ee0a240d2d0cff2f15cb243411e2f1e7d0c0b2c1",
+                "url": "https://api.github.com/repos/BlueFissionTech/develation/zipball/25bdd65152ef39a83524b30eb47cba2c061ded91",
+                "reference": "25bdd65152ef39a83524b30eb47cba2c061ded91",
                 "shasum": ""
             },
             "require": {
@@ -127,7 +118,7 @@
                 "issues": "https://github.com/BlueFissionTech/develation/issues",
                 "source": "https://github.com/BlueFissionTech/develation"
             },
-            "time": "2026-07-05T19:08:43+00:00"
+            "time": "2026-08-07T19:31:33+00:00"
         },
         {
             "name": "php-ai/php-ml",
