@@ -75,4 +75,15 @@ final class ComposerMetadataTest extends TestCase
         $this->assertContains('/tests', $exclude);
         $this->assertContains('/scripts', $exclude);
     }
+
+    public function testPackagistWorkflowUsesRegisteredPackageUpdateEndpoint(): void
+    {
+        $workflow = file_get_contents(dirname(__DIR__) . DIRECTORY_SEPARATOR . '.github' . DIRECTORY_SEPARATOR . 'workflows' . DIRECTORY_SEPARATOR . 'packagist.yaml');
+
+        $this->assertIsString($workflow);
+        $this->assertStringContainsString('PACKAGIST_PACKAGE_URL: https://packagist.org/bluefission/automata', $workflow);
+        $this->assertStringContainsString('PACKAGIST_REPOSITORY: https://github.com/BlueFissionTech/automata', $workflow);
+        $this->assertStringContainsString('--user-agent "BlueFissionTech/automata Packagist workflow"', $workflow);
+        $this->assertStringContainsString('Retrying Packagist update using the repository URL.', $workflow);
+    }
 }
