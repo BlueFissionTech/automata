@@ -25,7 +25,8 @@ jobs:
         env:
           PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
           PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
-          PACKAGE_REPOSITORY: https://github.com/BlueFissionTech/automata
+          PACKAGIST_PACKAGE_URL: https://packagist.org/bluefission/automata
+          PACKAGIST_REPOSITORY: https://github.com/BlueFissionTech/automata
         run: |
           set -euo pipefail
 
@@ -34,9 +35,36 @@ jobs:
             exit 1
           fi
 
-          curl --fail --show-error --silent \
-            --request POST \
-            --header "Content-Type: application/json" \
-            --header "Authorization: Bearer ${PACKAGIST_USERNAME}:${PACKAGIST_TOKEN}" \
-            --data "{\"repository\":\"${PACKAGE_REPOSITORY}\"}" \
-            "https://packagist.org/api/update-package"
+          update_packagist() {
+            local repository="$1"
+            local response_file
+            local http_code
+
+            response_file="$(mktemp)"
+
+            http_code="$(curl --show-error --silent \
+              --output "${response_file}" \
+              --write-out "%{http_code}" \
+              --request POST \
+              --user-agent "BlueFissionTech/automata Packagist workflow" \
+              --header "Content-Type: application/json" \
+              --header "Authorization: Bearer ${PACKAGIST_USERNAME}:${PACKAGIST_TOKEN}" \
+              --data "{\"repository\":\"${repository}\"}" \
+              "https://packagist.org/api/update-package")"
+
+            if [ "${http_code}" -ge 200 ] && [ "${http_code}" -lt 300 ]; then
+              cat "${response_file}"
+              rm -f "${response_file}"
+              return 0
+            fi
+
+            echo "::warning::Packagist update request for ${repository} returned HTTP ${http_code}."
+            cat "${response_file}"
+            rm -f "${response_file}"
+            return 1
+          }
+
+          if ! update_packagist "${PACKAGIST_PACKAGE_URL}"; then
+            echo "Retrying Packagist update using the repository URL."
+            update_packagist "${PACKAGIST_REPOSITORY}"
+          fi
