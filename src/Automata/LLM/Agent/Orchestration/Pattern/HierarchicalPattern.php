@@ -23,7 +23,7 @@ class HierarchicalPattern extends AbstractPattern
         ];
 
         $planStatus = (string)($plan['status'] ?? DelegationStatus::COMPLETED);
-        $selected = in_array($planStatus, [DelegationStatus::COMPLETED, DelegationStatus::ACCEPTED], true)
+        $selected = Arr::has([DelegationStatus::COMPLETED, DelegationStatus::ACCEPTED], $planStatus, true)
             ? ($plan['output']['workers'] ?? Arr::keys($config->workers()))
             : [];
         $workerResults = [$plan + ['name' => 'supervisor']];
@@ -42,12 +42,7 @@ class HierarchicalPattern extends AbstractPattern
             }
         }
 
-        $mergeable = [];
-        foreach ($workerResults as $index => $result) {
-            if ($index > 0) {
-                $mergeable[] = $result;
-            }
-        }
+        $mergeable = Arr::make($workerResults)->slice(1)->toArray();
         $merged = $this->mergeWorkerResults($config, $mergeable);
 
         return new OrchestrationResult([
@@ -63,44 +58,43 @@ class HierarchicalPattern extends AbstractPattern
 
     protected function aggregateStatus(array $workerResults): string
     {
-        $statuses = array_map(
-            static fn (array $result): string => (string)($result['status'] ?? DelegationStatus::COMPLETED),
-            array_slice($workerResults, 1)
-        );
+        $statuses = Arr::make($workerResults)
+            ->slice(1)
+            ->map(static fn (array $result): string => (string)($result['status'] ?? DelegationStatus::COMPLETED))
+            ->toArray();
         if (Arr::count($statuses) === 0) {
             return (string)($workerResults[0]['status'] ?? DelegationStatus::COMPLETED);
         }
 
-        $completed = array_filter(
-            $statuses,
+        $statuses = Arr::make($statuses);
+        $completed = $statuses->filter(
             static fn (string $status): bool => $status === DelegationStatus::COMPLETED
         );
-        $partial = array_filter(
-            $statuses,
+        $partial = $statuses->filter(
             static fn (string $status): bool => $status === DelegationStatus::PARTIAL
         );
-        $active = array_filter($statuses, static fn (string $status): bool => in_array($status, [
+        $active = $statuses->filter(static fn (string $status): bool => Arr::has([
             DelegationStatus::PENDING,
             DelegationStatus::ACCEPTED,
             DelegationStatus::IN_PROGRESS,
-        ], true));
-        $failed = array_filter($statuses, static fn (string $status): bool => in_array($status, [
+        ], $status, true));
+        $failed = $statuses->filter(static fn (string $status): bool => Arr::has([
             DelegationStatus::REJECTED,
             DelegationStatus::FAILED,
             DelegationStatus::CANCELLED,
             DelegationStatus::TIMED_OUT,
-        ], true));
+        ], $status, true));
 
-        if (Arr::count($partial) > 0 || (Arr::count($failed) > 0 && Arr::count($completed) > 0)) {
+        if ($partial->count() > 0 || ($failed->count() > 0 && $completed->count() > 0)) {
             return DelegationStatus::PARTIAL;
         }
 
-        if (Arr::count($active) > 0) {
-            return Arr::count($completed) > 0 || Arr::count($failed) > 0
+        if ($active->count() > 0) {
+            return $completed->count() > 0 || $failed->count() > 0
                 ? DelegationStatus::PARTIAL
                 : DelegationStatus::IN_PROGRESS;
         }
 
-        return Arr::count($failed) > 0 ? DelegationStatus::FAILED : DelegationStatus::COMPLETED;
+        return $failed->count() > 0 ? DelegationStatus::FAILED : DelegationStatus::COMPLETED;
     }
 }

@@ -30,12 +30,11 @@ class DelegationRequest extends DelegationValue
 
     public function grants(): array
     {
-        return array_map(
-            static fn (mixed $grant): CapabilityGrant => $grant instanceof CapabilityGrant
+        return Arr::make($this->field('capability_grants') ?? [])
+            ->map(static fn (mixed $grant): CapabilityGrant => $grant instanceof CapabilityGrant
                 ? $grant
-                : new CapabilityGrant(Arr::make($grant)->toArray()),
-            Arr::make($this->field('capability_grants') ?? [])->toArray()
-        );
+                : new CapabilityGrant(Arr::make($grant)->toArray()))
+            ->toArray();
     }
 
     public function permits(string $capability): bool

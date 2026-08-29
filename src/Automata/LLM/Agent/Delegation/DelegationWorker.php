@@ -107,11 +107,11 @@ class DelegationWorker
 
         $allowedPeers = $request->peerAgentIds();
 
-        return array_values(array_filter(
-            $priorResults,
-            static fn (mixed $result): bool => Arr::is($result)
-                && in_array((string)($result['name'] ?? ''), $allowedPeers, true)
-        ));
+        return Arr::make($priorResults)
+            ->filter(static fn (mixed $result): bool => Arr::is($result)
+                && Arr::has($allowedPeers, (string)($result['name'] ?? ''), true))
+            ->values()
+            ->toArray();
     }
 
     protected function normalize(DelegationResult $result): array
@@ -119,7 +119,11 @@ class DelegationWorker
         return [
             'status' => $result->status(),
             'output' => $result->output(),
-            'confidence' => in_array($result->status(), [DelegationStatus::COMPLETED, DelegationStatus::PARTIAL], true) ? 1.0 : 0.0,
+            'confidence' => Arr::has(
+                [DelegationStatus::COMPLETED, DelegationStatus::PARTIAL],
+                $result->status(),
+                true
+            ) ? 1.0 : 0.0,
             'metadata' => ['delegation' => $result->toArray()],
         ];
     }

@@ -18,7 +18,7 @@ class AgentProfile extends DelegationValue
 
     public function hasCapability(string $capability): bool
     {
-        return in_array($capability, $this->capabilities(), true);
+        return Arr::has($this->capabilities(), $capability, true);
     }
 
     protected function defaults(): array
