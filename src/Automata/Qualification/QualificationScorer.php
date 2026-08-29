@@ -14,12 +14,11 @@ class QualificationScorer
         protected float $qualifiedThreshold = 0.7,
         protected float $nurtureThreshold = 0.4
     ) {
-        $this->criteria = array_map(
-            static fn (mixed $criterion): QualificationCriterion => $criterion instanceof QualificationCriterion
+        $this->criteria = Arr::make($criteria)
+            ->map(static fn (mixed $criterion): QualificationCriterion => $criterion instanceof QualificationCriterion
                 ? $criterion
-                : new QualificationCriterion(Arr::make($criterion)->toArray()),
-            $criteria
-        );
+                : new QualificationCriterion(Arr::make($criterion)->toArray()))
+            ->toArray();
     }
 
     public function score(string $subjectId, array $signals, array $trace = []): QualificationScore
@@ -75,7 +74,7 @@ class QualificationScorer
             'confidence' => $confidence,
             'status' => $this->status($score, $unmet),
             'reasons' => $reasons,
-            'unmet_criteria' => array_values(array_unique($unmet)),
+            'unmet_criteria' => Arr::make($unmet)->unique()->values()->toArray(),
             'evidence' => $evidence,
             'trace' => $trace,
         ]);
