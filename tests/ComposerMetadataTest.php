@@ -56,7 +56,8 @@ final class ComposerMetadataTest extends TestCase
         $this->assertArrayNotHasKey('orhanerday/open-ai', $require);
         $this->assertArrayNotHasKey('symfony/http-client', $require);
 
-        $this->assertSame('dev-master', $requireDev['bluefission/simpleclients']);
+        $this->assertSame('^0.1.0-alpha', $requireDev['bluefission/simpleclients']);
+        $this->assertArrayNotHasKey('repositories', $composer);
         $this->assertArrayHasKey('bluefission/simpleclients', $suggest);
         $this->assertArrayHasKey('google-gemini-php/client', $suggest);
         $this->assertArrayHasKey('nyholm/psr7', $suggest);

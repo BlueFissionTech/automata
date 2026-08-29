@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8aa703771888a5e43288ba74c4f14d9f",
+    "content-hash": "18dd310d8c94353035cd4f6ec81d0ac8",
     "packages": [
         {
             "name": "bluefission/chronicler",
@@ -364,15 +364,30 @@
     "packages-dev": [
         {
             "name": "bluefission/simpleclients",
-            "version": "dev-master",
+            "version": "v0.1.1-alpha",
             "source": {
                 "type": "git",
                 "url": "https://github.com/BlueFissionTech/simpleclients.git",
-                "reference": "858ea3575b5eb725879c0066d152e07538019392"
+                "reference": "9321728041b016e1e80eca6fcd4dff9e24e720ce"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/BlueFissionTech/simpleclients/zipball/9321728041b016e1e80eca6fcd4dff9e24e720ce",
+                "reference": "9321728041b016e1e80eca6fcd4dff9e24e720ce",
+                "shasum": ""
             },
             "require": {
-                "bluefission/develation": "^1.0.0-alpha",
+                "bluefission/develation": "^1.3.39",
+                "ext-json": "*",
+                "php": ">=8.2",
                 "simplehtmldom/simplehtmldom": "^2.0@RC"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^11.5"
+            },
+            "suggest": {
+                "bluefission/automata": "Enables Automata-backed LLM provider clients such as OpenAIClient.",
+                "gemini-api-php/client": "Provide a Gemini SDK implementation when using GoogleGeminiClient without an injected test double."
             },
             "type": "library",
             "autoload": {
@@ -382,7 +397,38 @@
                 "classmap": [
                     "src/"
                 ]
-            }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Devon Scott",
+                    "email": "dscott@bluefission.com",
+                    "homepage": "https://bluefission.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Simple client wrappers for Blue Fission provider integrations",
+            "homepage": "https://github.com/BlueFissionTech/simpleclients",
+            "keywords": [
+                "api",
+                "bluefission",
+                "clients",
+                "http",
+                "materia",
+                "php",
+                "providers",
+                "services",
+                "simpleclients",
+                "transports"
+            ],
+            "support": {
+                "issues": "https://github.com/BlueFissionTech/simpleclients/issues",
+                "source": "https://github.com/BlueFissionTech/simpleclients"
+            },
+            "time": "2026-08-23T12:47:43+00:00"
         },
         {
             "name": "myclabs/deep-copy",
@@ -2255,9 +2301,7 @@
     ],
     "aliases": [],
     "minimum-stability": "dev",
-    "stability-flags": {
-        "bluefission/simpleclients": 20
-    },
+    "stability-flags": [],
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
