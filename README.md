@@ -16,6 +16,7 @@ The `bluefission/automata` library is a comprehensive PHP framework designed to 
 - **Anomaly Detection**: Score behavioral activity, fingerprints, and context to flag unusual or risky patterns.
 - **Media Ingestion**: Normalize text, image, audio, video, document, and URL inputs into consistent pipelines.
 - **Natural Language Processing (NLP)**: Tools for text parsing, analysis, and understanding, enabling the library to process and interpret human language.
+- **Claim Normalization**: Normalize raw, wrapped, and adapter-parsed textual claims into inspectable Statement semantics while preserving typed predicates as inert data. See [Claim Normalization](docs/claim-normalization.md).
 - **Bounded Language Prediction**: Lightweight Markov and trigram predictors support single-sentence updates and bounded bulk training for moderate local catalogs without requiring a hosted model.
 - **Large Language Models (LLM)**: Facilitate prompting and generating responses using large pre-trained models, integrating with tools like GPT for advanced text generation.
 - **Agent Capabilities**: Register deterministic tool contracts, scoped tool catalogs, permission checks, lifecycle hooks, session memory, Holoscene comprehension, orchestration patterns, DevElation-backed agent state/goal decisions, interpreter-facing integration contracts, and persona orchestration contracts around LLM agent loops. See [Agent Capabilities](docs/agent-capabilities.md) and [Agent Persona Orchestration Contracts](docs/agent-persona-orchestration-contracts.md).
