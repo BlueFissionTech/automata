@@ -2,7 +2,7 @@
 
 namespace BlueFission\Automata\LLM\Generation;
 
-interface GenerationRunner
+interface IGenerationRunner
 {
     public function run(GenerationRunRequest $request): GenerationRunResult;
 }

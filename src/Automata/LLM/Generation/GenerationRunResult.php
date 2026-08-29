@@ -23,32 +23,29 @@ class GenerationRunResult extends GenerationValue
 
     public function steps(): array
     {
-        return array_map(
-            static fn (mixed $step): GenerationStep => $step instanceof GenerationStep
+        return Arr::make($this->field('steps') ?? [])
+            ->map(static fn (mixed $step): GenerationStep => $step instanceof GenerationStep
                 ? $step
-                : new GenerationStep(Arr::make($step)->toArray()),
-            Arr::make($this->field('steps') ?? [])->toArray()
-        );
+                : new GenerationStep(Arr::make($step)->toArray()))
+            ->toArray();
     }
 
     public function artifacts(): array
     {
-        return array_map(
-            static fn (mixed $artifact): GeneratedArtifact => $artifact instanceof GeneratedArtifact
+        return Arr::make($this->field('artifacts') ?? [])
+            ->map(static fn (mixed $artifact): GeneratedArtifact => $artifact instanceof GeneratedArtifact
                 ? $artifact
-                : new GeneratedArtifact(Arr::make($artifact)->toArray()),
-            Arr::make($this->field('artifacts') ?? [])->toArray()
-        );
+                : new GeneratedArtifact(Arr::make($artifact)->toArray()))
+            ->toArray();
     }
 
     public function diagnostics(): array
     {
-        return array_map(
-            static fn (mixed $diagnostic): GenerationDiagnostic => $diagnostic instanceof GenerationDiagnostic
+        return Arr::make($this->field('diagnostics') ?? [])
+            ->map(static fn (mixed $diagnostic): GenerationDiagnostic => $diagnostic instanceof GenerationDiagnostic
                 ? $diagnostic
-                : new GenerationDiagnostic(Arr::make($diagnostic)->toArray()),
-            Arr::make($this->field('diagnostics') ?? [])->toArray()
-        );
+                : new GenerationDiagnostic(Arr::make($diagnostic)->toArray()))
+            ->toArray();
     }
 
     public static function completed(
@@ -99,7 +96,7 @@ class GenerationRunResult extends GenerationValue
     ): self {
         $requestData = $request->toArray();
 
-        return new self(array_merge($data, [
+        return new self(Arr::merge($data, [
             'contract_version' => $requestData['contract_version'] ?? '1.0',
             'run_id' => $request->runId(),
             'task_id' => $request->taskId(),
@@ -118,12 +115,15 @@ class GenerationRunResult extends GenerationValue
     public function toArray(): array
     {
         $data = parent::toArray();
-        $data['steps'] = array_map(static fn (GenerationStep $step): array => $step->toArray(), $this->steps());
-        $data['artifacts'] = array_map(static fn (GeneratedArtifact $artifact): array => $artifact->toArray(), $this->artifacts());
-        $data['diagnostics'] = array_map(
-            static fn (GenerationDiagnostic $diagnostic): array => $diagnostic->toArray(),
-            $this->diagnostics()
-        );
+        $data['steps'] = Arr::make($this->steps())
+            ->map(static fn (GenerationStep $step): array => $step->toArray())
+            ->toArray();
+        $data['artifacts'] = Arr::make($this->artifacts())
+            ->map(static fn (GeneratedArtifact $artifact): array => $artifact->toArray())
+            ->toArray();
+        $data['diagnostics'] = Arr::make($this->diagnostics())
+            ->map(static fn (GenerationDiagnostic $diagnostic): array => $diagnostic->toArray())
+            ->toArray();
 
         return $data;
     }

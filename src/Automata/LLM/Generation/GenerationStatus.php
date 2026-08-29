@@ -2,6 +2,8 @@
 
 namespace BlueFission\Automata\LLM\Generation;
 
+use BlueFission\Arr;
+
 final class GenerationStatus
 {
     public const QUEUED = 'queued';
@@ -38,11 +40,11 @@ final class GenerationStatus
 
     public static function isKnown(string $status): bool
     {
-        return in_array($status, self::all(), true);
+        return Arr::has(self::all(), $status, true);
     }
 
     public static function isTerminal(string $status): bool
     {
-        return in_array($status, self::terminal(), true);
+        return Arr::has(self::terminal(), $status, true);
     }
 }

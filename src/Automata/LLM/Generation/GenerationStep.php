@@ -18,21 +18,19 @@ class GenerationStep extends GenerationValue
 
     public function diagnostics(): array
     {
-        return array_map(
-            static fn (mixed $diagnostic): GenerationDiagnostic => $diagnostic instanceof GenerationDiagnostic
+        return Arr::make($this->field('diagnostics') ?? [])
+            ->map(static fn (mixed $diagnostic): GenerationDiagnostic => $diagnostic instanceof GenerationDiagnostic
                 ? $diagnostic
-                : new GenerationDiagnostic(Arr::make($diagnostic)->toArray()),
-            Arr::make($this->field('diagnostics') ?? [])->toArray()
-        );
+                : new GenerationDiagnostic(Arr::make($diagnostic)->toArray()))
+            ->toArray();
     }
 
     public function toArray(): array
     {
         $data = parent::toArray();
-        $data['diagnostics'] = array_map(
-            static fn (GenerationDiagnostic $diagnostic): array => $diagnostic->toArray(),
-            $this->diagnostics()
-        );
+        $data['diagnostics'] = Arr::make($this->diagnostics())
+            ->map(static fn (GenerationDiagnostic $diagnostic): array => $diagnostic->toArray())
+            ->toArray();
 
         return $data;
     }

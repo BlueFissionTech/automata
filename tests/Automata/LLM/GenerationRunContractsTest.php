@@ -4,7 +4,7 @@ namespace BlueFission\Tests\Automata\LLM;
 
 use BlueFission\Automata\LLM\Generation\GeneratedArtifact;
 use BlueFission\Automata\LLM\Generation\GenerationDiagnostic;
-use BlueFission\Automata\LLM\Generation\GenerationRunner;
+use BlueFission\Automata\LLM\Generation\IGenerationRunner;
 use BlueFission\Automata\LLM\Generation\GenerationRunRequest;
 use BlueFission\Automata\LLM\Generation\GenerationRunResult;
 use BlueFission\Automata\LLM\Generation\GenerationStatus;
@@ -189,7 +189,7 @@ class GenerationRunContractsTest extends TestCase
 
     public function testRunnerInterfaceKeepsExecutionBehindAnAdapter(): void
     {
-        $runner = new class implements GenerationRunner {
+        $runner = new class implements IGenerationRunner {
             public function run(GenerationRunRequest $request): GenerationRunResult
             {
                 return GenerationRunResult::completed($request, [

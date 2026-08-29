@@ -19,7 +19,7 @@ deployment mechanism.
 - `GenerationRunResult` preserves completed, partial, failed, cancelled, and
   timed-out outcomes. Partial results retain usable artifacts and continuation
   state.
-- `GenerationRunner` is the adapter boundary for hosts that perform generation.
+- `IGenerationRunner` is the adapter boundary for hosts that perform generation.
   Automata does not provide an implicit provider or execution implementation.
 
 ## Authority Boundary
