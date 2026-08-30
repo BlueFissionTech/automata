@@ -19,6 +19,11 @@ use BlueFission\Automata\Language\Statement;
 use BlueFission\Automata\LLM\Agent;
 use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\AgentSession;
+use BlueFission\Automata\LLM\Agent\Capability\AutonomyDecision;
+use BlueFission\Automata\LLM\Agent\Capability\AutonomyGrant;
+use BlueFission\Automata\LLM\Agent\Capability\AutonomyPacket;
+use BlueFission\Automata\LLM\Agent\Capability\CapabilityDefinition;
+use BlueFission\Automata\LLM\Agent\Capability\CapabilityRegistry;
 use BlueFission\Automata\LLM\Agent\Governance\GovernanceDecision;
 use BlueFission\Automata\LLM\Agent\Governance\HumanReviewGate;
 use BlueFission\Automata\LLM\Agent\Governance\TaskCallMonitor;
@@ -46,7 +51,7 @@ use BlueFission\Obj;
 
 class AgentIntegrationContract extends Obj
 {
-    public const VERSION = '1.3.0';
+    public const VERSION = '1.4.0';
 
     public const FEATURE_AGENT = 'agent.runtime';
     public const FEATURE_TOOLS = 'agent.tool_contracts';
@@ -62,6 +67,7 @@ class AgentIntegrationContract extends Obj
     public const FEATURE_SECURITY = 'agent.runtime_security';
     public const FEATURE_LANE_PRESSURE = 'agent.lane_pressure';
     public const FEATURE_CAPABILITY_VOCABULARY = 'agent.capability_vocabulary';
+    public const FEATURE_CAPABILITY_REGISTRY = 'agent.capability_registry';
     public const FEATURE_QUALIFICATION = 'agent.qualification';
 
     public const TEMPLATE_AGENT = 'agent';
@@ -78,6 +84,7 @@ class AgentIntegrationContract extends Obj
     public const TEMPLATE_SECURITY = 'security';
     public const TEMPLATE_LANES = 'lanes';
     public const TEMPLATE_CAPABILITY = 'capability';
+    public const TEMPLATE_AUTONOMY = 'autonomy';
     public const TEMPLATE_QUALIFICATION = 'qualification';
 
     /**
@@ -328,6 +335,13 @@ class AgentIntegrationContract extends Obj
                     'inputs' => ['capability_term', 'adapter_contract', 'fixture_payload'],
                     'outputs' => ['term_definition', 'stable_fields', 'aliases', 'compatibility_constraints'],
                 ],
+                self::FEATURE_CAPABILITY_REGISTRY => [
+                    'summary' => 'Descriptive capability discovery and exact, scoped, revocable autonomy decisions.',
+                    'classes' => [CapabilityDefinition::class, CapabilityRegistry::class, AutonomyGrant::class, AutonomyPacket::class, AutonomyDecision::class],
+                    'constructs' => ['capability.definition', 'capability.registry', 'autonomy.grant', 'autonomy.packet', 'autonomy.authorize'],
+                    'inputs' => ['capability_id', 'capability_version', 'subject_id', 'requested_capabilities', 'exact_grants', 'limits', 'approval_state'],
+                    'outputs' => ['capability_definition', 'registry_snapshot', 'autonomy.decision'],
+                ],
                 self::FEATURE_QUALIFICATION => [
                     'summary' => 'Advisory qualification scoring, safe nurture suggestions, bounded follow-up plans, and audit records.',
                     'classes' => [QualificationScorer::class, QualificationScore::class, NurtureSuggestion::class, FollowUpPlan::class, QualificationResult::class, QualificationAudit::class],
@@ -437,6 +451,7 @@ class AgentIntegrationContract extends Obj
                 self::TEMPLATE_SECURITY => ['feature' => self::FEATURE_SECURITY, 'constructs' => ['security.scan', 'security.validate', 'security.sanitize']],
                 self::TEMPLATE_LANES => ['feature' => self::FEATURE_LANE_PRESSURE, 'constructs' => ['lane.semantic', 'lane.operational', 'lane.execution', 'lane.pressure', 'lane.profile.long_horizon']],
                 self::TEMPLATE_CAPABILITY => ['feature' => self::FEATURE_CAPABILITY_VOCABULARY, 'constructs' => ['capability.goal', 'capability.statement', 'capability.feedback', 'capability.domain_evaluation', 'capability.lane_pressure']],
+                self::TEMPLATE_AUTONOMY => ['feature' => self::FEATURE_CAPABILITY_REGISTRY, 'constructs' => ['capability.definition', 'capability.registry', 'autonomy.grant', 'autonomy.packet', 'autonomy.authorize']],
                 self::TEMPLATE_QUALIFICATION => ['feature' => self::FEATURE_QUALIFICATION, 'constructs' => ['qualification.criterion', 'qualification.score', 'qualification.suggestion', 'qualification.follow_up', 'qualification.audit']],
             ],
             'hooks' => AgentHook::all(),
@@ -459,6 +474,7 @@ class AgentIntegrationContract extends Obj
                 'Session scope controls shared context instead of agents sharing full context windows.',
                 'Holoscene episodes use scoped working memory and snapshots rather than raw prompt-only memory coupling.',
                 'Capability vocabulary stays package-neutral and maps to stable Automata-owned classes or feature ids.',
+                'Capability registry entries are descriptive; only exact approved autonomy grants produce allowed decisions.',
                 'Conformance fixtures cover successful execution, blocked execution, review steering, and trace export.',
             ],
         ];
