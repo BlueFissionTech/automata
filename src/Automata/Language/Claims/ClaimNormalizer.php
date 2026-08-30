@@ -56,13 +56,13 @@ class ClaimNormalizer implements IClaimNormalizer
             return $normalized;
         }
 
-        if (isset($normalized['candidates']) && Arr::is($normalized['candidates']) && count($normalized['candidates']) !== 1) {
+        if (isset($normalized['candidates']) && Arr::is($normalized['candidates']) && Arr::size($normalized['candidates']) !== 1) {
             return $this->failure(
                 $envelope,
                 ClaimNormalizationStatus::AMBIGUOUS,
                 'ambiguous_claim',
                 'The claim produced multiple semantic candidates.',
-                ['candidate_count' => count($normalized['candidates'])]
+                ['candidate_count' => Arr::size($normalized['candidates'])]
             );
         }
 

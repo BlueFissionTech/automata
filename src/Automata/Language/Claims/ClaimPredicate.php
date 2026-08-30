@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\Language\Claims;
 
 use BlueFission\Arr;
+use BlueFission\Str;
 
 class ClaimPredicate extends ClaimValue
 {
@@ -18,12 +19,11 @@ class ClaimPredicate extends ClaimValue
 
     public function children(): array
     {
-        return array_map(
-            static fn (mixed $child): ClaimPredicate => $child instanceof ClaimPredicate
+        return Arr::make($this->field('children') ?? [])
+            ->map(static fn (mixed $child): ClaimPredicate => $child instanceof ClaimPredicate
                 ? $child
-                : new ClaimPredicate(Arr::make($child)->toArray()),
-            Arr::make($this->field('children') ?? [])->toArray()
-        );
+                : new ClaimPredicate(Arr::make($child)->toArray()))
+            ->toArray();
     }
 
     public function structureIsValid(): bool
@@ -32,8 +32,8 @@ class ClaimPredicate extends ClaimValue
 
         if (PredicateOperator::isLogical($this->operator())) {
             $validCount = $this->operator() === PredicateOperator::NOT
-                ? count($children) === 1
-                : count($children) > 0;
+                ? Arr::size($children) === 1
+                : Arr::size($children) > 0;
 
             if (!$validCount) {
                 return false;
@@ -48,16 +48,15 @@ class ClaimPredicate extends ClaimValue
             return true;
         }
 
-        return count($children) === 0 && trim((string)$this->field('path')) !== '';
+        return Arr::size($children) === 0 && Str::trim((string)$this->field('path')) !== '';
     }
 
     public function toArray(): array
     {
         $data = parent::toArray();
-        $data['children'] = array_map(
-            static fn (ClaimPredicate $predicate): array => $predicate->toArray(),
-            $this->children()
-        );
+        $data['children'] = Arr::make($this->children())
+            ->map(static fn (ClaimPredicate $predicate): array => $predicate->toArray())
+            ->toArray();
 
         return $data;
     }
