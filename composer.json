@@ -22,32 +22,6 @@
             "role": "Developer"
         }
     ],
-    "repositories": [
-        {
-            "type": "package",
-            "package": {
-                "name": "bluefission/simpleclients",
-                "version": "dev-master",
-                "source": {
-                    "type": "git",
-                    "url": "https://github.com/BlueFissionTech/simpleclients.git",
-                    "reference": "858ea3575b5eb725879c0066d152e07538019392"
-                },
-                "require": {
-                    "bluefission/develation": "^1.0.0-alpha",
-                    "simplehtmldom/simplehtmldom": "^2.0@RC"
-                },
-                "autoload": {
-                    "psr-4": {
-                        "BlueFission\\": "src/"
-                    },
-                    "classmap": [
-                        "src/"
-                    ]
-                }
-            }
-        }
-    ],
     "minimum-stability": "dev",
     "require": {
         "php": ">=8.2",
@@ -56,7 +30,7 @@
         "php-ai/php-ml": "^0.10.0"
     },
     "require-dev": {
-        "bluefission/simpleclients": "dev-master",
+        "bluefission/simpleclients": "^0.1.0-alpha",
         "phpunit/phpunit": "^11.5"
     },
     "suggest": {
