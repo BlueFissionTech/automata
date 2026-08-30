@@ -18,6 +18,7 @@ class TaskTraceSpan extends Obj
     public const KIND_RPC = 'rpc';
     public const KIND_API = 'api';
     public const KIND_REVIEW = 'review';
+    public const KIND_STRATEGY = 'strategy';
 
     /**
      * Create a span with default CPCT fields.

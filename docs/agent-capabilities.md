@@ -18,6 +18,8 @@ The model receives the definition as prompt context, but it never executes the t
 
 For discovery and authorization above one tool call, use the provider-neutral [Capability Registry And Autonomy](agent-capability-registry.md) contracts. Registry entries describe exact capability versions without carrying executable handlers. Autonomy packets bind one subject to exact, non-transitive grants, limits, approval, expiry, revocation, evidence, and trace lineage, then return typed allow or deny decisions without performing side effects.
 
+For deterministic-first selection across intelligence engines, use [Deterministic Strategy Routing](strategy-routing.md). Routes require an exact allowed autonomy decision, inert eligibility, explicit usage estimates and limits, side-effect-free adapters, policy-gated learned or generative modes, and typed traceable outcomes.
+
 ## Catalog Retrieval
 
 Large catalogs should be narrowed before they enter prompt context. `ToolCatalog` supports constants for filter keys, including category, permission, tags, tag-all matching, groups, taxonomy, include, exclude, limit, and parallel-safety.

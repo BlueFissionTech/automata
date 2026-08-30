@@ -28,6 +28,21 @@ class AutonomyDecision extends CapabilityValue
         return (string)$this->field('code');
     }
 
+    public function subjectId(): string
+    {
+        return (string)$this->field('subject_id');
+    }
+
+    public function capabilityId(): string
+    {
+        return (string)$this->field('capability_id');
+    }
+
+    public function capabilityVersion(): string
+    {
+        return (string)$this->field('capability_version');
+    }
+
     public function limits(): array
     {
         return Arr::make($this->field('limits') ?? [])->toArray();
