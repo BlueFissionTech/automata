@@ -30,6 +30,12 @@ use BlueFission\Automata\LLM\Agent\Security\RuntimeLogicValidator;
 use BlueFission\Automata\LLM\Agent\State\AgentState;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTrace;
 use BlueFission\Automata\Memory\IWorkingMemory;
+use BlueFission\Automata\Qualification\FollowUpPlan;
+use BlueFission\Automata\Qualification\NurtureSuggestion;
+use BlueFission\Automata\Qualification\QualificationAudit;
+use BlueFission\Automata\Qualification\QualificationResult;
+use BlueFission\Automata\Qualification\QualificationScore;
+use BlueFission\Automata\Qualification\QualificationScorer;
 use BlueFission\Automata\LLM\Agent\ToolCatalog;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
 use BlueFission\Automata\LLM\Agent\ToolExecutionResult;
@@ -40,7 +46,7 @@ use BlueFission\Obj;
 
 class AgentIntegrationContract extends Obj
 {
-    public const VERSION = '1.2.0';
+    public const VERSION = '1.3.0';
 
     public const FEATURE_AGENT = 'agent.runtime';
     public const FEATURE_TOOLS = 'agent.tool_contracts';
@@ -56,6 +62,7 @@ class AgentIntegrationContract extends Obj
     public const FEATURE_SECURITY = 'agent.runtime_security';
     public const FEATURE_LANE_PRESSURE = 'agent.lane_pressure';
     public const FEATURE_CAPABILITY_VOCABULARY = 'agent.capability_vocabulary';
+    public const FEATURE_QUALIFICATION = 'agent.qualification';
 
     public const TEMPLATE_AGENT = 'agent';
     public const TEMPLATE_TOOL = 'tool';
@@ -71,6 +78,7 @@ class AgentIntegrationContract extends Obj
     public const TEMPLATE_SECURITY = 'security';
     public const TEMPLATE_LANES = 'lanes';
     public const TEMPLATE_CAPABILITY = 'capability';
+    public const TEMPLATE_QUALIFICATION = 'qualification';
 
     /**
      * Build the standard Automata integration surface for adapter contracts.
@@ -320,6 +328,13 @@ class AgentIntegrationContract extends Obj
                     'inputs' => ['capability_term', 'adapter_contract', 'fixture_payload'],
                     'outputs' => ['term_definition', 'stable_fields', 'aliases', 'compatibility_constraints'],
                 ],
+                self::FEATURE_QUALIFICATION => [
+                    'summary' => 'Advisory qualification scoring, safe nurture suggestions, bounded follow-up plans, and audit records.',
+                    'classes' => [QualificationScorer::class, QualificationScore::class, NurtureSuggestion::class, FollowUpPlan::class, QualificationResult::class, QualificationAudit::class],
+                    'constructs' => ['qualification.criterion', 'qualification.score', 'qualification.suggestion', 'qualification.follow_up', 'qualification.audit'],
+                    'inputs' => ['subject_id', 'criteria', 'signals', 'context', 'trace'],
+                    'outputs' => ['qualification_result', 'score', 'suggestions', 'follow_up_plan', 'audit'],
+                ],
             ],
             'capability_vocabulary' => [
                 'goal' => [
@@ -370,6 +385,18 @@ class AgentIntegrationContract extends Obj
                         'Scores and confidence are advisory unless policy or goal criteria bind them to a threshold.',
                     ],
                 ],
+                'qualification' => [
+                    'feature' => self::FEATURE_QUALIFICATION,
+                    'definition' => 'An advisory scored evaluation with safe suggestions, bounded follow-up planning, and auditable evidence.',
+                    'classes' => [QualificationScorer::class, QualificationScore::class, QualificationResult::class],
+                    'stable_fields' => ['subject_id', 'score', 'confidence', 'status', 'reasons', 'unmet_criteria', 'evidence', 'suggestions', 'follow_up_plan', 'audit'],
+                    'aliases' => ['lead_qualification', 'eligibility_scoring', 'intake_priority'],
+                    'constraints' => [
+                        'Scores and suggestions remain advisory until a host policy authorizes an action.',
+                        'Transport, delivery channels, CRM payloads, and platform routing remain host-owned.',
+                        'Required missing or below-minimum criteria route to review rather than authorizing execution.',
+                    ],
+                ],
                 'lane_pressure' => [
                     'feature' => self::FEATURE_LANE_PRESSURE,
                     'definition' => 'A provider-neutral pressure assessment across semantic, operational, and execution lanes.',
@@ -410,6 +437,7 @@ class AgentIntegrationContract extends Obj
                 self::TEMPLATE_SECURITY => ['feature' => self::FEATURE_SECURITY, 'constructs' => ['security.scan', 'security.validate', 'security.sanitize']],
                 self::TEMPLATE_LANES => ['feature' => self::FEATURE_LANE_PRESSURE, 'constructs' => ['lane.semantic', 'lane.operational', 'lane.execution', 'lane.pressure', 'lane.profile.long_horizon']],
                 self::TEMPLATE_CAPABILITY => ['feature' => self::FEATURE_CAPABILITY_VOCABULARY, 'constructs' => ['capability.goal', 'capability.statement', 'capability.feedback', 'capability.domain_evaluation', 'capability.lane_pressure']],
+                self::TEMPLATE_QUALIFICATION => ['feature' => self::FEATURE_QUALIFICATION, 'constructs' => ['qualification.criterion', 'qualification.score', 'qualification.suggestion', 'qualification.follow_up', 'qualification.audit']],
             ],
             'hooks' => AgentHook::all(),
             'tool_catalog_filters' => [

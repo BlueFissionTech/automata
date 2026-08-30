@@ -65,6 +65,7 @@ class AgentIntegrationContractTest extends TestCase
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_TELEMETRY));
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_LANE_PRESSURE));
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_CAPABILITY_VOCABULARY));
+        $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_QUALIFICATION));
         $this->assertSame(
             'Deterministic tool definitions, catalog retrieval, execution, and structured results.',
             $contract->feature(AgentIntegrationContract::FEATURE_TOOLS)['summary']
@@ -123,7 +124,7 @@ class AgentIntegrationContractTest extends TestCase
     {
         $json = AgentIntegrationContract::standard()->toJson();
 
-        $this->assertStringContainsString('"version":"1.2.0"', $json);
+        $this->assertStringContainsString('"version":"1.3.0"', $json);
         $this->assertStringContainsString('"agent.tool_contracts"', $json);
         $this->assertStringContainsString('"agent.holoscene_comprehension"', $json);
         $this->assertStringContainsString('"agent.lane_pressure"', $json);
@@ -154,6 +155,7 @@ class AgentIntegrationContractTest extends TestCase
         $this->assertArrayHasKey('statement', $vocabulary);
         $this->assertArrayHasKey('feedback', $vocabulary);
         $this->assertArrayHasKey('domain_evaluation', $vocabulary);
+        $this->assertArrayHasKey('qualification', $vocabulary);
         $this->assertArrayHasKey('lane_pressure', $vocabulary);
         $this->assertSame(
             AgentIntegrationContract::FEATURE_HOLOSCENE,
@@ -163,6 +165,7 @@ class AgentIntegrationContractTest extends TestCase
         $this->assertContains('corrected_value', $contract->capabilityVocabulary('feedback')['stable_fields']);
         $this->assertContains(ReviewRecord::class, $contract->capabilityVocabulary('feedback')['classes']);
         $this->assertContains('unmet_conditions', $contract->capabilityVocabulary('domain_evaluation')['stable_fields']);
+        $this->assertContains('follow_up_plan', $contract->capabilityVocabulary('qualification')['stable_fields']);
         $this->assertStringContainsString(
             'provider internal architecture',
             $contract->capabilityVocabulary('lane_pressure')['constraints'][0]
