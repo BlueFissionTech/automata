@@ -149,10 +149,15 @@ File: `src/Automata/Intelligence.php`
     - Uses `accuracy()` and execution time to compute a score.
     - Updates weights in `_strategies`.
   - `predict($input)`:
-    - Uses the top-weighted strategy to predict.
+    - Combines the learned weight with contextual quality and efficiency evidence.
+    - Benchmarks prediction latency and records a reusable performance observation.
     - Records the last strategy used for feedback.
   - `approvePrediction()` / `rejectPrediction()`:
-    - Adjust weights of the last used strategy based on feedback.
+    - Adjust weights and record explicit prediction-accuracy feedback for the last used strategy.
+  - `advise()` / `observe()` / `recordStrategyFeedback()`:
+    - Collaborate with `StrategyRouter` as an advisory learning layer.
+    - Track exact strategy versions by context without bypassing authority, modes, eligibility, or budgets.
+    - Export data-only success, accuracy, latency, cost, energy, confidence, quality, and efficiency snapshots.
   - `scan($input)`:
     - Determines the data type.
     - Uses appropriate strategy group (`DataGroup`) to benchmark predictions and dispatch events.

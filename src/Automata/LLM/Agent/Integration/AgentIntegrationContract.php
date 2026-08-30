@@ -16,6 +16,7 @@ use BlueFission\Automata\Goal\GoalDecision;
 use BlueFission\Automata\Goal\GoalManager;
 use BlueFission\Automata\Language\Reader;
 use BlueFission\Automata\Language\Statement;
+use BlueFission\Automata\Intelligence;
 use BlueFission\Automata\LLM\Agent;
 use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\AgentSession;
@@ -43,7 +44,9 @@ use BlueFission\Automata\Qualification\QualificationScore;
 use BlueFission\Automata\Qualification\QualificationScorer;
 use BlueFission\Automata\Strategy\Routing\Adapter\DecisionTreeRouteAdapter;
 use BlueFission\Automata\Strategy\Routing\IStrategyRouteAdapter;
+use BlueFission\Automata\Strategy\Routing\IStrategyRouteAdvisor;
 use BlueFission\Automata\Strategy\Routing\StrategyDefinition;
+use BlueFission\Automata\Strategy\Routing\StrategyRouteAdvice;
 use BlueFission\Automata\Strategy\Routing\StrategyRouteRequest;
 use BlueFission\Automata\Strategy\Routing\StrategyRouteResult;
 use BlueFission\Automata\Strategy\Routing\StrategyRouter;
@@ -351,11 +354,11 @@ class AgentIntegrationContract extends Obj
                     'outputs' => ['capability_definition', 'registry_snapshot', 'autonomy.decision'],
                 ],
                 self::FEATURE_STRATEGY_ROUTING => [
-                    'summary' => 'Deterministic-first strategy selection with exact authority, inert eligibility, hard budgets, trace lineage, and explicit escalation.',
-                    'classes' => [StrategyDefinition::class, StrategyRouteRequest::class, StrategyRouteResult::class, StrategyRouter::class, IStrategyRouteAdapter::class, DecisionTreeRouteAdapter::class],
-                    'constructs' => ['strategy.definition', 'strategy.adapter', 'strategy.route', 'strategy.attempt', 'strategy.escalation'],
-                    'inputs' => ['autonomy_decision', 'capability_id', 'capability_version', 'candidate_versions', 'eligibility', 'limits', 'allowed_modes', 'escalation_policy'],
-                    'outputs' => ['strategy_route_result', 'selected_strategy', 'attempts', 'usage', 'escalation_history', 'task_trace_span'],
+                    'summary' => 'Deterministic-first strategy selection with exact authority, adaptive advice, inert eligibility, hard budgets, trace lineage, and explicit escalation.',
+                    'classes' => [StrategyDefinition::class, StrategyRouteRequest::class, StrategyRouteResult::class, StrategyRouteAdvice::class, StrategyRouter::class, IStrategyRouteAdapter::class, IStrategyRouteAdvisor::class, Intelligence::class, DecisionTreeRouteAdapter::class],
+                    'constructs' => ['strategy.definition', 'strategy.adapter', 'strategy.advice', 'strategy.route', 'strategy.attempt', 'strategy.feedback', 'strategy.performance', 'strategy.escalation'],
+                    'inputs' => ['autonomy_decision', 'capability_id', 'capability_version', 'candidate_versions', 'eligibility', 'limits', 'allowed_modes', 'selection_policy', 'context_key', 'outcome_feedback', 'escalation_policy'],
+                    'outputs' => ['strategy_route_result', 'selected_strategy', 'selection_advice', 'performance_snapshot', 'attempts', 'usage', 'escalation_history', 'task_trace_span'],
                 ],
                 self::FEATURE_QUALIFICATION => [
                     'summary' => 'Advisory qualification scoring, safe nurture suggestions, bounded follow-up plans, and audit records.',

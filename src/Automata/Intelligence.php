@@ -13,12 +13,17 @@ use BlueFission\Automata\Support\Evaluates;
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Automata\Sensory\Input;
 use BlueFission\Automata\Strategy\IStrategy;
+use BlueFission\Automata\Strategy\Routing\IStrategyRouteAdvisor;
+use BlueFission\Automata\Strategy\Routing\StrategyRouteAdvice;
+use BlueFission\Automata\Strategy\Routing\StrategyRouteRequest;
+use BlueFission\Automata\Strategy\Routing\StrategyRouteResult;
 use BlueFission\Automata\Service\BenchmarkService;
 use BlueFission\Automata\Analysis\IAnalyzer;
 use BlueFission\Automata\Context;
 use BlueFission\Behavioral\Dispatches;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\Behavior;
+use Throwable;
 
 /**
  * Class Intelligence
@@ -26,7 +31,7 @@ use BlueFission\Behavioral\Behaviors\Behavior;
  * Manages and orchestrates different AI strategies to analyze input data,
  * make predictions, and learn from feedback.
  */
-class Intelligence extends Obj
+class Intelligence extends Obj implements IStrategyRouteAdvisor
 {
     use Dispatches;
     use Evaluates;
@@ -37,6 +42,8 @@ class Intelligence extends Obj
     private ?string $_lastStrategyName = null; // Key/name of last strategy used
     private array $_strategyGroups; // Groups of strategies based on data type
     private array $_strategyProfiles; // Strategy metadata (types, tags, weights)
+    private array $_strategyPerformance; // Contextual route and prediction observations
+    private ?string $_lastStrategyContext = null;
     private BenchmarkService $_benchmarkService; // Service for benchmarking strategies
     private array $_intentAnalyzers;
     private array $_structureClassifiers;
@@ -57,6 +64,7 @@ class Intelligence extends Obj
         $this->_minThreshold = $minThreshold;
         $this->_strategyGroups = [];
         $this->_strategyProfiles = [];
+        $this->_strategyPerformance = [];
         $this->_benchmarkService = new BenchmarkService(); // Initialize benchmark service
         $this->_intentAnalyzers = [];
         $this->_structureClassifiers = [];
@@ -74,6 +82,15 @@ class Intelligence extends Obj
     public function registerStrategy(IStrategy $strategy, string $name)
     {
         $this->_strategies->add($strategy, $name);
+        if (!isset($this->_strategyProfiles[$name])) {
+            $this->_strategyProfiles[$name] = [
+                'types' => [],
+                'tags' => [],
+                'weight' => null,
+                'route_id' => $name,
+                'route_version' => '1.0',
+            ];
+        }
     }
 
     /**
@@ -89,6 +106,8 @@ class Intelligence extends Obj
             'types' => [],
             'tags' => [],
             'weight' => null,
+            'route_id' => $name,
+            'route_version' => '1.0',
         ];
 
         $profile = $this->mergeMap($defaults, $profile);
@@ -254,14 +273,17 @@ class Intelligence extends Obj
             return null;
         }
 
-        // Select the strategy with the highest weight.
+        // Combine the existing learned weight with contextual performance evidence.
         $bestName = null;
         $bestMeta = null;
+        $bestScore = null;
 
         foreach ($strategies as $name => $meta) {
-            if (!isset($bestMeta) || $meta['weight'] > $bestMeta['weight']) {
+            $score = $this->strategyPreferenceScore($name, $input);
+            if ($bestScore === null || $score > $bestScore) {
                 $bestMeta = $meta;
                 $bestName = $name;
+                $bestScore = $score;
             }
         }
 
@@ -270,8 +292,20 @@ class Intelligence extends Obj
 
         $this->_lastStrategyUsed = $bestStrategy;
         $this->_lastStrategyName = $bestName;
+        $this->_lastStrategyContext = $this->inputContextKey($input);
 
-        $output = $bestStrategy->predict($input);
+        $result = $this->_benchmarkService->benchmarkPrediction($bestStrategy, $input);
+        $output = $result['output'];
+        $this->recordPerformance(
+            $this->profileRouteId($bestName),
+            $this->profileRouteVersion($bestName),
+            [
+                'observation' => true,
+                'accuracy' => $this->strategyAccuracy($bestStrategy),
+                'latency_ms' => (float)$result['executionTime'] * 1000,
+            ],
+            $this->_lastStrategyContext
+        );
 
         // Post-prediction filter and action hook.
         $output = Dev::apply('automata.intelligence.predict.2', $output);
@@ -294,6 +328,12 @@ class Intelligence extends Obj
             $newScore = $score * 1.1;
             $this->_strategies->weight($this->_lastStrategyName, $newScore);
             $this->_strategies->sort();
+            $this->recordStrategyFeedback(
+                $this->profileRouteId($this->_lastStrategyName),
+                $this->profileRouteVersion($this->_lastStrategyName),
+                ['successful' => true, 'prediction_accuracy' => 1.0, 'score' => 1.0],
+                $this->_lastStrategyContext ?? 'global'
+            );
         }
     }
 
@@ -307,6 +347,12 @@ class Intelligence extends Obj
             $newScore = $score * 0.9;
             $this->_strategies->weight($this->_lastStrategyName, $newScore);
             $this->_strategies->sort();
+            $this->recordStrategyFeedback(
+                $this->profileRouteId($this->_lastStrategyName),
+                $this->profileRouteVersion($this->_lastStrategyName),
+                ['successful' => false, 'prediction_accuracy' => 0.0, 'score' => 0.0],
+                $this->_lastStrategyContext ?? 'global'
+            );
         }
     }
 
@@ -318,6 +364,121 @@ class Intelligence extends Obj
     public function onPrediction(Func|callable $listener)
     {
         $this->behavior(self::PREDICTION_EVENT, $listener instanceof Func ? $listener : new Func($listener));
+    }
+
+    /**
+     * Provide data-only preferences for the router's already-declared candidates.
+     */
+    public function advise(StrategyRouteRequest $request, array $definitions): StrategyRouteAdvice
+    {
+        $contextKey = $this->requestContextKey($request);
+        $rankings = [];
+
+        foreach ($definitions as $definition) {
+            $definition = Arr::make($definition)->toArray();
+            $strategyId = (string)($definition['id'] ?? '');
+            $strategyVersion = (string)($definition['version'] ?? '');
+            if ($strategyId === '' || $strategyVersion === '') {
+                continue;
+            }
+
+            $performance = $this->strategyPerformance($strategyId, $strategyVersion, $contextKey);
+            $registeredAccuracy = $this->routeStrategyAccuracy($strategyId, $strategyVersion);
+            $score = $this->adaptivePreferenceScore(
+                $this->routeBaseWeight($strategyId, $strategyVersion),
+                $performance,
+                $registeredAccuracy
+            );
+            $key = StrategyRouteAdvice::key($strategyId, $strategyVersion);
+            $rankings[$key] = [
+                'strategy_id' => $strategyId,
+                'strategy_version' => $strategyVersion,
+                'score' => $score,
+                'confidence' => $performance['confidence'],
+                'observations' => $performance['observations'],
+                'reasons' => [
+                    'existing Intelligence weight is the prior',
+                    'quality evidence is balanced against latency, cost, and energy',
+                ],
+                'evidence' => [[
+                    'source' => 'automata.intelligence',
+                    'context_key' => $contextKey,
+                    'observations' => $performance['observations'],
+                    'feedback_samples' => $performance['feedback_samples'],
+                ]],
+                'metrics' => $performance,
+            ];
+        }
+
+        return new StrategyRouteAdvice([
+            'policy' => StrategyRouteRequest::SELECTION_ADAPTIVE,
+            'rankings' => $rankings,
+            'evidence' => [[
+                'source' => 'automata.intelligence',
+                'context_key' => $contextKey,
+            ]],
+            'metadata' => [
+                'advisory_only' => true,
+                'may_add_candidates' => false,
+                'may_grant_authority' => false,
+            ],
+        ]);
+    }
+
+    /**
+     * Learn execution efficiency from a completed route without changing its result.
+     */
+    public function observe(StrategyRouteRequest $request, StrategyRouteResult $result): void
+    {
+        $contextKey = $this->requestContextKey($request);
+        foreach ($result->attempts() as $attempt) {
+            if (!($attempt['executed'] ?? false)) {
+                continue;
+            }
+
+            $usage = Arr::make($attempt['actual_usage'] ?? [])->toArray();
+            $this->recordPerformance(
+                (string)($attempt['strategy_id'] ?? ''),
+                (string)($attempt['strategy_version'] ?? ''),
+                [
+                    'observation' => true,
+                    'successful' => ($attempt['status'] ?? '') === 'completed',
+                    'latency_ms' => $usage['latency_ms'] ?? null,
+                    'cost' => $usage['cost'] ?? null,
+                    'energy' => $usage['energy'] ?? null,
+                    'confidence' => $attempt['confidence'] ?? null,
+                ],
+                $contextKey
+            );
+        }
+    }
+
+    /**
+     * Record delayed truth or reviewer feedback for one exact strategy version.
+     */
+    public function recordStrategyFeedback(
+        string $strategyId,
+        string $strategyVersion,
+        array $feedback,
+        string $contextKey = 'global'
+    ): void {
+        $feedback['feedback'] = true;
+        $this->recordPerformance($strategyId, $strategyVersion, $feedback, $contextKey);
+    }
+
+    /**
+     * Return a data-only performance snapshot suitable for agents and host telemetry.
+     */
+    public function strategyPerformance(
+        string $strategyId,
+        string $strategyVersion,
+        string $contextKey = 'global'
+    ): array {
+        $key = StrategyRouteAdvice::key($strategyId, $strategyVersion);
+        $bucket = $this->_strategyPerformance[$key][$this->normalizeContextKey($contextKey)]
+            ?? $this->performanceDefaults();
+
+        return $this->performanceSnapshot($bucket);
     }
 
     /**
@@ -372,6 +533,17 @@ class Intelligence extends Obj
             $result = $this->_benchmarkService->benchmarkPrediction($strategy, $segment['payload']);
             $accuracy = $strategy instanceof IStrategy ? $strategy->accuracy() : 0.0;
             $score = $this->calculateScore($accuracy, $result['executionTime']);
+            $this->recordPerformance(
+                $this->profileRouteId($name),
+                $this->profileRouteVersion($name),
+                [
+                    'observation' => true,
+                    'accuracy' => $accuracy,
+                    'score' => $score,
+                    'latency_ms' => (float)$result['executionTime'] * 1000,
+                ],
+                $this->inputContextKey($segment['payload'])
+            );
 
             $insight = [
                 'segment_index' => $segment['index'],
@@ -735,6 +907,277 @@ class Intelligence extends Obj
     {
         $valueText = is_bool($value) ? ($value ? 'true' : 'false') : (string)$value;
         return (string)$key . ':' . $valueText;
+    }
+
+    private function strategyPreferenceScore(string $name, mixed $input): float
+    {
+        $strategy = $this->strategyByName($name);
+        $performance = $this->strategyPerformance(
+            $this->profileRouteId($name),
+            $this->profileRouteVersion($name),
+            $this->inputContextKey($input)
+        );
+
+        return $this->adaptivePreferenceScore(
+            (float)$this->_strategies->weight($name),
+            $performance,
+            $strategy instanceof IStrategy ? $this->strategyAccuracy($strategy) : null
+        );
+    }
+
+    private function adaptivePreferenceScore(
+        float $baseWeight,
+        array $performance,
+        ?float $registeredAccuracy = null
+    ): float {
+        $qualitySignals = [];
+        foreach (['success_rate', 'accuracy', 'prediction_accuracy', 'average_score'] as $key) {
+            if ($performance[$key] !== null) {
+                $qualitySignals[] = $this->boundedRatio((float)$performance[$key]);
+            }
+        }
+        if ($registeredAccuracy !== null) {
+            $qualitySignals[] = $this->boundedRatio($registeredAccuracy);
+        }
+
+        $quality = $qualitySignals === []
+            ? 0.5
+            : array_sum($qualitySignals) / count($qualitySignals);
+        $confidence = (float)$performance['confidence'];
+        if ($registeredAccuracy !== null) {
+            $confidence = Num::max(0.25, $confidence);
+        }
+        $quality = (0.5 * (1.0 - $confidence)) + ($quality * $confidence);
+
+        $penalty = ((float)$performance['average_latency_ms'] / 1000)
+            + (float)$performance['average_cost']
+            + (float)$performance['average_energy'];
+
+        return Num::max(0.0, $baseWeight) * Num::divide($quality, 1.0 + $penalty);
+    }
+
+    private function recordPerformance(
+        string $strategyId,
+        string $strategyVersion,
+        array $metrics,
+        string $contextKey
+    ): void {
+        if ($strategyId === '' || $strategyVersion === '') {
+            return;
+        }
+
+        $key = StrategyRouteAdvice::key($strategyId, $strategyVersion);
+        $contexts = [$this->normalizeContextKey($contextKey)];
+        if ($contexts[0] !== 'global') {
+            $contexts[] = 'global';
+        }
+
+        foreach ($contexts as $context) {
+            $bucket = $this->_strategyPerformance[$key][$context] ?? $this->performanceDefaults();
+            if ($metrics['observation'] ?? false) {
+                $bucket['observations']++;
+            }
+            if (array_key_exists('successful', $metrics) && $metrics['successful'] !== null) {
+                $bucket['outcome_samples']++;
+                if ((bool)$metrics['successful']) {
+                    $bucket['successes']++;
+                } else {
+                    $bucket['failures']++;
+                }
+            }
+            if ($metrics['feedback'] ?? false) {
+                $bucket['feedback_samples']++;
+            }
+
+            foreach ([
+                'accuracy' => 'accuracy',
+                'prediction_accuracy' => 'prediction_accuracy',
+                'score' => 'score',
+                'latency_ms' => 'latency_ms',
+                'cost' => 'cost',
+                'energy' => 'energy',
+                'confidence' => 'confidence',
+            ] as $metric => $bucketPrefix) {
+                if (!array_key_exists($metric, $metrics) || $metrics[$metric] === null) {
+                    continue;
+                }
+
+                $value = (float)$metrics[$metric];
+                if (in_array($metric, ['accuracy', 'prediction_accuracy', 'score', 'confidence'], true)) {
+                    $value = $this->boundedRatio($value);
+                } else {
+                    $value = Num::max(0.0, $value);
+                }
+                $bucket[$bucketPrefix . '_total'] += $value;
+                $bucket[$bucketPrefix . '_samples']++;
+            }
+
+            $this->_strategyPerformance[$key][$context] = $bucket;
+        }
+    }
+
+    private function performanceSnapshot(array $bucket): array
+    {
+        $successRate = $bucket['outcome_samples'] > 0
+            ? Num::divide($bucket['successes'], $bucket['outcome_samples'])
+            : null;
+        $accuracy = $this->averageMetric($bucket, 'accuracy');
+        $predictionAccuracy = $this->averageMetric($bucket, 'prediction_accuracy');
+        $averageScore = $this->averageMetric($bucket, 'score');
+        $averageLatency = $this->averageMetric($bucket, 'latency_ms') ?? 0.0;
+        $averageCost = $this->averageMetric($bucket, 'cost') ?? 0.0;
+        $averageEnergy = $this->averageMetric($bucket, 'energy') ?? 0.0;
+        $averageConfidence = $this->averageMetric($bucket, 'confidence');
+        $sampleCount = $bucket['observations'] + $bucket['feedback_samples'];
+        $confidence = Num::min(1.0, Num::divide($sampleCount, 5));
+        if ($averageConfidence !== null) {
+            $confidence = Num::max($confidence, $averageConfidence);
+        }
+
+        $qualitySignals = array_values(array_filter([
+            $successRate,
+            $accuracy,
+            $predictionAccuracy,
+            $averageScore,
+        ], static fn ($value): bool => $value !== null));
+        $quality = $qualitySignals === [] ? 0.5 : array_sum($qualitySignals) / count($qualitySignals);
+        $efficiency = Num::divide(
+            $quality,
+            1.0 + ($averageLatency / 1000) + $averageCost + $averageEnergy
+        );
+
+        return [
+            'observations' => $bucket['observations'],
+            'successes' => $bucket['successes'],
+            'failures' => $bucket['failures'],
+            'outcome_samples' => $bucket['outcome_samples'],
+            'feedback_samples' => $bucket['feedback_samples'],
+            'success_rate' => $successRate,
+            'accuracy' => $accuracy,
+            'prediction_accuracy' => $predictionAccuracy,
+            'average_score' => $averageScore,
+            'average_latency_ms' => $averageLatency,
+            'average_cost' => $averageCost,
+            'average_energy' => $averageEnergy,
+            'confidence' => $this->boundedRatio((float)$confidence),
+            'quality' => $this->boundedRatio((float)$quality),
+            'efficiency' => Num::max(0.0, (float)$efficiency),
+        ];
+    }
+
+    private function performanceDefaults(): array
+    {
+        return [
+            'observations' => 0,
+            'successes' => 0,
+            'failures' => 0,
+            'outcome_samples' => 0,
+            'feedback_samples' => 0,
+            'accuracy_total' => 0.0,
+            'accuracy_samples' => 0,
+            'prediction_accuracy_total' => 0.0,
+            'prediction_accuracy_samples' => 0,
+            'score_total' => 0.0,
+            'score_samples' => 0,
+            'latency_ms_total' => 0.0,
+            'latency_ms_samples' => 0,
+            'cost_total' => 0.0,
+            'cost_samples' => 0,
+            'energy_total' => 0.0,
+            'energy_samples' => 0,
+            'confidence_total' => 0.0,
+            'confidence_samples' => 0,
+        ];
+    }
+
+    private function averageMetric(array $bucket, string $metric): ?float
+    {
+        $samples = (int)$bucket[$metric . '_samples'];
+
+        return $samples > 0 ? Num::divide((float)$bucket[$metric . '_total'], $samples) : null;
+    }
+
+    private function routeBaseWeight(string $strategyId, string $strategyVersion): float
+    {
+        foreach ($this->_strategyProfiles as $name => $profile) {
+            if (
+                $this->profileRouteId($name) === $strategyId
+                && $this->profileRouteVersion($name) === $strategyVersion
+                && $this->_strategies->has($name)
+            ) {
+                return (float)$this->_strategies->weight($name);
+            }
+        }
+
+        return 1.0;
+    }
+
+    private function routeStrategyAccuracy(string $strategyId, string $strategyVersion): ?float
+    {
+        foreach ($this->_strategyProfiles as $name => $profile) {
+            if (
+                $this->profileRouteId($name) === $strategyId
+                && $this->profileRouteVersion($name) === $strategyVersion
+            ) {
+                $strategy = $this->strategyByName($name);
+                return $strategy instanceof IStrategy ? $this->strategyAccuracy($strategy) : null;
+            }
+        }
+
+        return null;
+    }
+
+    private function strategyByName(string $name): ?IStrategy
+    {
+        $entry = $this->_strategies->toArray()[$name] ?? null;
+        $strategy = is_array($entry) ? ($entry['value'] ?? null) : null;
+
+        return $strategy instanceof IStrategy ? $strategy : null;
+    }
+
+    private function strategyAccuracy(IStrategy $strategy): ?float
+    {
+        try {
+            return $this->boundedRatio($strategy->accuracy());
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function profileRouteId(string $name): string
+    {
+        return (string)($this->_strategyProfiles[$name]['route_id'] ?? $name);
+    }
+
+    private function profileRouteVersion(string $name): string
+    {
+        return (string)($this->_strategyProfiles[$name]['route_version'] ?? '1.0');
+    }
+
+    private function requestContextKey(StrategyRouteRequest $request): string
+    {
+        return $request->contextKey() !== ''
+            ? $this->normalizeContextKey($request->contextKey())
+            : $this->inputContextKey($request->input());
+    }
+
+    private function inputContextKey(mixed $input): string
+    {
+        $type = $this->getType($input);
+
+        return $type === null || $type === '' ? 'global' : 'type:' . $type;
+    }
+
+    private function normalizeContextKey(string $contextKey): string
+    {
+        $contextKey = Str::trim($contextKey);
+
+        return $contextKey === '' ? 'global' : $contextKey;
+    }
+
+    private function boundedRatio(float $value): float
+    {
+        return (float)Num::max(0.0, Num::min(1.0, $value));
     }
 
     /**

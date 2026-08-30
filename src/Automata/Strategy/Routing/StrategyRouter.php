@@ -29,9 +29,12 @@ class StrategyRouter
     public const CODE_EXHAUSTED = 'strategies_exhausted';
 
     protected array $adapters = [];
+    protected ?IStrategyRouteAdvisor $advisor;
 
-    public function __construct(array $adapters = [])
+    public function __construct(array $adapters = [], ?IStrategyRouteAdvisor $advisor = null)
     {
+        $this->advisor = $advisor;
+
         foreach ($adapters as $adapter) {
             if (!$adapter instanceof IStrategyRouteAdapter) {
                 throw new InvalidArgumentException('Strategy adapters must implement IStrategyRouteAdapter.');
@@ -65,11 +68,19 @@ class StrategyRouter
         return $this;
     }
 
+    public function advisor(?IStrategyRouteAdvisor $advisor): self
+    {
+        $this->advisor = $advisor;
+
+        return $this;
+    }
+
     public function route(
         StrategyRouteRequest $request,
         AutonomyDecision $authorization,
         ?TaskTrace $trace = null
     ): StrategyRouteResult {
+        $advice = $this->declaredAdvice($request);
         $span = $trace?->startSpan(TaskTraceSpan::KIND_STRATEGY, 'strategy.route', [
             'request_id' => $request->id(),
             'capability_id' => $request->capabilityId(),
@@ -82,6 +93,10 @@ class StrategyRouter
             || $request->capabilityId() === ''
             || $request->capabilityVersion() === ''
             || $request->candidates() === []
+            || !Arr::has([
+                StrategyRouteRequest::SELECTION_DECLARED,
+                StrategyRouteRequest::SELECTION_ADAPTIVE,
+            ], $request->selectionPolicy(), true)
         ) {
             return $this->finish($this->result(
                 $request,
@@ -89,8 +104,12 @@ class StrategyRouter
                 StrategyRouteResult::STATUS_DENIED,
                 self::CODE_INVALID_REQUEST,
                 [],
-                new StrategyUsage()
-            ), $trace, $span);
+                new StrategyUsage(),
+                null,
+                null,
+                [],
+                $advice
+            ), $request, $trace, $span);
         }
 
         if (!$authorization->allowed()) {
@@ -100,8 +119,12 @@ class StrategyRouter
                 StrategyRouteResult::STATUS_DENIED,
                 self::CODE_AUTHORIZATION_DENIED,
                 [],
-                new StrategyUsage()
-            ), $trace, $span);
+                new StrategyUsage(),
+                null,
+                null,
+                [],
+                $advice
+            ), $request, $trace, $span);
         }
 
         if (
@@ -115,15 +138,19 @@ class StrategyRouter
                 StrategyRouteResult::STATUS_DENIED,
                 self::CODE_AUTHORIZATION_MISMATCH,
                 [],
-                new StrategyUsage()
-            ), $trace, $span);
+                new StrategyUsage(),
+                null,
+                null,
+                [],
+                $advice
+            ), $request, $trace, $span);
         }
 
         $attempts = [];
         $escalations = [];
         $usage = new StrategyUsage();
         $limits = $this->effectiveLimits($request->limits(), $authorization->limits());
-        $candidates = $this->orderedCandidates($request);
+        [$candidates, $advice] = $this->orderedCandidates($request);
 
         foreach ($candidates as $index => $candidate) {
             $candidate = Arr::make($candidate)->toArray();
@@ -216,8 +243,9 @@ class StrategyRouter
                     $usage,
                     null,
                     null,
-                    $escalations
-                ), $trace, $span);
+                    $escalations,
+                    $advice
+                ), $request, $trace, $span);
             }
 
             $actualUsage = $adapterResult->usage()->withMinimumInvocations();
@@ -228,6 +256,9 @@ class StrategyRouter
                 'executed' => true,
                 'estimate' => $estimate->toArray(),
                 'actual_usage' => $actualUsage->toArray(),
+                'selection_score' => $advice->score($id, $version),
+                'confidence' => $adapterResult->confidence(),
+                'uncertainty' => $adapterResult->uncertainty(),
                 'evidence' => $adapterResult->toArray()['evidence'],
                 'diagnostics' => $adapterResult->toArray()['diagnostics'],
             ]);
@@ -240,8 +271,11 @@ class StrategyRouter
                     self::CODE_ACTUAL_BUDGET_EXCEEDED,
                     $attempts,
                     $usage,
-                    $definition
-                ), $trace, $span);
+                    $definition,
+                    null,
+                    [],
+                    $advice
+                ), $request, $trace, $span);
             }
 
             if ($adapterResult->succeeded()) {
@@ -254,8 +288,9 @@ class StrategyRouter
                     $usage,
                     $definition,
                     $adapterResult->output(),
-                    $escalations
-                ), $trace, $span);
+                    $escalations,
+                    $advice
+                ), $request, $trace, $span);
             }
 
             if ($request->canEscalate() && isset($candidates[$index + 1])) {
@@ -273,8 +308,9 @@ class StrategyRouter
                 $usage,
                 $definition,
                 $adapterResult->output(),
-                $escalations
-            ), $trace, $span);
+                $escalations,
+                $advice
+            ), $request, $trace, $span);
         }
 
         return $this->finish($this->result(
@@ -286,37 +322,110 @@ class StrategyRouter
             $usage,
             null,
             null,
-            $escalations
-        ), $trace, $span);
+            $escalations,
+            $advice
+        ), $request, $trace, $span);
     }
 
     protected function orderedCandidates(StrategyRouteRequest $request): array
     {
-        if (!$request->deterministicPreferred()) {
-            return $request->candidates();
+        $advice = $this->declaredAdvice($request);
+        if ($request->adaptiveSelection()) {
+            if (!$this->advisor) {
+                $advice = new StrategyRouteAdvice([
+                    'policy' => StrategyRouteRequest::SELECTION_ADAPTIVE,
+                    'diagnostics' => [[
+                        'code' => 'advisor_unavailable',
+                        'message' => 'Adaptive selection was requested without an injected advisor; declared order was retained.',
+                    ]],
+                ]);
+            } else {
+                try {
+                    $advice = $this->advisor->advise($request, $this->candidateDefinitions($request));
+                } catch (Throwable $exception) {
+                    $advice = new StrategyRouteAdvice([
+                        'policy' => StrategyRouteRequest::SELECTION_ADAPTIVE,
+                        'diagnostics' => [[
+                            'code' => 'advisor_exception',
+                            'message' => $exception->getMessage(),
+                        ]],
+                    ]);
+                }
+            }
         }
 
-        $deterministic = Arr::make([]);
-        $remaining = Arr::make([]);
-        foreach ($request->candidates() as $candidate) {
+        $candidates = [];
+        foreach ($request->candidates() as $index => $candidate) {
             $candidateData = Arr::make($candidate)->toArray();
             $adapter = $this->adapters[$this->key(
                 (string)($candidateData['id'] ?? ''),
                 (string)($candidateData['version'] ?? '')
             )] ?? null;
 
-            if ($adapter && $adapter->definition()->deterministic()) {
-                $deterministic->push($candidateData);
-            } else {
-                $remaining->push($candidateData);
+            $candidateData['_declared_index'] = $index;
+            $candidateData['_deterministic_tier'] = $request->deterministicPreferred()
+                && (!$adapter || !$adapter->definition()->deterministic())
+                ? 1
+                : 0;
+            $candidateData['_selection_score'] = $advice->score(
+                (string)($candidateData['id'] ?? ''),
+                (string)($candidateData['version'] ?? '')
+            );
+            $candidates[] = $candidateData;
+        }
+
+        usort($candidates, static function (array $left, array $right) use ($request): int {
+            if ($left['_deterministic_tier'] !== $right['_deterministic_tier']) {
+                return $left['_deterministic_tier'] <=> $right['_deterministic_tier'];
+            }
+
+            if ($request->adaptiveSelection()) {
+                $leftScore = $left['_selection_score'];
+                $rightScore = $right['_selection_score'];
+                if ($leftScore !== null || $rightScore !== null) {
+                    $leftScore = $leftScore ?? -INF;
+                    $rightScore = $rightScore ?? -INF;
+                    if ($leftScore !== $rightScore) {
+                        return $leftScore < $rightScore ? 1 : -1;
+                    }
+                }
+            }
+
+            return $left['_declared_index'] <=> $right['_declared_index'];
+        });
+
+        foreach ($candidates as &$candidate) {
+            unset(
+                $candidate['_declared_index'],
+                $candidate['_deterministic_tier'],
+                $candidate['_selection_score']
+            );
+        }
+        unset($candidate);
+
+        return [$candidates, $advice];
+    }
+
+    protected function candidateDefinitions(StrategyRouteRequest $request): array
+    {
+        $definitions = [];
+        foreach ($request->candidates() as $candidate) {
+            $candidate = Arr::make($candidate)->toArray();
+            $adapter = $this->adapters[$this->key(
+                (string)($candidate['id'] ?? ''),
+                (string)($candidate['version'] ?? '')
+            )] ?? null;
+            if ($adapter) {
+                $definitions[] = $adapter->definition()->toArray();
             }
         }
 
-        foreach ($remaining->toArray() as $candidate) {
-            $deterministic->push($candidate);
-        }
+        return $definitions;
+    }
 
-        return $deterministic->toArray();
+    protected function declaredAdvice(StrategyRouteRequest $request): StrategyRouteAdvice
+    {
+        return new StrategyRouteAdvice(['policy' => $request->selectionPolicy()]);
     }
 
     protected function attempt(string $id, string $version, string $mode, string $code, array $data = []): array
@@ -349,7 +458,8 @@ class StrategyRouter
         StrategyUsage $usage,
         ?StrategyDefinition $selected = null,
         mixed $output = null,
-        array $escalations = []
+        array $escalations = [],
+        ?StrategyRouteAdvice $advice = null
     ): StrategyRouteResult {
         $requestData = $request->toArray();
 
@@ -365,6 +475,7 @@ class StrategyRouter
             'attempts' => $attempts,
             'usage' => $usage->toArray(),
             'limits' => $this->effectiveLimits($request->limits(), $authorization->limits()),
+            'selection_advice' => ($advice ?? $this->declaredAdvice($request))->toArray(),
             'escalated' => $escalations !== [],
             'escalation_history' => $escalations,
             'authorization' => $authorization->toArray(),
@@ -377,26 +488,39 @@ class StrategyRouter
 
     protected function finish(
         StrategyRouteResult $result,
+        StrategyRouteRequest $request,
         ?TaskTrace $trace,
         ?TaskTraceSpan $span
     ): StrategyRouteResult {
-        if (!$trace || !$span) {
-            return $result;
+        if ($trace && $span) {
+            $data = $result->toArray();
+            $data['trace_id'] = $trace->taskId();
+            $result = new StrategyRouteResult($data);
+            $trace->addSpan($span->finish($result->status(), [
+                'tool_spend' => $result->usage()['cost'],
+                'outcome_status' => $result->status(),
+                'metadata' => [
+                    'code' => $result->code(),
+                    'selected_strategy' => $result->selectedStrategy(),
+                    'selection_advice' => $result->selectionAdvice(),
+                    'usage' => $result->usage(),
+                    'attempts' => $result->attempts(),
+                ],
+            ]));
         }
 
-        $data = $result->toArray();
-        $data['trace_id'] = $trace->taskId();
-        $result = new StrategyRouteResult($data);
-        $trace->addSpan($span->finish($result->status(), [
-            'tool_spend' => $result->usage()['cost'],
-            'outcome_status' => $result->status(),
-            'metadata' => [
-                'code' => $result->code(),
-                'selected_strategy' => $result->selectedStrategy(),
-                'usage' => $result->usage(),
-                'attempts' => $result->attempts(),
-            ],
-        ]));
+        if ($this->advisor) {
+            try {
+                $this->advisor->observe($request, $result);
+            } catch (Throwable $exception) {
+                $data = $result->toArray();
+                $data['diagnostics'][] = [
+                    'code' => 'advisor_observation_exception',
+                    'message' => $exception->getMessage(),
+                ];
+                $result = new StrategyRouteResult($data);
+            }
+        }
 
         return $result;
     }

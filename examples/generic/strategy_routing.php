@@ -3,6 +3,7 @@
 require_once dirname(__DIR__) . '/bootstrap.php';
 
 use BlueFission\Automata\DecisionTree\DecisionTree;
+use BlueFission\Automata\Intelligence;
 use BlueFission\Automata\DecisionTree\DepthFirstTraceMethod;
 use BlueFission\Automata\DecisionTree\Node;
 use BlueFission\Automata\LLM\Agent\Capability\AutonomyPacket;
@@ -93,13 +94,17 @@ $request = new StrategyRouteRequest([
     ],
     'allowed_modes' => [StrategyDefinition::MODE_DETERMINISTIC],
     'deterministic_preferred' => true,
+    'selection_policy' => StrategyRouteRequest::SELECTION_ADAPTIVE,
+    'context_key' => 'incident-dispatch',
     'correlation_id' => 'correlation-strategy-example',
 ]);
 $trace = new TaskTrace('trace-strategy-example');
-$result = (new StrategyRouter([$adapter]))->route($request, $authorization, $trace);
+$intelligence = new Intelligence();
+$result = (new StrategyRouter([$adapter], $intelligence))->route($request, $authorization, $trace);
 $trace->complete($result->status());
 
 echo json_encode([
     'route' => $result->toArray(),
+    'performance' => $intelligence->strategyPerformance('tree.dispatch', '1.0', 'incident-dispatch'),
     'trace' => $trace->toArray(),
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;

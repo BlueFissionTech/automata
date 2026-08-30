@@ -41,6 +41,20 @@ class StrategyAdapterResult extends RoutingValue
             : new StrategyUsage(Arr::make($usage ?? [])->toArray());
     }
 
+    public function confidence(): ?float
+    {
+        $confidence = $this->field('confidence');
+
+        return $confidence === null ? null : (float)$confidence;
+    }
+
+    public function uncertainty(): ?float
+    {
+        $uncertainty = $this->field('uncertainty');
+
+        return $uncertainty === null ? null : (float)$uncertainty;
+    }
+
     protected function defaults(): array
     {
         return [

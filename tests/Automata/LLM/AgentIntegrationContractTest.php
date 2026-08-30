@@ -10,6 +10,7 @@ use BlueFission\Automata\LLM\Agent\Capability\CapabilityRegistry;
 use BlueFission\Automata\LLM\Agent\Integration\AgentIntegrationContract;
 use BlueFission\Automata\LLM\Agent\ToolCatalog;
 use BlueFission\Automata\Strategy\Routing\StrategyRouteRequest;
+use BlueFission\Automata\Strategy\Routing\StrategyRouteAdvice;
 use BlueFission\Automata\Strategy\Routing\StrategyRouter;
 use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\LLM\Clients\IClient;
@@ -200,7 +201,11 @@ class AgentIntegrationContractTest extends TestCase
 
         $this->assertContains(StrategyRouter::class, $feature['classes']);
         $this->assertContains(StrategyRouteRequest::class, $feature['classes']);
+        $this->assertContains(StrategyRouteAdvice::class, $feature['classes']);
         $this->assertContains('strategy.route', $feature['constructs']);
+        $this->assertContains('strategy.feedback', $feature['constructs']);
+        $this->assertContains('selection_advice', $feature['outputs']);
+        $this->assertContains('performance_snapshot', $feature['outputs']);
         $this->assertContains('escalation_history', $feature['outputs']);
     }
 

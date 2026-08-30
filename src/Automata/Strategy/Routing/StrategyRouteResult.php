@@ -48,6 +48,18 @@ class StrategyRouteResult extends RoutingValue
         return Arr::make($this->field('escalation_history') ?? [])->toArray();
     }
 
+    public function selectionAdvice(): array
+    {
+        return (new StrategyRouteAdvice(
+            Arr::make($this->field('selection_advice') ?? [])->toArray()
+        ))->toArray();
+    }
+
+    public function completed(): bool
+    {
+        return $this->status() === self::STATUS_COMPLETED;
+    }
+
     protected function defaults(): array
     {
         return [
@@ -62,6 +74,7 @@ class StrategyRouteResult extends RoutingValue
             'attempts' => [],
             'usage' => [],
             'limits' => [],
+            'selection_advice' => [],
             'escalated' => false,
             'escalation_history' => [],
             'authorization' => [],

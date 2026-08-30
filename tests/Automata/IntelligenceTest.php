@@ -136,4 +136,26 @@ class IntelligenceTest extends TestCase
         $weight = $strategies->weight('testStrategy');
         $this->assertLessThan(1, $weight);
     }
+
+    public function testPredictionFeedbackAdaptsSelectionAndPerformanceEvidence(): void
+    {
+        $first = $this->createMock(IStrategy::class);
+        $first->method('accuracy')->willReturn(0.5);
+        $first->expects($this->once())->method('predict')->willReturn('first');
+        $second = $this->createMock(IStrategy::class);
+        $second->method('accuracy')->willReturn(0.5);
+        $second->expects($this->once())->method('predict')->willReturn('second');
+
+        $this->intelligence->registerStrategyProfile($first, 'first', ['weight' => 1]);
+        $this->intelligence->registerStrategyProfile($second, 'second', ['weight' => 1]);
+
+        $this->assertSame('first', $this->intelligence->predict('incident'));
+        $this->intelligence->rejectPrediction();
+        $this->assertSame('second', $this->intelligence->predict('incident'));
+
+        $performance = $this->intelligence->strategyPerformance('first', '1.0', 'type:text');
+        $this->assertSame(1, $performance['observations']);
+        $this->assertSame(0.0, $performance['prediction_accuracy']);
+        $this->assertSame(1, $performance['feedback_samples']);
+    }
 }

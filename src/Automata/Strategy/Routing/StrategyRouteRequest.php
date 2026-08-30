@@ -9,6 +9,9 @@ class StrategyRouteRequest extends RoutingValue
     public const ESCALATE_NONE = 'none';
     public const ESCALATE_NEXT_ELIGIBLE = 'next_eligible';
 
+    public const SELECTION_DECLARED = 'declared';
+    public const SELECTION_ADAPTIVE = 'adaptive';
+
     public function id(): string
     {
         return (string)$this->field('id');
@@ -59,6 +62,26 @@ class StrategyRouteRequest extends RoutingValue
         return $this->field('escalation_policy') === self::ESCALATE_NEXT_ELIGIBLE;
     }
 
+    public function selectionPolicy(): string
+    {
+        return (string)$this->field('selection_policy');
+    }
+
+    public function adaptiveSelection(): bool
+    {
+        return $this->selectionPolicy() === self::SELECTION_ADAPTIVE;
+    }
+
+    public function contextKey(): string
+    {
+        return (string)$this->field('context_key');
+    }
+
+    public function metadata(): array
+    {
+        return Arr::make($this->field('metadata') ?? [])->toArray();
+    }
+
     protected function defaults(): array
     {
         return [
@@ -73,6 +96,8 @@ class StrategyRouteRequest extends RoutingValue
             'limits' => [],
             'allowed_modes' => [StrategyDefinition::MODE_DETERMINISTIC],
             'deterministic_preferred' => true,
+            'selection_policy' => self::SELECTION_DECLARED,
+            'context_key' => '',
             'escalation_policy' => self::ESCALATE_NONE,
             'correlation_id' => '',
             'causation_id' => '',
