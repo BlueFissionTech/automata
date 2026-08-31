@@ -2,7 +2,7 @@
 
 namespace BlueFission\Automata\LLM\Agent\Capability;
 
-use BlueFission\Arr;
+use BlueFission\DataTypes;
 
 class AutonomyDecision extends CapabilityValue
 {
@@ -18,44 +18,41 @@ class AutonomyDecision extends CapabilityValue
     public const CODE_GRANT_REVOKED = 'grant_revoked';
     public const CODE_GRANT_EXPIRED = 'grant_expired';
 
-    public function allowed(): bool
-    {
-        return (bool)$this->field('allowed');
-    }
+    protected $_data = [
+        'allowed' => false,
+        'code' => self::CODE_CAPABILITY_NOT_GRANTED,
+        'reason' => '',
+        'packet_id' => '',
+        'subject_id' => '',
+        'capability_id' => '',
+        'capability_version' => '',
+        'limits' => [],
+        'constraints' => [],
+        'risk' => [],
+        'evidence' => [],
+        'correlation_id' => '',
+        'causation_id' => '',
+        'trace_id' => '',
+        'metadata' => [],
+    ];
 
-    public function code(): string
-    {
-        return (string)$this->field('code');
-    }
+    protected $_types = [
+        'allowed' => DataTypes::BOOLEAN,
+        'code' => DataTypes::STRING,
+        'reason' => DataTypes::STRING,
+        'packet_id' => DataTypes::STRING,
+        'subject_id' => DataTypes::STRING,
+        'capability_id' => DataTypes::STRING,
+        'capability_version' => DataTypes::STRING,
+        'limits' => DataTypes::ARRAY,
+        'constraints' => DataTypes::ARRAY,
+        'risk' => DataTypes::ARRAY,
+        'evidence' => DataTypes::ARRAY,
+        'correlation_id' => DataTypes::STRING,
+        'causation_id' => DataTypes::STRING,
+        'trace_id' => DataTypes::STRING,
+        'metadata' => DataTypes::ARRAY,
+    ];
 
-    public function limits(): array
-    {
-        return Arr::make($this->field('limits') ?? [])->toArray();
-    }
-
-    public function evidence(): array
-    {
-        return Arr::make($this->field('evidence') ?? [])->toArray();
-    }
-
-    protected function defaults(): array
-    {
-        return [
-            'allowed' => false,
-            'code' => self::CODE_CAPABILITY_NOT_GRANTED,
-            'reason' => '',
-            'packet_id' => '',
-            'subject_id' => '',
-            'capability_id' => '',
-            'capability_version' => '',
-            'limits' => [],
-            'constraints' => [],
-            'risk' => [],
-            'evidence' => [],
-            'correlation_id' => '',
-            'causation_id' => '',
-            'trace_id' => '',
-            'metadata' => [],
-        ];
-    }
+    protected $_lockDataType = true;
 }

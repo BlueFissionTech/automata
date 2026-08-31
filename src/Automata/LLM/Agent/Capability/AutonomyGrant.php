@@ -2,45 +2,47 @@
 
 namespace BlueFission\Automata\LLM\Agent\Capability;
 
-use BlueFission\Arr;
+use BlueFission\DataTypes;
 use DateTimeImmutable;
 use Throwable;
 
 class AutonomyGrant extends CapabilityValue
 {
-    public function capabilityId(): string
-    {
-        return (string)$this->field('capability_id');
-    }
+    protected $_data = [
+        'capability_id' => '',
+        'capability_version' => '',
+        'subject_id' => '',
+        'granted' => false,
+        'transferable' => false,
+        'constraints' => [],
+        'limits' => [],
+        'expires_at' => null,
+        'revoked' => false,
+        'revocation_reason' => '',
+        'evidence' => [],
+        'metadata' => [],
+    ];
 
-    public function capabilityVersion(): string
-    {
-        return (string)$this->field('capability_version');
-    }
+    protected $_types = [
+        'capability_id' => DataTypes::STRING,
+        'capability_version' => DataTypes::STRING,
+        'subject_id' => DataTypes::STRING,
+        'granted' => DataTypes::BOOLEAN,
+        'transferable' => DataTypes::BOOLEAN,
+        'constraints' => DataTypes::ARRAY,
+        'limits' => DataTypes::ARRAY,
+        'expires_at' => DataTypes::GENERIC,
+        'revoked' => DataTypes::BOOLEAN,
+        'revocation_reason' => DataTypes::STRING,
+        'evidence' => DataTypes::ARRAY,
+        'metadata' => DataTypes::ARRAY,
+    ];
 
-    public function subjectId(): string
-    {
-        return (string)$this->field('subject_id');
-    }
-
-    public function granted(): bool
-    {
-        return (bool)$this->field('granted');
-    }
-
-    public function transferable(): bool
-    {
-        return (bool)$this->field('transferable');
-    }
-
-    public function revoked(): bool
-    {
-        return (bool)$this->field('revoked');
-    }
+    protected $_lockDataType = true;
 
     public function expired(?DateTimeImmutable $now = null): bool
     {
-        $expiresAt = $this->field('expires_at');
+        $expiresAt = $this->expires_at;
         if (!$expiresAt) {
             return false;
         }
@@ -58,44 +60,11 @@ class AutonomyGrant extends CapabilityValue
         string $subjectId,
         ?DateTimeImmutable $now = null
     ): bool {
-        return $this->granted()
-            && !$this->revoked()
+        return $this->granted
+            && !$this->revoked
             && !$this->expired($now)
-            && $this->capabilityId() === $capabilityId
-            && $this->capabilityVersion() === $capabilityVersion
-            && $this->subjectId() === $subjectId;
-    }
-
-    public function limits(): array
-    {
-        return Arr::make($this->field('limits') ?? [])->toArray();
-    }
-
-    public function constraints(): array
-    {
-        return Arr::make($this->field('constraints') ?? [])->toArray();
-    }
-
-    public function evidence(): array
-    {
-        return Arr::make($this->field('evidence') ?? [])->toArray();
-    }
-
-    protected function defaults(): array
-    {
-        return [
-            'capability_id' => '',
-            'capability_version' => '',
-            'subject_id' => '',
-            'granted' => false,
-            'transferable' => false,
-            'constraints' => [],
-            'limits' => [],
-            'expires_at' => null,
-            'revoked' => false,
-            'revocation_reason' => '',
-            'evidence' => [],
-            'metadata' => [],
-        ];
+            && $this->capability_id === $capabilityId
+            && $this->capability_version === $capabilityVersion
+            && $this->subject_id === $subjectId;
     }
 }
