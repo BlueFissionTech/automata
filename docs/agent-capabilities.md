@@ -16,6 +16,8 @@ Tools are registered through `ToolCatalog` and described by `ToolDefinition`. A 
 
 The model receives the definition as prompt context, but it never executes the tool directly. `ToolExecutor` validates the proposed input, checks permissions, runs the PHP tool, normalizes the result, and returns structured success or error data.
 
+For discovery and authorization above one tool call, use the provider-neutral [Capability Registry And Autonomy](agent-capability-registry.md) contracts. Registry entries describe exact capability versions without carrying executable handlers. Autonomy packets bind one subject to exact, non-transitive grants, limits, approval, expiry, revocation, evidence, and trace lineage, then return typed allow or deny decisions without performing side effects.
+
 ## Catalog Retrieval
 
 Large catalogs should be narrowed before they enter prompt context. `ToolCatalog` supports constants for filter keys, including category, permission, tags, tag-all matching, groups, taxonomy, include, exclude, limit, and parallel-safety.
