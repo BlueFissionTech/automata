@@ -65,7 +65,7 @@ class AgentIntegrationContractTest extends TestCase
     {
         $contract = AgentIntegrationContract::standard();
 
-        $this->assertSame(AgentIntegrationContract::VERSION, $contract->version());
+        $this->assertSame(AgentIntegrationContract::VERSION, $contract->version);
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_TOOLS));
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_TELEMETRY));
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_LANE_PRESSURE));
@@ -111,7 +111,7 @@ class AgentIntegrationContractTest extends TestCase
 
     public function testContractTemplateDefinesAdapterOwnedUpstreamShape(): void
     {
-        $template = AgentIntegrationContract::standard()->contractTemplate();
+        $template = AgentIntegrationContract::standard()->contract_template;
 
         $this->assertSame('family.adapter.contract', $template['name']);
         $this->assertSame('adapter-to-upstream-runtime', $template['direction']);
@@ -123,10 +123,10 @@ class AgentIntegrationContractTest extends TestCase
     {
         $contract = AgentIntegrationContract::standard();
 
-        $this->assertContains(AgentHook::SESSION_START, $contract->hooks());
-        $this->assertContains(AgentHook::HUMAN_REVIEW_DECISION, $contract->hooks());
-        $this->assertContains(ToolCatalog::FILTER_TAXONOMY, $contract->toolCatalogFilters());
-        $this->assertContains(ToolCatalog::FILTER_PARALLEL_SAFE, $contract->toolCatalogFilters());
+        $this->assertContains(AgentHook::SESSION_START, $contract->hooks);
+        $this->assertContains(AgentHook::HUMAN_REVIEW_DECISION, $contract->hooks);
+        $this->assertContains(ToolCatalog::FILTER_TAXONOMY, $contract->tool_catalog_filters);
+        $this->assertContains(ToolCatalog::FILTER_PARALLEL_SAFE, $contract->tool_catalog_filters);
     }
 
     public function testContractJsonCanSeedConformanceFixtures(): void
