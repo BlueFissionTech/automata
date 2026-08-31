@@ -29,5 +29,6 @@ Authorization returns an `AutonomyDecision`; it never executes a capability. Unk
 - Delegation `CapabilityGrant` remains the coordinator-to-worker grant used by hierarchical orchestration. An autonomy grant can describe the wider host authorization boundary, but it does not make delegation grants transitive.
 - Governance and human-review classes remain responsible for host review workflows. The packet only carries the resulting approval state and reference.
 - Providers, credentials, installation, transport, side effects, and usage accounting remain adapter or host responsibilities.
+- `StrategyRouter` may consume an allowed `AutonomyDecision`, but it rechecks the exact subject and capability version and does not treat registry discovery as authority.
 
 See `examples/generic/agent_capability_registry.php` for a deterministic allowed decision and a denied version mismatch.

@@ -9,6 +9,9 @@ use BlueFission\Automata\LLM\Agent\Capability\AutonomyPacket;
 use BlueFission\Automata\LLM\Agent\Capability\CapabilityRegistry;
 use BlueFission\Automata\LLM\Agent\Integration\AgentIntegrationContract;
 use BlueFission\Automata\LLM\Agent\ToolCatalog;
+use BlueFission\Automata\Strategy\Routing\StrategyRouteRequest;
+use BlueFission\Automata\Strategy\Routing\StrategyRouteAdvice;
+use BlueFission\Automata\Strategy\Routing\StrategyRouter;
 use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
@@ -68,6 +71,7 @@ class AgentIntegrationContractTest extends TestCase
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_LANE_PRESSURE));
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_CAPABILITY_VOCABULARY));
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_CAPABILITY_REGISTRY));
+        $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_STRATEGY_ROUTING));
         $this->assertTrue($contract->supports(AgentIntegrationContract::FEATURE_QUALIFICATION));
         $this->assertSame(
             'Deterministic tool definitions, catalog retrieval, execution, and structured results.',
@@ -101,6 +105,7 @@ class AgentIntegrationContractTest extends TestCase
         $this->assertSame(AgentIntegrationContract::FEATURE_MCP, $template['mcp']['feature']);
         $this->assertSame(AgentIntegrationContract::FEATURE_CAPABILITY_VOCABULARY, $template['capability']['feature']);
         $this->assertSame(AgentIntegrationContract::FEATURE_CAPABILITY_REGISTRY, $template['autonomy']['feature']);
+        $this->assertSame(AgentIntegrationContract::FEATURE_STRATEGY_ROUTING, $template['strategy']['feature']);
         $this->assertSame($template['tool'], $contract->bindings(AgentIntegrationContract::TEMPLATE_TOOL));
     }
 
@@ -128,12 +133,13 @@ class AgentIntegrationContractTest extends TestCase
     {
         $json = AgentIntegrationContract::standard()->toJson();
 
-        $this->assertStringContainsString('"version":"1.4.0"', $json);
+        $this->assertStringContainsString('"version":"1.5.0"', $json);
         $this->assertStringContainsString('"agent.tool_contracts"', $json);
         $this->assertStringContainsString('"agent.holoscene_comprehension"', $json);
         $this->assertStringContainsString('"agent.lane_pressure"', $json);
         $this->assertStringContainsString('"agent.capability_vocabulary"', $json);
         $this->assertStringContainsString('"agent.capability_registry"', $json);
+        $this->assertStringContainsString('"strategy.routing"', $json);
         $this->assertStringContainsString('"contract_template"', $json);
         $this->assertStringNotContainsString('"jenss"', $json);
         $this->assertStringNotContainsString('"jenerator"', $json);
@@ -186,6 +192,21 @@ class AgentIntegrationContractTest extends TestCase
         $this->assertContains(AutonomyPacket::class, $feature['classes']);
         $this->assertContains('capability.registry', $feature['constructs']);
         $this->assertContains('autonomy.decision', $feature['outputs']);
+    }
+
+    public function testStrategyRoutingFeatureAdvertisesTypedRouterContracts(): void
+    {
+        $feature = AgentIntegrationContract::standard()
+            ->feature(AgentIntegrationContract::FEATURE_STRATEGY_ROUTING);
+
+        $this->assertContains(StrategyRouter::class, $feature['classes']);
+        $this->assertContains(StrategyRouteRequest::class, $feature['classes']);
+        $this->assertContains(StrategyRouteAdvice::class, $feature['classes']);
+        $this->assertContains('strategy.route', $feature['constructs']);
+        $this->assertContains('strategy.feedback', $feature['constructs']);
+        $this->assertContains('selection_advice', $feature['outputs']);
+        $this->assertContains('performance_snapshot', $feature['outputs']);
+        $this->assertContains('escalation_history', $feature['outputs']);
     }
 
     public function testAgentUsesDevelationPrototypeCarrier(): void

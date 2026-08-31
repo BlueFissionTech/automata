@@ -17,6 +17,7 @@ use BlueFission\Automata\Goal\GoalDecision;
 use BlueFission\Automata\Goal\GoalManager;
 use BlueFission\Automata\Language\Reader;
 use BlueFission\Automata\Language\Statement;
+use BlueFission\Automata\Intelligence;
 use BlueFission\Automata\LLM\Agent;
 use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\AgentSession;
@@ -42,6 +43,14 @@ use BlueFission\Automata\Qualification\QualificationAudit;
 use BlueFission\Automata\Qualification\QualificationResult;
 use BlueFission\Automata\Qualification\QualificationScore;
 use BlueFission\Automata\Qualification\QualificationScorer;
+use BlueFission\Automata\Strategy\Routing\Adapter\DecisionTreeRouteAdapter;
+use BlueFission\Automata\Strategy\Routing\IStrategyRouteAdapter;
+use BlueFission\Automata\Strategy\Routing\IStrategyRouteAdvisor;
+use BlueFission\Automata\Strategy\Routing\StrategyDefinition;
+use BlueFission\Automata\Strategy\Routing\StrategyRouteAdvice;
+use BlueFission\Automata\Strategy\Routing\StrategyRouteRequest;
+use BlueFission\Automata\Strategy\Routing\StrategyRouteResult;
+use BlueFission\Automata\Strategy\Routing\StrategyRouter;
 use BlueFission\Automata\LLM\Agent\ToolCatalog;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
 use BlueFission\Automata\LLM\Agent\ToolExecutionResult;
@@ -52,7 +61,7 @@ use BlueFission\Obj;
 
 class AgentIntegrationContract extends Obj
 {
-    public const VERSION = '1.4.0';
+    public const VERSION = '1.5.0';
 
     public const FEATURE_AGENT = 'agent.runtime';
     public const FEATURE_TOOLS = 'agent.tool_contracts';
@@ -69,6 +78,7 @@ class AgentIntegrationContract extends Obj
     public const FEATURE_LANE_PRESSURE = 'agent.lane_pressure';
     public const FEATURE_CAPABILITY_VOCABULARY = 'agent.capability_vocabulary';
     public const FEATURE_CAPABILITY_REGISTRY = 'agent.capability_registry';
+    public const FEATURE_STRATEGY_ROUTING = 'strategy.routing';
     public const FEATURE_QUALIFICATION = 'agent.qualification';
 
     public const TEMPLATE_AGENT = 'agent';
@@ -86,6 +96,7 @@ class AgentIntegrationContract extends Obj
     public const TEMPLATE_LANES = 'lanes';
     public const TEMPLATE_CAPABILITY = 'capability';
     public const TEMPLATE_AUTONOMY = 'autonomy';
+    public const TEMPLATE_STRATEGY = 'strategy';
     public const TEMPLATE_QUALIFICATION = 'qualification';
 
     protected $_types = [
@@ -319,6 +330,13 @@ class AgentIntegrationContract extends Obj
                     'inputs' => ['capability_id', 'capability_version', 'subject_id', 'requested_capabilities', 'exact_grants', 'limits', 'approval_state'],
                     'outputs' => ['capability_definition', 'registry_snapshot', 'autonomy.decision'],
                 ],
+                self::FEATURE_STRATEGY_ROUTING => [
+                    'summary' => 'Deterministic-first strategy selection with exact authority, adaptive advice, inert eligibility, hard budgets, trace lineage, and explicit escalation.',
+                    'classes' => [StrategyDefinition::class, StrategyRouteRequest::class, StrategyRouteResult::class, StrategyRouteAdvice::class, StrategyRouter::class, IStrategyRouteAdapter::class, IStrategyRouteAdvisor::class, Intelligence::class, DecisionTreeRouteAdapter::class],
+                    'constructs' => ['strategy.definition', 'strategy.adapter', 'strategy.advice', 'strategy.route', 'strategy.attempt', 'strategy.feedback', 'strategy.performance', 'strategy.escalation'],
+                    'inputs' => ['autonomy_decision', 'capability_id', 'capability_version', 'candidate_versions', 'eligibility', 'limits', 'allowed_modes', 'selection_policy', 'context_key', 'outcome_feedback', 'escalation_policy'],
+                    'outputs' => ['strategy_route_result', 'selected_strategy', 'selection_advice', 'performance_snapshot', 'attempts', 'usage', 'escalation_history', 'task_trace_span'],
+                ],
                 self::FEATURE_QUALIFICATION => [
                     'summary' => 'Advisory qualification scoring, safe nurture suggestions, bounded follow-up plans, and audit records.',
                     'classes' => [QualificationScorer::class, QualificationScore::class, NurtureSuggestion::class, FollowUpPlan::class, QualificationResult::class, QualificationAudit::class],
@@ -429,6 +447,7 @@ class AgentIntegrationContract extends Obj
                 self::TEMPLATE_LANES => ['feature' => self::FEATURE_LANE_PRESSURE, 'constructs' => ['lane.semantic', 'lane.operational', 'lane.execution', 'lane.pressure', 'lane.profile.long_horizon']],
                 self::TEMPLATE_CAPABILITY => ['feature' => self::FEATURE_CAPABILITY_VOCABULARY, 'constructs' => ['capability.goal', 'capability.statement', 'capability.feedback', 'capability.domain_evaluation', 'capability.lane_pressure']],
                 self::TEMPLATE_AUTONOMY => ['feature' => self::FEATURE_CAPABILITY_REGISTRY, 'constructs' => ['capability.definition', 'capability.registry', 'autonomy.grant', 'autonomy.packet', 'autonomy.authorize']],
+                self::TEMPLATE_STRATEGY => ['feature' => self::FEATURE_STRATEGY_ROUTING, 'constructs' => ['strategy.definition', 'strategy.adapter', 'strategy.route', 'strategy.attempt', 'strategy.escalation']],
                 self::TEMPLATE_QUALIFICATION => ['feature' => self::FEATURE_QUALIFICATION, 'constructs' => ['qualification.criterion', 'qualification.score', 'qualification.suggestion', 'qualification.follow_up', 'qualification.audit']],
             ],
             'hooks' => AgentHook::all(),
@@ -452,6 +471,7 @@ class AgentIntegrationContract extends Obj
                 'Holoscene episodes use scoped working memory and snapshots rather than raw prompt-only memory coupling.',
                 'Capability vocabulary stays package-neutral and maps to stable Automata-owned classes or feature ids.',
                 'Capability registry entries are descriptive; only exact approved autonomy grants produce allowed decisions.',
+                'Strategy routes require exact autonomy decisions, reject side-effecting adapters, enforce budgets, and gate learned or generative escalation explicitly.',
                 'Conformance fixtures cover successful execution, blocked execution, review steering, and trace export.',
             ],
         ];
