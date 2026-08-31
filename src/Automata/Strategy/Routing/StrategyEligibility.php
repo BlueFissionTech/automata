@@ -2,36 +2,28 @@
 
 namespace BlueFission\Automata\Strategy\Routing;
 
-use BlueFission\Arr;
+use BlueFission\DataTypes;
 
 class StrategyEligibility extends RoutingValue
 {
     public const CODE_ELIGIBLE = 'eligible';
     public const CODE_INELIGIBLE = 'ineligible';
 
-    public function eligible(): bool
-    {
-        return (bool)$this->field('eligible');
-    }
+    protected $_data = [
+        'eligible' => false,
+        'code' => self::CODE_INELIGIBLE,
+        'reasons' => [],
+        'evidence' => [],
+        'metadata' => [],
+    ];
 
-    public function code(): string
-    {
-        return (string)$this->field('code');
-    }
+    protected $_types = [
+        'eligible' => DataTypes::BOOLEAN,
+        'code' => DataTypes::STRING,
+        'reasons' => DataTypes::ARRAY,
+        'evidence' => DataTypes::ARRAY,
+        'metadata' => DataTypes::ARRAY,
+    ];
 
-    public function reasons(): array
-    {
-        return Arr::make($this->field('reasons') ?? [])->toArray();
-    }
-
-    protected function defaults(): array
-    {
-        return [
-            'eligible' => false,
-            'code' => self::CODE_INELIGIBLE,
-            'reasons' => [],
-            'evidence' => [],
-            'metadata' => [],
-        ];
-    }
+    protected $_lockDataType = true;
 }

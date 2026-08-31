@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\Strategy\Routing;
 
 use BlueFission\Arr;
+use BlueFission\DataTypes;
 
 class StrategyRouteRequest extends RoutingValue
 {
@@ -12,97 +13,62 @@ class StrategyRouteRequest extends RoutingValue
     public const SELECTION_DECLARED = 'declared';
     public const SELECTION_ADAPTIVE = 'adaptive';
 
-    public function id(): string
-    {
-        return (string)$this->field('id');
-    }
+    protected $_data = [
+        'id' => '',
+        'subject_id' => '',
+        'capability_id' => '',
+        'capability_version' => '',
+        'candidates' => [],
+        'input' => null,
+        'fixtures' => [],
+        'eligibility' => [],
+        'limits' => [],
+        'allowed_modes' => [StrategyDefinition::MODE_DETERMINISTIC],
+        'deterministic_preferred' => true,
+        'selection_policy' => self::SELECTION_DECLARED,
+        'context_key' => '',
+        'escalation_policy' => self::ESCALATE_NONE,
+        'correlation_id' => '',
+        'causation_id' => '',
+        'trace_id' => '',
+        'metadata' => [],
+    ];
 
-    public function subjectId(): string
-    {
-        return (string)$this->field('subject_id');
-    }
+    protected $_types = [
+        'id' => DataTypes::STRING,
+        'subject_id' => DataTypes::STRING,
+        'capability_id' => DataTypes::STRING,
+        'capability_version' => DataTypes::STRING,
+        'candidates' => DataTypes::ARRAY,
+        'input' => DataTypes::GENERIC,
+        'fixtures' => DataTypes::ARRAY,
+        'eligibility' => DataTypes::ARRAY,
+        'limits' => DataTypes::ARRAY,
+        'allowed_modes' => DataTypes::ARRAY,
+        'deterministic_preferred' => DataTypes::BOOLEAN,
+        'selection_policy' => DataTypes::STRING,
+        'context_key' => DataTypes::STRING,
+        'escalation_policy' => DataTypes::STRING,
+        'correlation_id' => DataTypes::STRING,
+        'causation_id' => DataTypes::STRING,
+        'trace_id' => DataTypes::STRING,
+        'metadata' => DataTypes::ARRAY,
+    ];
 
-    public function capabilityId(): string
-    {
-        return (string)$this->field('capability_id');
-    }
-
-    public function capabilityVersion(): string
-    {
-        return (string)$this->field('capability_version');
-    }
-
-    public function candidates(): array
-    {
-        return Arr::make($this->field('candidates') ?? [])->toArray();
-    }
-
-    public function input(): mixed
-    {
-        return $this->field('input');
-    }
-
-    public function limits(): array
-    {
-        return Arr::make($this->field('limits') ?? [])->toArray();
-    }
+    protected $_lockDataType = true;
 
     public function allowsMode(string $mode): bool
     {
-        return Arr::has(Arr::make($this->field('allowed_modes') ?? [])->toArray(), $mode, true);
-    }
-
-    public function deterministicPreferred(): bool
-    {
-        return (bool)$this->field('deterministic_preferred');
+        return Arr::has($this->allowed_modes, $mode, true);
     }
 
     public function canEscalate(): bool
     {
-        return $this->field('escalation_policy') === self::ESCALATE_NEXT_ELIGIBLE;
-    }
-
-    public function selectionPolicy(): string
-    {
-        return (string)$this->field('selection_policy');
+        return $this->escalation_policy === self::ESCALATE_NEXT_ELIGIBLE;
     }
 
     public function adaptiveSelection(): bool
     {
-        return $this->selectionPolicy() === self::SELECTION_ADAPTIVE;
-    }
-
-    public function contextKey(): string
-    {
-        return (string)$this->field('context_key');
-    }
-
-    public function metadata(): array
-    {
-        return Arr::make($this->field('metadata') ?? [])->toArray();
-    }
-
-    protected function defaults(): array
-    {
-        return [
-            'id' => '',
-            'subject_id' => '',
-            'capability_id' => '',
-            'capability_version' => '',
-            'candidates' => [],
-            'input' => null,
-            'fixtures' => [],
-            'eligibility' => [],
-            'limits' => [],
-            'allowed_modes' => [StrategyDefinition::MODE_DETERMINISTIC],
-            'deterministic_preferred' => true,
-            'selection_policy' => self::SELECTION_DECLARED,
-            'context_key' => '',
-            'escalation_policy' => self::ESCALATE_NONE,
-            'correlation_id' => '',
-            'causation_id' => '',
-            'trace_id' => '',
-            'metadata' => [],
-        ];
+        return $this->selection_policy === self::SELECTION_ADAPTIVE;
     }
 }

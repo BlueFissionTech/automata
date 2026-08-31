@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\Strategy\Routing;
 
 use BlueFission\Arr;
+use BlueFission\DataTypes;
 
 class StrategyDefinition extends RoutingValue
 {
@@ -15,39 +16,45 @@ class StrategyDefinition extends RoutingValue
     public const AVAILABILITY_UNAVAILABLE = 'unavailable';
     public const AVAILABILITY_UNKNOWN = 'unknown';
 
-    public function id(): string
-    {
-        return (string)$this->field('id');
-    }
+    protected $_data = [
+        'id' => '',
+        'version' => '',
+        'capability_id' => '',
+        'capability_version' => '',
+        'family' => '',
+        'mode' => self::MODE_DETERMINISTIC,
+        'priority' => 100,
+        'side_effect_free' => false,
+        'availability' => self::AVAILABILITY_UNKNOWN,
+        'inputs' => [],
+        'outputs' => [],
+        'constraints' => [],
+        'evidence' => [],
+        'metadata' => [],
+    ];
 
-    public function version(): string
-    {
-        return (string)$this->field('version');
-    }
+    protected $_types = [
+        'id' => DataTypes::STRING,
+        'version' => DataTypes::STRING,
+        'capability_id' => DataTypes::STRING,
+        'capability_version' => DataTypes::STRING,
+        'family' => DataTypes::STRING,
+        'mode' => DataTypes::STRING,
+        'priority' => DataTypes::INTEGER,
+        'side_effect_free' => DataTypes::BOOLEAN,
+        'availability' => DataTypes::STRING,
+        'inputs' => DataTypes::ARRAY,
+        'outputs' => DataTypes::ARRAY,
+        'constraints' => DataTypes::ARRAY,
+        'evidence' => DataTypes::ARRAY,
+        'metadata' => DataTypes::ARRAY,
+    ];
 
-    public function capabilityId(): string
-    {
-        return (string)$this->field('capability_id');
-    }
-
-    public function capabilityVersion(): string
-    {
-        return (string)$this->field('capability_version');
-    }
-
-    public function mode(): string
-    {
-        return (string)$this->field('mode');
-    }
+    protected $_lockDataType = true;
 
     public function deterministic(): bool
     {
-        return $this->mode() === self::MODE_DETERMINISTIC;
-    }
-
-    public function sideEffectFree(): bool
-    {
-        return (bool)$this->field('side_effect_free');
+        return $this->mode === self::MODE_DETERMINISTIC;
     }
 
     public function available(): bool
@@ -55,26 +62,6 @@ class StrategyDefinition extends RoutingValue
         return Arr::has([
             self::AVAILABILITY_AVAILABLE,
             self::AVAILABILITY_DEGRADED,
-        ], (string)$this->field('availability'), true);
-    }
-
-    protected function defaults(): array
-    {
-        return [
-            'id' => '',
-            'version' => '',
-            'capability_id' => '',
-            'capability_version' => '',
-            'family' => '',
-            'mode' => self::MODE_DETERMINISTIC,
-            'priority' => 100,
-            'side_effect_free' => false,
-            'availability' => self::AVAILABILITY_UNKNOWN,
-            'inputs' => [],
-            'outputs' => [],
-            'constraints' => [],
-            'evidence' => [],
-            'metadata' => [],
-        ];
+        ], $this->availability, true);
     }
 }

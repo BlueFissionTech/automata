@@ -82,7 +82,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
     public function registerStrategy(IStrategy $strategy, string $name)
     {
         $this->_strategies->add($strategy, $name);
-        if (!isset($this->_strategyProfiles[$name])) {
+        if (!Arr::hasKey($this->_strategyProfiles, $name)) {
             $this->_strategyProfiles[$name] = [
                 'types' => [],
                 'tags' => [],
@@ -206,7 +206,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
     public function scan($input)
     {
         $dataType = $this->getType($input);
-        if ($dataType && isset($this->_strategyGroups[$dataType])) {
+        if ($dataType && Arr::hasKey($this->_strategyGroups, $dataType)) {
             $group = $this->_strategyGroups[$dataType];
             $strategies = $group->getStrategies();
 
@@ -269,7 +269,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
         $input = Dev::apply('automata.intelligence.predict.1', $input);
 
         $strategies = $this->_strategies->toArray();
-        if (empty($strategies)) {
+        if (Arr::isEmpty($strategies)) {
             return null;
         }
 
@@ -431,7 +431,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
     public function observe(StrategyRouteRequest $request, StrategyRouteResult $result): void
     {
         $contextKey = $this->requestContextKey($request);
-        foreach ($result->attempts() as $attempt) {
+        foreach ($result->attempts as $attempt) {
             if (!($attempt['executed'] ?? false)) {
                 continue;
             }
@@ -521,7 +521,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
     private function analyzeSegment(array $segment, array $options): array
     {
         $strategies = $this->resolveStrategiesForType($segment['type']);
-        $budget = $this->resolveStrategyBudget(count($strategies), $options);
+        $budget = $this->resolveStrategyBudget(Arr::count($strategies), $options);
 
         $selected = Arr::slice($strategies, 0, $budget);
         $insights = [];
@@ -581,7 +581,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
             $profile = $this->_strategyProfiles[$name] ?? [];
             $types = $profile['types'] ?? [];
 
-            if (!empty($types) && !Arr::make($types)->contains($type, true)) {
+            if (Arr::isNotEmpty($types) && !Arr::contains($types, $type, true)) {
                 continue;
             }
 
@@ -593,7 +593,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
             ];
         }
 
-        usort($strategies, function (array $a, array $b): int {
+        $strategies = Arr::sort($strategies, function (array $a, array $b): int {
             if ($a['weight'] === $b['weight']) {
                 return 0;
             }
@@ -610,20 +610,20 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
             return 0;
         }
 
-        if (isset($options['strategy_budget'])) {
+        if (Arr::hasKey($options, 'strategy_budget')) {
             $budget = (int)$options['strategy_budget'];
             return Num::max(1, Num::min($strategyCount, $budget));
         }
 
-        if (isset($options['attention_score'])) {
+        if (Arr::hasKey($options, 'attention_score')) {
             $score = (float)$options['attention_score'];
             $score = Num::max(0.0, Num::min(1.0, $score));
             $budget = (int)Num::max(1, ceil($score * $strategyCount));
 
-            if (isset($options['max_strategy_budget'])) {
+            if (Arr::hasKey($options, 'max_strategy_budget')) {
                 $budget = Num::min($budget, (int)$options['max_strategy_budget']);
             }
-            if (isset($options['min_strategy_budget'])) {
+            if (Arr::hasKey($options, 'min_strategy_budget')) {
                 $budget = Num::max($budget, (int)$options['min_strategy_budget']);
             }
 
@@ -635,7 +635,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
 
     private function segmentInput($input, array $options): array
     {
-        if (isset($options['segmenter']) && ($options['segmenter'] instanceof Func || is_callable($options['segmenter']))) {
+        if (Arr::hasKey($options, 'segmenter') && Func::is($options['segmenter'])) {
             $segments = $this->invokeFunc($options['segmenter'], [$input, $options, $this]);
             return $this->normalizeSegments($segments, $options);
         }
@@ -649,11 +649,11 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
         $items = [];
         $baseMeta = $options['meta'] ?? [];
 
-        if (is_array($input)) {
-            if ($this->isAssociative($input) && isset($input['segments']) && is_array($input['segments'])) {
+        if (Arr::is($input)) {
+            if ($this->isAssociative($input) && Arr::hasKey($input, 'segments') && Arr::is($input['segments'])) {
                 $items = $input['segments'];
                 $baseMeta = $this->mergeMap($baseMeta, $input['meta'] ?? []);
-            } elseif ($this->isAssociative($input) && (array_key_exists('payload', $input) || array_key_exists('type', $input))) {
+            } elseif ($this->isAssociative($input) && (Arr::hasKey($input, 'payload') || Arr::hasKey($input, 'type'))) {
                 $items = [$input];
             } else {
                 $items = $input;
@@ -667,7 +667,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
             $type = null;
             $meta = $baseMeta;
 
-            if (is_array($item) && (array_key_exists('payload', $item) || array_key_exists('type', $item))) {
+            if (Arr::is($item) && (Arr::hasKey($item, 'payload') || Arr::hasKey($item, 'type'))) {
                 $payload = $item['payload'] ?? ($item['content'] ?? $item);
                 $type = $item['type'] ?? null;
                 $meta = $this->mergeMap($meta, $item['meta'] ?? []);
@@ -675,7 +675,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
 
             $type = $type ?: ($this->getType($payload) ?? InputType::TEXT);
 
-            if (isset($options['segment_meta']) && ($options['segment_meta'] instanceof Func || is_callable($options['segment_meta']))) {
+            if (Arr::hasKey($options, 'segment_meta') && Func::is($options['segment_meta'])) {
                 $extraMeta = (array)$this->invokeFunc($options['segment_meta'], [$payload, $type, $index, $meta, $this]);
                 $meta = $this->mergeMap($meta, $extraMeta);
             }
@@ -699,7 +699,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
         $intents = $options['intents'] ?? $this->_intents;
 
         $intentSignals = [];
-        if (isset($options['intent_classifier']) && ($options['intent_classifier'] instanceof Func || is_callable($options['intent_classifier']))) {
+        if (Arr::hasKey($options, 'intent_classifier') && Func::is($options['intent_classifier'])) {
             $intentSignals[] = $this->invokeFunc($options['intent_classifier'], [$payload, $type, $meta, $context, $intents, $this]);
         }
 
@@ -707,29 +707,29 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
             $intentSignals[] = $this->runIntentAnalyzer($analyzer, $payload, $context, $intents);
         }
 
-        if (!empty($intentSignals)) {
+        if (Arr::isNotEmpty($intentSignals)) {
             $meta['intent'] = $intentSignals;
         }
 
         $structureSignals = [];
-        if (isset($options['structure_classifier']) && ($options['structure_classifier'] instanceof Func || is_callable($options['structure_classifier']))) {
+        if (Arr::hasKey($options, 'structure_classifier') && Func::is($options['structure_classifier'])) {
             $structureSignals[] = $this->invokeFunc($options['structure_classifier'], [$payload, $type, $meta, $context, $this]);
         }
         foreach ($this->_structureClassifiers as $classifier) {
             $structureSignals[] = $this->invokeFunc($classifier, [$payload, $type, $meta, $context, $this]);
         }
-        if (!empty($structureSignals)) {
+        if (Arr::isNotEmpty($structureSignals)) {
             $meta['structure'] = $structureSignals;
         }
 
         $contextSignals = [];
-        if (isset($options['context_provider']) && ($options['context_provider'] instanceof Func || is_callable($options['context_provider']))) {
+        if (Arr::hasKey($options, 'context_provider') && Func::is($options['context_provider'])) {
             $contextSignals[] = $this->invokeFunc($options['context_provider'], [$payload, $type, $meta, $context, $this]);
         }
         foreach ($this->_contextProviders as $provider) {
             $contextSignals[] = $this->invokeFunc($provider, [$payload, $type, $meta, $context, $this]);
         }
-        if (!empty($contextSignals)) {
+        if (Arr::isNotEmpty($contextSignals)) {
             $meta['context'] = $contextSignals;
         }
 
@@ -742,7 +742,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
             return $analyzer->analyze((string)$payload, $context, $intents);
         }
 
-        if ($analyzer instanceof Func || is_callable($analyzer)) {
+        if (Func::is($analyzer)) {
             return $this->invokeFunc($analyzer, [$payload, $context, $intents, $this]);
         }
 
@@ -759,7 +759,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
 
         $contextObj = new Context();
 
-        if (is_array($context)) {
+        if (Arr::is($context)) {
             foreach ($context as $key => $value) {
                 $contextObj->set($key, $value);
             }
@@ -790,8 +790,8 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
         $contextScores = $this->aggregateSignals($segments, 'context');
 
         return [
-            'segment_count' => count($segments),
-            'insight_count' => count($insights),
+            'segment_count' => Arr::count($segments),
+            'insight_count' => Arr::count($insights),
             'segment_types' => $segmentTypes,
             'strategy_scores' => $strategyScores,
             'top_strategies' => $topStrategies,
@@ -806,11 +806,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
 
     private function isAssociative(array $value): bool
     {
-        if ($value === []) {
-            return false;
-        }
-
-        return Arr::keys($value) !== range(0, count($value) - 1);
+        return Arr::isNotEmpty($value) && Arr::isAssoc($value);
     }
 
     private function aggregateSignals(array $segments, string $metaKey): array
@@ -818,12 +814,12 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
         $scores = [];
 
         foreach ($segments as $segment) {
-            if (!isset($segment['meta'][$metaKey])) {
+            if (!Arr::hasKey($segment['meta'], $metaKey)) {
                 continue;
             }
 
             $signals = $segment['meta'][$metaKey];
-            if (!is_array($signals)) {
+            if (!Arr::is($signals)) {
                 $signals = [$signals];
             }
 
@@ -850,9 +846,9 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
             $signal = $signal->toArray();
         }
 
-        if (is_array($signal)) {
+        if (Arr::is($signal)) {
             if ($this->isAssociative($signal)) {
-                if (isset($signal['label'])) {
+                if (Arr::hasKey($signal, 'label')) {
                     $label = (string)$signal['label'];
                     $score = $signal['score'] ?? ($signal['weight'] ?? 1);
                     return [$label => $this->normalizeScore($score, $label)];
@@ -875,7 +871,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
             foreach ($signal as $value) {
                 if (is_scalar($value)) {
                     $entries[(string)$value] = 1.0;
-                } elseif (is_array($value) && $this->isAssociative($value)) {
+                } elseif (Arr::is($value) && $this->isAssociative($value)) {
                     $entries = $this->mergeMap($entries, $this->normalizeSignal($value));
                 }
             }
@@ -940,20 +936,25 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
             $qualitySignals[] = $this->boundedRatio($registeredAccuracy);
         }
 
-        $quality = $qualitySignals === []
-            ? 0.5
-            : array_sum($qualitySignals) / count($qualitySignals);
+        $quality = $this->averageValues($qualitySignals, 0.5);
         $confidence = (float)$performance['confidence'];
         if ($registeredAccuracy !== null) {
             $confidence = Num::max(0.25, $confidence);
         }
-        $quality = (0.5 * (1.0 - $confidence)) + ($quality * $confidence);
+        $quality = Num::plus(
+            Num::times(0.5, Num::minus(1.0, $confidence)),
+            Num::times($quality, $confidence)
+        );
 
-        $penalty = ((float)$performance['average_latency_ms'] / 1000)
-            + (float)$performance['average_cost']
-            + (float)$performance['average_energy'];
+        $penalty = Num::plus(
+            Num::divide((float)$performance['average_latency_ms'], 1000),
+            Num::plus((float)$performance['average_cost'], (float)$performance['average_energy'])
+        );
 
-        return Num::max(0.0, $baseWeight) * Num::divide($quality, 1.0 + $penalty);
+        return Num::times(
+            Num::max(0.0, $baseWeight),
+            Num::divide($quality, Num::plus(1.0, $penalty))
+        );
     }
 
     private function recordPerformance(
@@ -975,18 +976,18 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
         foreach ($contexts as $context) {
             $bucket = $this->_strategyPerformance[$key][$context] ?? $this->performanceDefaults();
             if ($metrics['observation'] ?? false) {
-                $bucket['observations']++;
+                $bucket['observations'] = (int)Num::plus($bucket['observations'], 1);
             }
-            if (array_key_exists('successful', $metrics) && $metrics['successful'] !== null) {
-                $bucket['outcome_samples']++;
+            if (Arr::hasKey($metrics, 'successful') && $metrics['successful'] !== null) {
+                $bucket['outcome_samples'] = (int)Num::plus($bucket['outcome_samples'], 1);
                 if ((bool)$metrics['successful']) {
-                    $bucket['successes']++;
+                    $bucket['successes'] = (int)Num::plus($bucket['successes'], 1);
                 } else {
-                    $bucket['failures']++;
+                    $bucket['failures'] = (int)Num::plus($bucket['failures'], 1);
                 }
             }
             if ($metrics['feedback'] ?? false) {
-                $bucket['feedback_samples']++;
+                $bucket['feedback_samples'] = (int)Num::plus($bucket['feedback_samples'], 1);
             }
 
             foreach ([
@@ -998,18 +999,21 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
                 'energy' => 'energy',
                 'confidence' => 'confidence',
             ] as $metric => $bucketPrefix) {
-                if (!array_key_exists($metric, $metrics) || $metrics[$metric] === null) {
+                if (!Arr::hasKey($metrics, $metric) || $metrics[$metric] === null) {
                     continue;
                 }
 
                 $value = (float)$metrics[$metric];
-                if (in_array($metric, ['accuracy', 'prediction_accuracy', 'score', 'confidence'], true)) {
+                if (Arr::has(['accuracy', 'prediction_accuracy', 'score', 'confidence'], $metric, true)) {
                     $value = $this->boundedRatio($value);
                 } else {
                     $value = Num::max(0.0, $value);
                 }
-                $bucket[$bucketPrefix . '_total'] += $value;
-                $bucket[$bucketPrefix . '_samples']++;
+                $bucket[$bucketPrefix . '_total'] = Num::plus($bucket[$bucketPrefix . '_total'], $value);
+                $bucket[$bucketPrefix . '_samples'] = (int)Num::plus(
+                    $bucket[$bucketPrefix . '_samples'],
+                    1
+                );
             }
 
             $this->_strategyPerformance[$key][$context] = $bucket;
@@ -1028,22 +1032,28 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
         $averageCost = $this->averageMetric($bucket, 'cost') ?? 0.0;
         $averageEnergy = $this->averageMetric($bucket, 'energy') ?? 0.0;
         $averageConfidence = $this->averageMetric($bucket, 'confidence');
-        $sampleCount = $bucket['observations'] + $bucket['feedback_samples'];
+        $sampleCount = Num::plus($bucket['observations'], $bucket['feedback_samples']);
         $confidence = Num::min(1.0, Num::divide($sampleCount, 5));
         if ($averageConfidence !== null) {
             $confidence = Num::max($confidence, $averageConfidence);
         }
 
-        $qualitySignals = array_values(array_filter([
+        $qualitySignals = Arr::make([
             $successRate,
             $accuracy,
             $predictionAccuracy,
             $averageScore,
-        ], static fn ($value): bool => $value !== null));
-        $quality = $qualitySignals === [] ? 0.5 : array_sum($qualitySignals) / count($qualitySignals);
+        ])->filter(static fn ($value): bool => $value !== null)->values()->toArray();
+        $quality = $this->averageValues($qualitySignals, 0.5);
         $efficiency = Num::divide(
             $quality,
-            1.0 + ($averageLatency / 1000) + $averageCost + $averageEnergy
+            Num::plus(
+                1.0,
+                Num::plus(
+                    Num::divide($averageLatency, 1000),
+                    Num::plus($averageCost, $averageEnergy)
+                )
+            )
         );
 
         return [
@@ -1097,6 +1107,20 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
         return $samples > 0 ? Num::divide((float)$bucket[$metric . '_total'], $samples) : null;
     }
 
+    private function averageValues(array $values, float $default): float
+    {
+        if (Arr::isEmpty($values)) {
+            return $default;
+        }
+
+        $total = 0.0;
+        foreach ($values as $value) {
+            $total = Num::plus($total, (float)$value);
+        }
+
+        return Num::divide($total, Arr::count($values));
+    }
+
     private function routeBaseWeight(string $strategyId, string $strategyVersion): float
     {
         foreach ($this->_strategyProfiles as $name => $profile) {
@@ -1130,7 +1154,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
     private function strategyByName(string $name): ?IStrategy
     {
         $entry = $this->_strategies->toArray()[$name] ?? null;
-        $strategy = is_array($entry) ? ($entry['value'] ?? null) : null;
+        $strategy = Arr::is($entry) ? ($entry['value'] ?? null) : null;
 
         return $strategy instanceof IStrategy ? $strategy : null;
     }
@@ -1156,9 +1180,9 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
 
     private function requestContextKey(StrategyRouteRequest $request): string
     {
-        return $request->contextKey() !== ''
-            ? $this->normalizeContextKey($request->contextKey())
-            : $this->inputContextKey($request->input());
+        return $request->context_key !== ''
+            ? $this->normalizeContextKey($request->context_key)
+            : $this->inputContextKey($request->input);
     }
 
     private function inputContextKey(mixed $input): string

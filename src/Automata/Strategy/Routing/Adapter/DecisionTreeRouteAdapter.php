@@ -41,7 +41,7 @@ class DecisionTreeRouteAdapter implements IStrategyRouteAdapter
 
     public function execute(StrategyRouteRequest $request): StrategyAdapterResult
     {
-        $this->method->setState($request->input());
+        $this->method->setState($request->input);
         $decision = $this->tree->decide($this->method);
         $trace = Arr::make($this->method->getTrace())
             ->map(static fn (INode $node): array => $node->getValue())

@@ -101,7 +101,7 @@ $request = new StrategyRouteRequest([
 $trace = new TaskTrace('trace-strategy-example');
 $intelligence = new Intelligence();
 $result = (new StrategyRouter([$adapter], $intelligence))->route($request, $authorization, $trace);
-$trace->complete($result->status());
+$trace->complete($result->status);
 
 echo json_encode([
     'route' => $result->toArray(),

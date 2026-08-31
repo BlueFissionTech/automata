@@ -44,9 +44,9 @@ class StrategyRouterTest extends TestCase
             $trace
         );
 
-        $this->assertSame(StrategyRouteResult::STATUS_COMPLETED, $result->status());
-        $this->assertSame('tree.dispatch', $result->selectedStrategy()['id']);
-        $this->assertSame(['decision' => 'ground'], $result->output());
+        $this->assertSame(StrategyRouteResult::STATUS_COMPLETED, $result->status);
+        $this->assertSame('tree.dispatch', $result->selected_strategy['id']);
+        $this->assertSame(['decision' => 'ground'], $result->output);
         $this->assertSame(1, $deterministic->executions);
         $this->assertSame(0, $learned->executions);
         $this->assertSame('trace-strategy-1', $result->toArray()['trace_id']);
@@ -67,9 +67,9 @@ class StrategyRouterTest extends TestCase
             'capability_version' => '2.0',
         ]));
 
-        $this->assertSame(StrategyRouteResult::STATUS_DENIED, $denied->status());
-        $this->assertSame(StrategyRouter::CODE_AUTHORIZATION_DENIED, $denied->code());
-        $this->assertSame(StrategyRouter::CODE_AUTHORIZATION_MISMATCH, $mismatched->code());
+        $this->assertSame(StrategyRouteResult::STATUS_DENIED, $denied->status);
+        $this->assertSame(StrategyRouter::CODE_AUTHORIZATION_DENIED, $denied->code);
+        $this->assertSame(StrategyRouter::CODE_AUTHORIZATION_MISMATCH, $mismatched->code);
         $this->assertSame(0, $adapter->executions);
     }
 
@@ -82,8 +82,8 @@ class StrategyRouterTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame(StrategyRouteResult::STATUS_DENIED, $result->status());
-        $this->assertSame(StrategyRouter::CODE_INVALID_REQUEST, $result->code());
+        $this->assertSame(StrategyRouteResult::STATUS_DENIED, $result->status);
+        $this->assertSame(StrategyRouter::CODE_INVALID_REQUEST, $result->code);
         $this->assertSame(0, $adapter->executions);
     }
 
@@ -96,8 +96,20 @@ class StrategyRouterTest extends TestCase
             'capability_version' => '1.0',
         ]);
 
-        $this->assertFalse($definition->sideEffectFree());
+        $this->assertFalse($definition->side_effect_free);
         $this->assertFalse($definition->toArray()['side_effect_free']);
+    }
+
+    public function testRoutingValuesExposeNativeTypedObjFields(): void
+    {
+        $request = $this->request();
+
+        $request->selection_policy = StrategyRouteRequest::SELECTION_ADAPTIVE;
+        $request->context_key = 'support.billing';
+
+        $this->assertSame(StrategyRouteRequest::SELECTION_ADAPTIVE, $request->selection_policy);
+        $this->assertSame('support.billing', $request->context_key);
+        $this->assertSame('support.billing', $request->toArray()['context_key']);
     }
 
     public function testEligibilityAndEstimatedBudgetBlockExecution(): void
@@ -126,9 +138,9 @@ class StrategyRouterTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame(StrategyRouteResult::STATUS_EXHAUSTED, $result->status());
-        $this->assertSame('predicate_failed', $result->attempts()[0]['code']);
-        $this->assertSame(StrategyRouter::CODE_ESTIMATED_BUDGET_EXCEEDED, $result->attempts()[1]['code']);
+        $this->assertSame(StrategyRouteResult::STATUS_EXHAUSTED, $result->status);
+        $this->assertSame('predicate_failed', $result->attempts[0]['code']);
+        $this->assertSame(StrategyRouter::CODE_ESTIMATED_BUDGET_EXCEEDED, $result->attempts[1]['code']);
         $this->assertSame(0, $ineligible->executions);
         $this->assertSame(0, $expensive->executions);
     }
@@ -163,12 +175,12 @@ class StrategyRouterTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame(StrategyRouteResult::STATUS_COMPLETED, $result->status());
-        $this->assertSame('provider.generate', $result->selectedStrategy()['id']);
-        $this->assertEqualsWithDelta(0.6, $result->usage()['cost'], 0.0001);
-        $this->assertSame(2, $result->usage()['invocations']);
-        $this->assertSame('tree.dispatch', $result->escalationHistory()[0]['from']);
-        $this->assertSame('provider.generate', $result->escalationHistory()[0]['to']);
+        $this->assertSame(StrategyRouteResult::STATUS_COMPLETED, $result->status);
+        $this->assertSame('provider.generate', $result->selected_strategy['id']);
+        $this->assertEqualsWithDelta(0.6, $result->usage['cost'], 0.0001);
+        $this->assertSame(2, $result->usage['invocations']);
+        $this->assertSame('tree.dispatch', $result->escalation_history[0]['from']);
+        $this->assertSame('provider.generate', $result->escalation_history[0]['to']);
     }
 
     public function testGenerativeModeAndSideEffectsRequireExplicitPolicy(): void
@@ -189,7 +201,7 @@ class StrategyRouterTest extends TestCase
         );
 
         $attempts = [];
-        foreach ($result->attempts() as $attempt) {
+        foreach ($result->attempts as $attempt) {
             $attempts[$attempt['strategy_id']] = $attempt;
         }
 
@@ -215,8 +227,8 @@ class StrategyRouterTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame(StrategyRouteResult::STATUS_FAILED, $result->status());
-        $this->assertSame(StrategyRouter::CODE_ACTUAL_BUDGET_EXCEEDED, $result->code());
+        $this->assertSame(StrategyRouteResult::STATUS_FAILED, $result->status);
+        $this->assertSame(StrategyRouter::CODE_ACTUAL_BUDGET_EXCEEDED, $result->code);
         $this->assertSame(1, $adapter->executions);
     }
 
@@ -231,8 +243,8 @@ class StrategyRouterTest extends TestCase
             $this->authorization(['limits' => ['max_cost' => 0.5]])
         );
 
-        $this->assertSame(StrategyRouteResult::STATUS_EXHAUSTED, $result->status());
-        $this->assertSame(StrategyRouter::CODE_ESTIMATED_BUDGET_EXCEEDED, $result->attempts()[0]['code']);
+        $this->assertSame(StrategyRouteResult::STATUS_EXHAUSTED, $result->status);
+        $this->assertSame(StrategyRouter::CODE_ESTIMATED_BUDGET_EXCEEDED, $result->attempts[0]['code']);
         $this->assertSame(0.5, $result->toArray()['limits']['max_cost']);
         $this->assertSame(0, $adapter->executions);
     }
@@ -248,8 +260,8 @@ class StrategyRouterTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame(StrategyRouter::CODE_ESTIMATED_BUDGET_EXCEEDED, $result->attempts()[0]['code']);
-        $this->assertSame(1, $result->attempts()[0]['estimate']['invocations']);
+        $this->assertSame(StrategyRouter::CODE_ESTIMATED_BUDGET_EXCEEDED, $result->attempts[0]['code']);
+        $this->assertSame(1, $result->attempts[0]['estimate']['invocations']);
         $this->assertSame(0, $adapter->executions);
     }
 
@@ -263,10 +275,10 @@ class StrategyRouterTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame(StrategyRouteResult::STATUS_FAILED, $result->status());
-        $this->assertSame(StrategyRouter::CODE_EXECUTION_EXCEPTION, $result->code());
-        $this->assertSame(StrategyRouter::CODE_EXECUTION_EXCEPTION, $result->attempts()[0]['code']);
-        $this->assertSame('adapter failed', $result->attempts()[0]['diagnostics'][0]['message']);
+        $this->assertSame(StrategyRouteResult::STATUS_FAILED, $result->status);
+        $this->assertSame(StrategyRouter::CODE_EXECUTION_EXCEPTION, $result->code);
+        $this->assertSame(StrategyRouter::CODE_EXECUTION_EXCEPTION, $result->attempts[0]['code']);
+        $this->assertSame('adapter failed', $result->attempts[0]['diagnostics'][0]['message']);
     }
 
     public function testExecutionExceptionDoesNotEscalateWithUnknownActualUsage(): void
@@ -287,9 +299,9 @@ class StrategyRouterTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame(StrategyRouter::CODE_EXECUTION_EXCEPTION, $result->code());
+        $this->assertSame(StrategyRouter::CODE_EXECUTION_EXCEPTION, $result->code);
         $this->assertSame(0, $fallback->executions);
-        $this->assertSame([], $result->escalationHistory());
+        $this->assertSame([], $result->escalation_history);
     }
 
     public function testUnknownExactVersionProducesStableExhaustedResultSchema(): void
@@ -300,8 +312,8 @@ class StrategyRouterTest extends TestCase
         );
         $data = $result->toArray();
 
-        $this->assertSame(StrategyRouteResult::STATUS_EXHAUSTED, $result->status());
-        $this->assertSame(StrategyRouter::CODE_UNKNOWN_STRATEGY, $result->attempts()[0]['code']);
+        $this->assertSame(StrategyRouteResult::STATUS_EXHAUSTED, $result->status);
+        $this->assertSame(StrategyRouter::CODE_UNKNOWN_STRATEGY, $result->attempts[0]['code']);
         $this->assertNull($data['selected_strategy']);
         $this->assertSame([], $data['escalation_history']);
         $this->assertSame(0.0, $data['usage']['cost']);
@@ -348,9 +360,9 @@ class StrategyRouterTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame('air', $result->output()['decision']['decision']);
-        $this->assertSame(['root', 'air'], array_column($result->output()['trace'], 'id'));
-        $this->assertSame('fixture-policy', $result->attempts()[0]['evidence'][0]['source']);
+        $this->assertSame('air', $result->output['decision']['decision']);
+        $this->assertSame(['root', 'air'], array_column($result->output['trace'], 'id'));
+        $this->assertSame('fixture-policy', $result->attempts[0]['evidence'][0]['source']);
     }
 
     private function adapter(

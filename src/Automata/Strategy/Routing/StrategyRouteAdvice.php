@@ -3,22 +3,31 @@
 namespace BlueFission\Automata\Strategy\Routing;
 
 use BlueFission\Arr;
+use BlueFission\DataTypes;
 
 class StrategyRouteAdvice extends RoutingValue
 {
-    public function policy(): string
-    {
-        return (string)$this->field('policy');
-    }
+    protected $_data = [
+        'policy' => StrategyRouteRequest::SELECTION_DECLARED,
+        'rankings' => [],
+        'evidence' => [],
+        'diagnostics' => [],
+        'metadata' => [],
+    ];
 
-    public function rankings(): array
-    {
-        return Arr::make($this->field('rankings') ?? [])->toArray();
-    }
+    protected $_types = [
+        'policy' => DataTypes::STRING,
+        'rankings' => DataTypes::ARRAY,
+        'evidence' => DataTypes::ARRAY,
+        'diagnostics' => DataTypes::ARRAY,
+        'metadata' => DataTypes::ARRAY,
+    ];
+
+    protected $_lockDataType = true;
 
     public function ranking(string $strategyId, string $strategyVersion): ?array
     {
-        $ranking = $this->rankings()[self::key($strategyId, $strategyVersion)] ?? null;
+        $ranking = $this->rankings[self::key($strategyId, $strategyVersion)] ?? null;
 
         return $ranking === null ? null : Arr::make($ranking)->toArray();
     }
@@ -27,7 +36,7 @@ class StrategyRouteAdvice extends RoutingValue
     {
         $ranking = $this->ranking($strategyId, $strategyVersion);
 
-        return $ranking === null || !isset($ranking['score'])
+        return $ranking === null || !Arr::hasKey($ranking, 'score')
             ? null
             : (float)$ranking['score'];
     }
@@ -37,14 +46,4 @@ class StrategyRouteAdvice extends RoutingValue
         return $strategyId . '@' . $strategyVersion;
     }
 
-    protected function defaults(): array
-    {
-        return [
-            'policy' => StrategyRouteRequest::SELECTION_DECLARED,
-            'rankings' => [],
-            'evidence' => [],
-            'diagnostics' => [],
-            'metadata' => [],
-        ];
-    }
 }

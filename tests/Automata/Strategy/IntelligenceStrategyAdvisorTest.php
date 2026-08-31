@@ -51,13 +51,13 @@ class IntelligenceStrategyAdvisorTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame('fast.tree', $result->selectedStrategy()['id']);
+        $this->assertSame('fast.tree', $result->selected_strategy['id']);
         $this->assertSame(0, $slow->executions);
         $this->assertSame(1, $fast->executions);
-        $this->assertSame(StrategyRouteRequest::SELECTION_ADAPTIVE, $result->selectionAdvice()['policy']);
+        $this->assertSame(StrategyRouteRequest::SELECTION_ADAPTIVE, $result->selection_advice['policy']);
         $this->assertGreaterThan(
-            $result->selectionAdvice()['rankings']['slow.tree@1.0']['score'],
-            $result->selectionAdvice()['rankings']['fast.tree@1.0']['score']
+            $result->selection_advice['rankings']['slow.tree@1.0']['score'],
+            $result->selection_advice['rankings']['fast.tree@1.0']['score']
         );
     }
 
@@ -92,7 +92,7 @@ class IntelligenceStrategyAdvisorTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame('rules.ground', $result->selectedStrategy()['id']);
+        $this->assertSame('rules.ground', $result->selected_strategy['id']);
         $this->assertSame(0, $learned->executions);
         $this->assertSame(1, $deterministic->executions);
     }
@@ -135,8 +135,8 @@ class IntelligenceStrategyAdvisorTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame('first.tree', $result->selectedStrategy()['id']);
-        $this->assertSame('advisor_unavailable', $result->selectionAdvice()['diagnostics'][0]['code']);
+        $this->assertSame('first.tree', $result->selected_strategy['id']);
+        $this->assertSame('advisor_unavailable', $result->selection_advice['diagnostics'][0]['code']);
     }
 
     public function testAdaptiveScoreCannotBypassEligibility(): void
@@ -166,9 +166,9 @@ class IntelligenceStrategyAdvisorTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame('eligible.tree', $result->selectedStrategy()['id']);
+        $this->assertSame('eligible.tree', $result->selected_strategy['id']);
         $this->assertSame(0, $blocked->executions);
-        $this->assertSame('fixture_ineligible', $result->attempts()[0]['code']);
+        $this->assertSame('fixture_ineligible', $result->attempts[0]['code']);
     }
 
     public function testUnknownSelectionPolicyFailsBeforeAdvisorOrExecution(): void
@@ -181,7 +181,7 @@ class IntelligenceStrategyAdvisorTest extends TestCase
             $this->authorization()
         );
 
-        $this->assertSame(StrategyRouter::CODE_INVALID_REQUEST, $result->code());
+        $this->assertSame(StrategyRouter::CODE_INVALID_REQUEST, $result->code);
         $this->assertSame(0, $adapter->executions);
         $this->assertSame(0, $intelligence->strategyPerformance(
             'tree.dispatch',
