@@ -618,7 +618,7 @@ class Intelligence extends Obj implements IStrategyRouteAdvisor
         if (Arr::hasKey($options, 'attention_score')) {
             $score = (float)$options['attention_score'];
             $score = Num::max(0.0, Num::min(1.0, $score));
-            $budget = (int)Num::max(1, ceil($score * $strategyCount));
+            $budget = (int)Num::max(1, ceil(Num::times($score, $strategyCount)));
 
             if (Arr::hasKey($options, 'max_strategy_budget')) {
                 $budget = Num::min($budget, (int)$options['max_strategy_budget']);
