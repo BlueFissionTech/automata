@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\LLM\Agent\Integration;
 
 use BlueFission\Arr;
+use BlueFission\DataTypes;
 use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\Comprehension\Scene;
 use BlueFission\Automata\Classification\Result as ClassificationResult;
@@ -87,13 +88,29 @@ class AgentIntegrationContract extends Obj
     public const TEMPLATE_AUTONOMY = 'autonomy';
     public const TEMPLATE_QUALIFICATION = 'qualification';
 
+    protected $_types = [
+        'name' => DataTypes::STRING,
+        'version' => DataTypes::STRING,
+        'owner' => DataTypes::STRING,
+        'features' => DataTypes::ARRAY,
+        'contract_template' => DataTypes::ARRAY,
+        'binding_template' => DataTypes::ARRAY,
+        'capability_vocabulary' => DataTypes::ARRAY,
+        'hooks' => DataTypes::ARRAY,
+        'tool_catalog_filters' => DataTypes::ARRAY,
+        'acceptance_criteria' => DataTypes::ARRAY,
+    ];
+
+    protected $_lockDataType = true;
+
     /**
      * Build the standard Automata integration surface for adapter contracts.
      */
     public function __construct(array $overrides = [])
     {
+        $this->_data = $this->defaults();
         parent::__construct();
-        $this->assign(ToolDefinition::mergeConfig($this->defaults(), $overrides));
+        $this->assign($overrides);
     }
 
     /**
@@ -105,19 +122,11 @@ class AgentIntegrationContract extends Obj
     }
 
     /**
-     * Return the contract version for compatibility checks.
-     */
-    public function version(): string
-    {
-        return (string)$this->field('version');
-    }
-
-    /**
      * Return deterministic feature descriptors, optionally filtered by feature id.
      */
     public function features(?array $featureIds = null): array
     {
-        $features = Arr::make($this->field('features') ?? [])->toArray();
+        $features = $this->features;
 
         if (!$featureIds) {
             return $features;
@@ -152,19 +161,11 @@ class AgentIntegrationContract extends Obj
     }
 
     /**
-     * Return the template other libraries can use to publish adapter contracts upstream.
-     */
-    public function contractTemplate(): array
-    {
-        return Arr::make($this->field('contract_template') ?? [])->toArray();
-    }
-
-    /**
      * Return neutral construct-to-feature hints for adapter-owned bindings.
      */
     public function bindingTemplate(?string $construct = null): array
     {
-        $template = Arr::make($this->field('binding_template') ?? [])->toArray();
+        $template = $this->binding_template;
 
         if (!$construct) {
             return $template;
@@ -186,37 +187,13 @@ class AgentIntegrationContract extends Obj
      */
     public function capabilityVocabulary(?string $capability = null): array
     {
-        $vocabulary = Arr::make($this->field('capability_vocabulary') ?? [])->toArray();
+        $vocabulary = $this->capability_vocabulary;
 
         if (!$capability) {
             return $vocabulary;
         }
 
         return Arr::make($vocabulary[$capability] ?? [])->toArray();
-    }
-
-    /**
-     * Return the lifecycle hook names available to adapters.
-     */
-    public function hooks(): array
-    {
-        return Arr::make($this->field('hooks') ?? [])->toArray();
-    }
-
-    /**
-     * Return supported catalog filter keys for interpreter-driven retrieval.
-     */
-    public function toolCatalogFilters(): array
-    {
-        return Arr::make($this->field('tool_catalog_filters') ?? [])->toArray();
-    }
-
-    /**
-     * Return production integration checks that adapter contracts should satisfy.
-     */
-    public function acceptanceCriteria(): array
-    {
-        return Arr::make($this->field('acceptance_criteria') ?? [])->toArray();
     }
 
     /**

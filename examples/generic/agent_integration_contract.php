@@ -10,14 +10,14 @@ use BlueFission\Net\HTTP;
 $contract = AgentIntegrationContract::standard();
 
 print HTTP::jsonEncode([
-    'version' => $contract->version(),
-    'contract_template' => $contract->contractTemplate(),
+    'version' => $contract->version,
+    'contract_template' => $contract->contract_template,
     'binding_template' => $contract->bindingTemplate(),
     'features' => $contract->features([
         AgentIntegrationContract::FEATURE_TOOLS,
         AgentIntegrationContract::FEATURE_HOLOSCENE,
         AgentIntegrationContract::FEATURE_TELEMETRY,
     ]),
-    'catalog_filters' => $contract->toolCatalogFilters(),
-    'production_checks' => $contract->acceptanceCriteria(),
+    'catalog_filters' => $contract->tool_catalog_filters,
+    'production_checks' => $contract->acceptance_criteria,
 ]) . PHP_EOL;
