@@ -22,11 +22,11 @@ class CapabilityRegistry
             ? $definition
             : new CapabilityDefinition($definition);
 
-        if ($definition->id() === '' || $definition->version() === '' || $definition->owner() === '') {
+        if ($definition->id === '' || $definition->version === '' || $definition->owner === '') {
             throw new InvalidArgumentException('Capability id, version, and owner are required.');
         }
 
-        $this->definitions[$this->key($definition->id(), $definition->version())] = $definition;
+        $this->definitions[$this->key($definition->id, $definition->version)] = $definition;
 
         return $this;
     }
@@ -45,8 +45,8 @@ class CapabilityRegistry
     {
         return Arr::make($this->definitions)
             ->filter(static fn (CapabilityDefinition $definition): bool =>
-                ($owner === null || $definition->owner() === $owner)
-                && ($availability === null || $definition->availability() === $availability))
+                ($owner === null || $definition->owner === $owner)
+                && ($availability === null || $definition->availability === $availability))
             ->toArray();
     }
 

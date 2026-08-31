@@ -19,8 +19,8 @@ class AgentCapabilityRegistryTest extends TestCase
         $definition = $registry->definition('evidence.read', '1.0');
 
         $this->assertInstanceOf(CapabilityDefinition::class, $definition);
-        $this->assertSame('automata', $definition->owner());
-        $this->assertSame(CapabilityDefinition::AVAILABILITY_AVAILABLE, $definition->availability());
+        $this->assertSame('automata', $definition->owner);
+        $this->assertSame(CapabilityDefinition::AVAILABILITY_AVAILABLE, $definition->availability);
         $this->assertTrue($definition->available());
         $this->assertSame(['query'], $definition->toArray()['inputs']);
         $this->assertArrayNotHasKey('handler', $definition->toArray());
@@ -38,6 +38,19 @@ class AgentCapabilityRegistryTest extends TestCase
         ]);
     }
 
+    public function testCapabilityValuesUseNativeTypedObjFields(): void
+    {
+        $decision = new AutonomyDecision();
+        $decision->allowed = true;
+        $decision->code = AutonomyDecision::CODE_ALLOWED;
+        $decision->limits = ['max_calls' => 2];
+
+        $this->assertTrue($decision->allowed);
+        $this->assertSame(AutonomyDecision::CODE_ALLOWED, $decision->code);
+        $this->assertSame(2, $decision->limits['max_calls']);
+        $this->assertSame($decision->toArray()['limits'], $decision->limits);
+    }
+
     public function testApprovedExactGrantReturnsTypedAuthorizationDecision(): void
     {
         $packet = $this->packet();
@@ -48,12 +61,12 @@ class AgentCapabilityRegistryTest extends TestCase
             new DateTimeImmutable('2026-08-30T00:00:00Z')
         );
 
-        $this->assertTrue($decision->allowed());
-        $this->assertSame(AutonomyDecision::CODE_ALLOWED, $decision->code());
-        $this->assertSame(1, $decision->limits()['max_calls']);
+        $this->assertTrue($decision->allowed);
+        $this->assertSame(AutonomyDecision::CODE_ALLOWED, $decision->code);
+        $this->assertSame(1, $decision->limits['max_calls']);
         $this->assertSame('trace-capability-1', $decision->toArray()['trace_id']);
-        $this->assertSame('registry-fixture', $decision->evidence()[0]['source']);
-        $this->assertSame('operator-approval', $decision->evidence()[1]['source']);
+        $this->assertSame('registry-fixture', $decision->evidence[0]['source']);
+        $this->assertSame('operator-approval', $decision->evidence[1]['source']);
     }
 
     public function testUnknownUnavailableAndUnrequestedCapabilitiesFailClosed(): void
@@ -65,11 +78,11 @@ class AgentCapabilityRegistryTest extends TestCase
         $unavailable = $packet->authorize('provider.generate', '1.0', $registry);
         $unrequested = $packet->authorize('review.approve', '1.0', $registry);
 
-        $this->assertFalse($unknown->allowed());
+        $this->assertFalse($unknown->allowed);
         $this->assertFalse($unknown->toArray()['allowed']);
-        $this->assertSame(AutonomyDecision::CODE_UNKNOWN_CAPABILITY, $unknown->code());
-        $this->assertSame(AutonomyDecision::CODE_CAPABILITY_UNAVAILABLE, $unavailable->code());
-        $this->assertSame(AutonomyDecision::CODE_CAPABILITY_NOT_REQUESTED, $unrequested->code());
+        $this->assertSame(AutonomyDecision::CODE_UNKNOWN_CAPABILITY, $unknown->code);
+        $this->assertSame(AutonomyDecision::CODE_CAPABILITY_UNAVAILABLE, $unavailable->code);
+        $this->assertSame(AutonomyDecision::CODE_CAPABILITY_NOT_REQUESTED, $unrequested->code);
     }
 
     public function testApprovalExpiryAndRevocationStatesFailClosed(): void
@@ -82,15 +95,15 @@ class AgentCapabilityRegistryTest extends TestCase
 
         $this->assertSame(
             AutonomyDecision::CODE_APPROVAL_REQUIRED,
-            $pending->authorize('evidence.read', '1.0', $registry)->code()
+            $pending->authorize('evidence.read', '1.0', $registry)->code
         );
         $this->assertSame(
             AutonomyDecision::CODE_PACKET_EXPIRED,
-            $expired->authorize('evidence.read', '1.0', $registry, new DateTimeImmutable('2026-08-30T00:00:00Z'))->code()
+            $expired->authorize('evidence.read', '1.0', $registry, new DateTimeImmutable('2026-08-30T00:00:00Z'))->code
         );
         $this->assertSame(
             AutonomyDecision::CODE_PACKET_REVOKED,
-            $revoked->authorize('evidence.read', '1.0', $registry)->code()
+            $revoked->authorize('evidence.read', '1.0', $registry)->code
         );
     }
 
@@ -105,15 +118,15 @@ class AgentCapabilityRegistryTest extends TestCase
 
         $this->assertSame(
             AutonomyDecision::CODE_GRANT_EXPIRED,
-            $expired->authorize('evidence.read', '1.0', $registry, $now)->code()
+            $expired->authorize('evidence.read', '1.0', $registry, $now)->code
         );
         $this->assertSame(
             AutonomyDecision::CODE_GRANT_REVOKED,
-            $revoked->authorize('evidence.read', '1.0', $registry, $now)->code()
+            $revoked->authorize('evidence.read', '1.0', $registry, $now)->code
         );
         $this->assertSame(
             AutonomyDecision::CODE_SUBJECT_MISMATCH,
-            $mismatched->authorize('evidence.read', '1.0', $registry, $now)->code()
+            $mismatched->authorize('evidence.read', '1.0', $registry, $now)->code
         );
     }
 
@@ -129,7 +142,7 @@ class AgentCapabilityRegistryTest extends TestCase
         $this->assertTrue($grant->permits('evidence.read', '1.0', 'agent-specialist'));
         $this->assertFalse($grant->permits('evidence.read', '1.0', 'agent-child'));
         $this->assertFalse($grant->permits('evidence.read', '2.0', 'agent-specialist'));
-        $this->assertFalse($grant->transferable());
+        $this->assertFalse($grant->transferable);
         $this->assertFalse($grant->toArray()['transferable']);
     }
 
@@ -189,7 +202,7 @@ class AgentCapabilityRegistryTest extends TestCase
             ], $grantOverrides)],
             'limits' => ['max_calls' => 3],
             'approval_state' => AutonomyPacket::APPROVAL_APPROVED,
-            'expires_at' => '2026-08-31T00:00:00Z',
+            'expires_at' => '2099-12-31T23:59:59Z',
             'correlation_id' => 'correlation-capability-1',
             'trace_id' => 'trace-capability-1',
         ], $packetOverrides));

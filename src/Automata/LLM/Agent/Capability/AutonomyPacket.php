@@ -4,6 +4,7 @@ namespace BlueFission\Automata\LLM\Agent\Capability;
 
 use BlueFission\Arr;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
+use BlueFission\DataTypes;
 use DateTimeImmutable;
 use Throwable;
 
@@ -13,33 +14,58 @@ class AutonomyPacket extends CapabilityValue
     public const APPROVAL_APPROVED = 'approved';
     public const APPROVAL_DENIED = 'denied';
 
-    public function id(): string
-    {
-        return (string)$this->field('id');
-    }
+    protected $_data = [
+        'id' => '',
+        'subject_id' => '',
+        'requested_capabilities' => [],
+        'grants' => [],
+        'constraints' => [],
+        'limits' => [],
+        'approval_state' => self::APPROVAL_PENDING,
+        'approval_reference' => '',
+        'expires_at' => null,
+        'revoked' => false,
+        'revocation_reason' => '',
+        'evidence' => [],
+        'correlation_id' => '',
+        'causation_id' => '',
+        'trace_id' => '',
+        'metadata' => [],
+    ];
 
-    public function subjectId(): string
-    {
-        return (string)$this->field('subject_id');
-    }
+    protected $_types = [
+        'id' => DataTypes::STRING,
+        'subject_id' => DataTypes::STRING,
+        'requested_capabilities' => DataTypes::ARRAY,
+        'grants' => DataTypes::ARRAY,
+        'constraints' => DataTypes::ARRAY,
+        'limits' => DataTypes::ARRAY,
+        'approval_state' => DataTypes::STRING,
+        'approval_reference' => DataTypes::STRING,
+        'expires_at' => DataTypes::GENERIC,
+        'revoked' => DataTypes::BOOLEAN,
+        'revocation_reason' => DataTypes::STRING,
+        'evidence' => DataTypes::ARRAY,
+        'correlation_id' => DataTypes::STRING,
+        'causation_id' => DataTypes::STRING,
+        'trace_id' => DataTypes::STRING,
+        'metadata' => DataTypes::ARRAY,
+    ];
+
+    protected $_lockDataType = true;
 
     public function grants(): array
     {
-        return Arr::make($this->field('grants') ?? [])
+        return Arr::make($this->grants ?? [])
             ->map(static fn (mixed $grant): AutonomyGrant => $grant instanceof AutonomyGrant
                 ? $grant
                 : new AutonomyGrant(Arr::make($grant)->toArray()))
             ->toArray();
     }
 
-    public function revoked(): bool
-    {
-        return (bool)$this->field('revoked');
-    }
-
     public function expired(?DateTimeImmutable $now = null): bool
     {
-        $expiresAt = $this->field('expires_at');
+        $expiresAt = $this->expires_at;
         if (!$expiresAt) {
             return false;
         }
@@ -66,7 +92,7 @@ class AutonomyPacket extends CapabilityValue
             return $this->decision(false, AutonomyDecision::CODE_CAPABILITY_UNAVAILABLE, $capabilityId, $capabilityVersion, $definition);
         }
 
-        if ($this->revoked()) {
+        if ($this->revoked) {
             return $this->decision(false, AutonomyDecision::CODE_PACKET_REVOKED, $capabilityId, $capabilityVersion, $definition);
         }
 
@@ -74,7 +100,7 @@ class AutonomyPacket extends CapabilityValue
             return $this->decision(false, AutonomyDecision::CODE_PACKET_EXPIRED, $capabilityId, $capabilityVersion, $definition);
         }
 
-        if ($this->field('approval_state') !== self::APPROVAL_APPROVED) {
+        if ($this->approval_state !== self::APPROVAL_APPROVED) {
             return $this->decision(false, AutonomyDecision::CODE_APPROVAL_REQUIRED, $capabilityId, $capabilityVersion, $definition);
         }
 
@@ -87,11 +113,11 @@ class AutonomyPacket extends CapabilityValue
             return $this->decision(false, AutonomyDecision::CODE_CAPABILITY_NOT_GRANTED, $capabilityId, $capabilityVersion, $definition);
         }
 
-        if ($grant->subjectId() !== $this->subjectId()) {
+        if ($grant->subject_id !== $this->subject_id) {
             return $this->decision(false, AutonomyDecision::CODE_SUBJECT_MISMATCH, $capabilityId, $capabilityVersion, $definition, $grant);
         }
 
-        if ($grant->revoked()) {
+        if ($grant->revoked) {
             return $this->decision(false, AutonomyDecision::CODE_GRANT_REVOKED, $capabilityId, $capabilityVersion, $definition, $grant);
         }
 
@@ -99,7 +125,7 @@ class AutonomyPacket extends CapabilityValue
             return $this->decision(false, AutonomyDecision::CODE_GRANT_EXPIRED, $capabilityId, $capabilityVersion, $definition, $grant);
         }
 
-        if (!$grant->permits($capabilityId, $capabilityVersion, $this->subjectId(), $now)) {
+        if (!$grant->permits($capabilityId, $capabilityVersion, $this->subject_id, $now)) {
             return $this->decision(false, AutonomyDecision::CODE_CAPABILITY_NOT_GRANTED, $capabilityId, $capabilityVersion, $definition, $grant);
         }
 
@@ -108,7 +134,7 @@ class AutonomyPacket extends CapabilityValue
 
     protected function requested(string $capabilityId, string $capabilityVersion): bool
     {
-        foreach (Arr::make($this->field('requested_capabilities') ?? [])->toArray() as $requested) {
+        foreach (Arr::make($this->requested_capabilities ?? [])->toArray() as $requested) {
             $requested = Arr::make($requested)->toArray();
             if (($requested['id'] ?? '') === $capabilityId && ($requested['version'] ?? '') === $capabilityVersion) {
                 return true;
@@ -121,7 +147,7 @@ class AutonomyPacket extends CapabilityValue
     protected function matchingGrant(string $capabilityId, string $capabilityVersion): ?AutonomyGrant
     {
         foreach ($this->grants() as $grant) {
-            if ($grant->capabilityId() === $capabilityId && $grant->capabilityVersion() === $capabilityVersion) {
+            if ($grant->capability_id === $capabilityId && $grant->capability_version === $capabilityVersion) {
                 return $grant;
             }
         }
@@ -140,19 +166,19 @@ class AutonomyPacket extends CapabilityValue
         $packet = $this->toArray();
         $limits = ToolDefinition::mergeConfig(
             Arr::make($packet['limits'] ?? [])->toArray(),
-            $grant?->limits() ?? []
+            Arr::make($grant?->limits ?? [])->toArray()
         );
         $constraints = ToolDefinition::mergeConfig(
-            $definition?->constraints() ?? [],
+            Arr::make($definition?->constraints ?? [])->toArray(),
             ToolDefinition::mergeConfig(
                 Arr::make($packet['constraints'] ?? [])->toArray(),
-                $grant?->constraints() ?? []
+                Arr::make($grant?->constraints ?? [])->toArray()
             )
         );
         $evidence = Arr::make([]);
         foreach ([
-            $definition?->evidence() ?? [],
-            $grant?->evidence() ?? [],
+            Arr::make($definition?->evidence ?? [])->toArray(),
+            Arr::make($grant?->evidence ?? [])->toArray(),
             Arr::make($packet['evidence'] ?? [])->toArray(),
         ] as $entries) {
             foreach ($entries as $entry) {
@@ -164,13 +190,13 @@ class AutonomyPacket extends CapabilityValue
             'allowed' => $allowed,
             'code' => $code,
             'reason' => $code,
-            'packet_id' => $this->id(),
-            'subject_id' => $this->subjectId(),
+            'packet_id' => $this->id,
+            'subject_id' => $this->subject_id,
             'capability_id' => $capabilityId,
             'capability_version' => $capabilityVersion,
             'limits' => $limits,
             'constraints' => $constraints,
-            'risk' => $definition?->field('risk') ?? [],
+            'risk' => Arr::make($definition?->risk ?? [])->toArray(),
             'evidence' => $evidence->toArray(),
             'correlation_id' => $packet['correlation_id'] ?? '',
             'causation_id' => $packet['causation_id'] ?? '',
@@ -178,25 +204,4 @@ class AutonomyPacket extends CapabilityValue
         ]);
     }
 
-    protected function defaults(): array
-    {
-        return [
-            'id' => '',
-            'subject_id' => '',
-            'requested_capabilities' => [],
-            'grants' => [],
-            'constraints' => [],
-            'limits' => [],
-            'approval_state' => self::APPROVAL_PENDING,
-            'approval_reference' => '',
-            'expires_at' => null,
-            'revoked' => false,
-            'revocation_reason' => '',
-            'evidence' => [],
-            'correlation_id' => '',
-            'causation_id' => '',
-            'trace_id' => '',
-            'metadata' => [],
-        ];
-    }
 }

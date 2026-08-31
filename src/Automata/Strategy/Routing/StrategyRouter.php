@@ -112,7 +112,7 @@ class StrategyRouter
             ), $request, $trace, $span);
         }
 
-        if (!$authorization->allowed()) {
+        if (!$authorization->allowed) {
             return $this->finish($this->result(
                 $request,
                 $authorization,
@@ -128,9 +128,9 @@ class StrategyRouter
         }
 
         if (
-            $authorization->subjectId() !== $request->subjectId()
-            || $authorization->capabilityId() !== $request->capabilityId()
-            || $authorization->capabilityVersion() !== $request->capabilityVersion()
+            $authorization->subject_id !== $request->subjectId()
+            || $authorization->capability_id !== $request->capabilityId()
+            || $authorization->capability_version !== $request->capabilityVersion()
         ) {
             return $this->finish($this->result(
                 $request,
@@ -149,7 +149,7 @@ class StrategyRouter
         $attempts = [];
         $escalations = [];
         $usage = new StrategyUsage();
-        $limits = $this->effectiveLimits($request->limits(), $authorization->limits());
+        $limits = $this->effectiveLimits($request->limits(), $authorization->limits);
         [$candidates, $advice] = $this->orderedCandidates($request);
 
         foreach ($candidates as $index => $candidate) {
@@ -474,12 +474,12 @@ class StrategyRouter
             'output' => $output,
             'attempts' => $attempts,
             'usage' => $usage->toArray(),
-            'limits' => $this->effectiveLimits($request->limits(), $authorization->limits()),
+            'limits' => $this->effectiveLimits($request->limits(), $authorization->limits),
             'selection_advice' => ($advice ?? $this->declaredAdvice($request))->toArray(),
             'escalated' => $escalations !== [],
             'escalation_history' => $escalations,
             'authorization' => $authorization->toArray(),
-            'evidence' => $authorization->evidence(),
+            'evidence' => $authorization->evidence,
             'correlation_id' => $requestData['correlation_id'],
             'causation_id' => $requestData['causation_id'],
             'trace_id' => $requestData['trace_id'],

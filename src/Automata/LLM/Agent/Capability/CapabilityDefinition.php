@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\LLM\Agent\Capability;
 
 use BlueFission\Arr;
+use BlueFission\DataTypes;
 
 class CapabilityDefinition extends CapabilityValue
 {
@@ -11,58 +12,41 @@ class CapabilityDefinition extends CapabilityValue
     public const AVAILABILITY_UNAVAILABLE = 'unavailable';
     public const AVAILABILITY_UNKNOWN = 'unknown';
 
-    public function id(): string
-    {
-        return (string)$this->field('id');
-    }
+    protected $_data = [
+        'id' => '',
+        'version' => '',
+        'owner' => '',
+        'description' => '',
+        'inputs' => [],
+        'outputs' => [],
+        'constraints' => [],
+        'risk' => [],
+        'evidence' => [],
+        'availability' => self::AVAILABILITY_UNKNOWN,
+        'metadata' => [],
+    ];
 
-    public function version(): string
-    {
-        return (string)$this->field('version');
-    }
+    protected $_types = [
+        'id' => DataTypes::STRING,
+        'version' => DataTypes::STRING,
+        'owner' => DataTypes::STRING,
+        'description' => DataTypes::STRING,
+        'inputs' => DataTypes::ARRAY,
+        'outputs' => DataTypes::ARRAY,
+        'constraints' => DataTypes::ARRAY,
+        'risk' => DataTypes::ARRAY,
+        'evidence' => DataTypes::ARRAY,
+        'availability' => DataTypes::STRING,
+        'metadata' => DataTypes::ARRAY,
+    ];
 
-    public function owner(): string
-    {
-        return (string)$this->field('owner');
-    }
-
-    public function availability(): string
-    {
-        return (string)$this->field('availability');
-    }
+    protected $_lockDataType = true;
 
     public function available(): bool
     {
         return Arr::has([
             self::AVAILABILITY_AVAILABLE,
             self::AVAILABILITY_DEGRADED,
-        ], $this->availability(), true);
-    }
-
-    public function constraints(): array
-    {
-        return Arr::make($this->field('constraints') ?? [])->toArray();
-    }
-
-    public function evidence(): array
-    {
-        return Arr::make($this->field('evidence') ?? [])->toArray();
-    }
-
-    protected function defaults(): array
-    {
-        return [
-            'id' => '',
-            'version' => '',
-            'owner' => '',
-            'description' => '',
-            'inputs' => [],
-            'outputs' => [],
-            'constraints' => [],
-            'risk' => [],
-            'evidence' => [],
-            'availability' => self::AVAILABILITY_UNKNOWN,
-            'metadata' => [],
-        ];
+        ], $this->availability, true);
     }
 }
