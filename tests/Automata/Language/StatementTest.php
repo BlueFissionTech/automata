@@ -23,6 +23,16 @@ class StatementTest extends TestCase
         $this->assertGreaterThan($initial, $after);
     }
 
+    public function testSemanticFieldPreservesExplicitNullAssignment(): void
+    {
+        $statement = new Statement();
+        $statement->field('subject', 'HospitalA');
+        $statement->field('subject', null);
+
+        $this->assertNull($statement->field('subject'));
+        $this->assertNull($statement->snapshot()['subject']);
+    }
+
     public function testEntitiesReturnsSubjectObjectAndIndirectObject(): void
     {
         $statement = new Statement();
