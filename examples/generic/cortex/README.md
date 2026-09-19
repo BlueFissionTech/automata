@@ -45,6 +45,14 @@ exercise cancellation and deadline fallback. See
 [`docs/response-composition.md`](../../../docs/response-composition.md) for the
 checkpoint, terminal receipt and host persistence contract.
 
+Run `php examples/generic/cortex/agent.php` to exercise the response contract through
+real Agent orchestration, governed fixture tools and TaskTrace. It emits early text,
+classifies a request, produces a tool plan and waits for a terminal receipt before
+confirmation. Additional probes cover host scope/version checks, permission denial
+and revocation after preparation, cancellation and uncertain effects without retry.
+The host receiver ledger is retained in memory across a simulated caller restart;
+the example does not prove durable recovery, concurrency or production authorization.
+
 Subsequent slices add controlled promotion, durable governed adaptive routes,
-Agent/worker/TaskTrace response integration, composite/scripted strategies and shared goal criteria.
+concurrent response persistence, composite/scripted strategies and shared goal criteria.
 Each slice must report its actual measurements and unresolved release gates.

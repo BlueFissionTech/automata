@@ -109,6 +109,62 @@ exercise cancellation and deadline fallback. Its receiver state is deliberately
 retained in memory across the simulated caller restart. This demonstrates the
 protocol with synthetic effects, not durable production delivery.
 
-Direct Agent output, fragment-producing workers, TaskTrace adapters and concurrent
-transactional persistence remain subsequent integration work. No new dependencies,
-provider calls, live operational effects or release promotion are required.
+## Agent and worker integration
+
+`Agent::startResponse($envelope, $policy)` returns an `AgentResponse` handle bound
+to the Agent's current session and TaskTrace. It exposes the composer's fluent
+production methods, preparation, acknowledgement and cancellation. Its
+`worker($fragmentId, $producer)` wrapper fits the existing orchestrator. Producers
+explicitly return `['status' => 'completed', 'output' => $value]` or a `failed`
+result; optional confidence must satisfy the composer contract and otherwise
+stays null. Raw strings, partial statuses and missing output are rejected. A
+failed result or exception fails the fragment; it does not prove receiver success.
+
+```php
+$response = $agent->startResponse($envelope);
+$agent->configureOrchestration(['workers' => [
+    'format' => $response->worker('text', fn () => [
+        'status' => 'completed', 'output' => 'A deterministic response.',
+    ]),
+]]);
+$agent->orchestrate();
+$release = $response->prepare(0);
+```
+
+The handle checks its session/task binding before and after producer invocation.
+Duplicate, unknown, cancelled and exhausted fragments are rejected before work.
+A producer can cancel the response; its late result is discarded. Producers are
+synchronous and trusted computation: this adapter neither interrupts them nor
+authorizes any tools they might call. Use the existing governed executors for
+effects, with receiver-side idempotency and current host permission checks.
+
+`Agent::restoreResponse($checkpoint)` accepts handle schema version one and requires
+the same session and task ids. Checkpoints are allowed only between producer calls;
+they do not record an in-progress worker invocation or provide safe worker restart.
+The handle must stay bound to the current TaskTrace object during execution. Hosts
+persist traces separately and authenticate checkpoint origin, tenant/actor scope,
+receiver identity, version compatibility and revocation before restoration.
+Session/task equality alone is not an access-control decision.
+
+Response trace events carry response, session, fragment and release ids. Prepare
+events mean prepared output, not completed execution; acknowledgement is a separate
+event with the aggregate terminal result. Repeated prepare/acknowledge/cancel calls
+do not add duplicate transition observations. Response events omit content payloads;
+the existing orchestration and tool tracing may still capture their own payloads.
+Observer exceptions are contained after response transitions and exposed through
+`telemetryErrors()` (at most 32 entries, process-local). They never grant retry
+permission or erase committed response state.
+
+Run `php examples/generic/cortex/agent.php` for the integrated proof. It combines
+the trained classifier, real Agent orchestration and tool approval, progressive
+output, TaskTrace and checkpoint restoration. Neutral host fixtures reject tenant,
+actor, receiver and version mismatches, refresh permission after preparation, keep
+terminal receipts after cancellation and refuse to retry a tool whose effect may
+have completed before an exception. Tool retries are explicitly disabled in this
+fixture. Its scope checks and retained in-memory ledger are example host code,
+not a production authorization, storage or concurrency service.
+
+These APIs require PHP 8.2+ and the declared DevElation dependency. They are staged
+source contracts and have no released package version yet. Concurrent transactional
+persistence, authenticated receipt adapters and interruption recovery remain open.
+No provider calls, dependency changes or release promotion are required.
