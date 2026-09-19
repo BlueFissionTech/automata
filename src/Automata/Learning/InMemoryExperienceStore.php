@@ -20,6 +20,6 @@ final class InMemoryExperienceStore implements IExperienceStore
 
     public function experiences(): iterable
     {
-        yield from Arr::values($this->records);
+        yield from Arr::make($this->records)->values()->val();
     }
 }

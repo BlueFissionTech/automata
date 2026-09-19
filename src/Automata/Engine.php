@@ -164,7 +164,10 @@ class Engine extends Intelligence implements ISphere {
 	// }
 
 	public function getTransactionSize() {
-		$this->_transaction_size = Num::pow(Num::multiply(self::TRANSACTION_BASE_SIZE, $this->_level), self::TRANSACTION_MULTIPLIER);
+		$this->_transaction_size = Num::make(self::TRANSACTION_BASE_SIZE)
+			->multiply($this->_level)
+			->pow(self::TRANSACTION_MULTIPLIER)
+			->val();
 		return $this->_transaction_size;
 	}
 
@@ -177,20 +180,27 @@ class Engine extends Intelligence implements ISphere {
 			$this->_stoptime = getrusage();
 			$ru = $this->_starttime;
 			$rus = $this->_stoptime;
-			$this->_totaltime = Num::subtract(
-				Num::add(Num::multiply($rus["ru_utime.tv_sec"], 1000), Num::int(Num::divide($rus["ru_utime.tv_usec"], 1000))),
-				Num::add(Num::multiply($ru["ru_utime.tv_sec"], 1000), Num::int(Num::divide($ru["ru_utime.tv_usec"], 1000)))
-			);
+			$startFraction = Num::make($ru["ru_utime.tv_usec"])->divide(1000)->int();
+			$stopFraction = Num::make($rus["ru_utime.tv_usec"])->divide(1000)->int();
+			$startMilliseconds = Num::make($ru["ru_utime.tv_sec"])
+				->multiply(1000)
+				->add($startFraction)
+				->val();
+			$this->_totaltime = Num::make($rus["ru_utime.tv_sec"])
+				->multiply(1000)
+				->add($stopFraction)
+				->subtract($startMilliseconds)
+				->val();
 		} else {
 			$this->_stoptime = microtime(true);
 			$start = Num::isValid($this->_starttime) ? $this->_starttime : $this->_stoptime;
-			$this->_totaltime = Num::subtract($this->_stoptime, $start);
+			$this->_totaltime = Num::make($this->_stoptime)->subtract($start)->val();
 		}
 
 		if ( !Num::isValid($this->_avgtime) || $this->_avgtime <= 0 ) {
 			$this->_avgtime = $this->_totaltime;
 		} else {
-			$this->_avgtime = Num::divide(Num::add($this->_avgtime, $this->_totaltime), 2);
+			$this->_avgtime = Num::make($this->_avgtime)->add($this->_totaltime)->divide(2)->val();
 		}
 	}
 
@@ -243,12 +253,10 @@ class Engine extends Intelligence implements ISphere {
 	{
 		$stats = [];
 		if (!is_object($data) && Arr::is($data)) {
-			$stats = Arr::filter($data, static fn ($value, $key) => Arr::has([
-				'count',
-				'mean1',
-				'variance1',
-				'std1',
-			], $key, true));
+			$statisticNames = ['count', 'mean1', 'variance1', 'std1'];
+			$stats = Arr::make($data)
+				->filter(static fn ($value, $key) => Arr::has($statisticNames, $key, true))
+				->val();
 		}
 
 		return [

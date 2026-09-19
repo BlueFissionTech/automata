@@ -5,6 +5,7 @@ namespace BlueFission\Automata\Learning;
 use BlueFission\Arr;
 use BlueFission\Flag;
 use BlueFission\Num;
+use BlueFission\Ref;
 use BlueFission\Str;
 use BlueFission\Val;
 use InvalidArgumentException;
@@ -18,7 +19,7 @@ final class RecordSnapshot
             throw new InvalidArgumentException('Record exceeds the maximum snapshot depth.');
         }
         // Primitive helpers unwrap IVal objects; reject runtime values before using them.
-        if (is_object($value) || is_resource($value)) {
+        if (is_object($value) || Ref::is($value)) {
             throw new InvalidArgumentException('Records accept only finite, serializable scalar and array values.');
         }
         if (Arr::is($value)) {
@@ -37,7 +38,7 @@ final class RecordSnapshot
 
     public static function identifier(mixed $value, string $field): string
     {
-        if (is_object($value) || !Str::is($value) || Str::trim($value) === '') {
+        if (is_object($value) || !Str::is($value) || Str::make($value)->trim()->val() === '') {
             throw new InvalidArgumentException($field . ' must be a nonempty string.');
         }
         return $value;

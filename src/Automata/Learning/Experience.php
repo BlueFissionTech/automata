@@ -58,13 +58,15 @@ final class Experience implements JsonSerializable
     /** @param Statement[] $statements */
     public static function fromStatements(string $id, array $statements, Context $context, array $options = []): self
     {
-        $snapshots = [];
-        foreach ($statements as $statement) {
-            if (!$statement instanceof Statement) {
-                throw new InvalidArgumentException('Expected normalized Statement instances.');
-            }
-            $snapshots[] = $statement->snapshot();
-        }
+        $snapshots = Arr::make($statements)
+            ->map(static function ($statement): array {
+                if (!$statement instanceof Statement) {
+                    throw new InvalidArgumentException('Expected normalized Statement instances.');
+                }
+                return $statement->snapshot();
+            })
+            ->values()
+            ->val();
         $experience = new self([
             'schema_version' => self::SCHEMA_VERSION,
             'id' => $id,
@@ -103,7 +105,10 @@ final class Experience implements JsonSerializable
 
     public function id(): string { return $this->record['id']; }
     /** @return Outcome[] */
-    public function outcomes(): array { return Arr::map($this->record['outcomes'], Outcome::fromArray(...)); }
+    public function outcomes(): array
+    {
+        return Arr::make($this->record['outcomes'])->map(Outcome::fromArray(...))->val();
+    }
     public function toArray(): array { return $this->record; }
     public function jsonSerialize(): array { return $this->toArray(); }
 }

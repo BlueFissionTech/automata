@@ -22,7 +22,7 @@ class ExperienceTest extends TestCase
         $statement->assign(['subject' => 'guest', 'behavior' => 'asks', 'object' => 'breakfast']);
         $context = new Context(['utterance' => 'Where is breakfast?']);
         $context->addTag('concierge')->setNormalization('channel', 'text');
-        $experience = Experience::fromStatements('episode-1', [$statement], $context, [
+        $experience = Experience::fromStatements('episode-1', ['request' => $statement], $context, [
             'timestamp' => '2026-09-19T12:00:00Z', 'trace_id' => 'trace-1',
         ]);
         $statement->field('object', 'luggage');
@@ -118,6 +118,23 @@ class ExperienceTest extends TestCase
             } catch (InvalidArgumentException $exception) {
                 $this->assertStringContainsString('serializable', $exception->getMessage());
             }
+        }
+    }
+
+    public function testResourceRejectionLeavesTheCallersStreamUsable(): void
+    {
+        $stream = fopen('php://temp', 'w+');
+        try {
+            try {
+                Experience::fromStatements('resource', [], new Context(), ['metadata' => ['stream' => $stream]]);
+                $this->fail('Runtime resources must not enter an experience snapshot.');
+            } catch (InvalidArgumentException $exception) {
+                $this->assertStringContainsString('serializable', $exception->getMessage());
+            }
+            $this->assertIsResource($stream);
+            $this->assertSame(4, fwrite($stream, 'test'));
+        } finally {
+            fclose($stream);
         }
     }
 }

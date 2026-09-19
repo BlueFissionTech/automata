@@ -56,19 +56,21 @@ foreach ($training as $index => [$text, $intent]) {
 $store->save(Experience::fromStatements('pending-review', [], new Context(['utterance' => 'unknown request'])));
 $memory->review();
 $adapter = new CallbackTrainingAdapter('concierge.intent', '1', static function (Experience $experience): iterable {
-    foreach ($experience->outcomes() as $outcome) {
-        $intent = $outcome->observations()['intent'] ?? null;
-        if ($outcome->successful() && Str::is($intent)) {
-            yield new TrainingExample($experience->id(), $outcome->id(),
-                $experience->toArray()['context']['data']['utterance'], $intent);
-        }
-    }
+    return Arr::make($experience->outcomes())
+        ->filter(static fn (Outcome $outcome): bool => $outcome->successful()
+            && Str::is($outcome->observations()['intent'] ?? null))
+        ->map(static fn (Outcome $outcome): TrainingExample => new TrainingExample(
+            $experience->id(), $outcome->id(),
+            $experience->toArray()['context']['data']['utterance'], $outcome->observations()['intent']))
+        ->values()
+        ->val();
 });
 $batch = (new ExperienceRecomposer())->compose($store->experiences(), $adapter);
 $candidate = new NaiveBayesTextClassification();
 // Train all projected examples through the public pipeline. The strategy's train()
 // method performs its own random split; this experiment uses separate holdouts.
 $candidate->getPipeline()->train($batch->samples(), $batch->labels());
+$evaluationCount = Arr::count($holdout);
 $baselineCorrect = 0;
 $candidateCorrect = 0;
 $predictions = [];
@@ -90,7 +92,7 @@ $checks = [
     'episodic_snapshots_recorded' => Arr::count($memory->assessment()) === Arr::count($training),
     'snapshot_round_trip' => $restored->toArray() === $first->toArray(),
     'candidate_improves_over_constant_prior' => $candidateCorrect > $baselineCorrect,
-    'all_held_out_predictions_correct' => $candidateCorrect === Arr::count($holdout),
+    'all_held_out_predictions_correct' => $candidateCorrect === $evaluationCount,
 ];
 $passed = !Arr::has($checks, false, true);
 echo json_encode([
@@ -99,9 +101,9 @@ echo json_encode([
     'passed' => $passed,
     'checks' => $checks,
     'training_examples' => Arr::count($batch->samples()),
-    'evaluation_examples' => Arr::count($holdout),
-    'constant_prior_accuracy' => Num::divide($baselineCorrect, Arr::count($holdout)),
-    'candidate_accuracy' => Num::divide($candidateCorrect, Arr::count($holdout)),
+    'evaluation_examples' => $evaluationCount,
+    'constant_prior_accuracy' => Num::make($baselineCorrect)->divide($evaluationCount)->val(),
+    'candidate_accuracy' => Num::make($candidateCorrect)->divide($evaluationCount)->val(),
     'predictions' => $predictions,
     'training_lineage' => $batch->toArray(),
     'limits' => ['No live provider or physical actions.',

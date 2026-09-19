@@ -92,14 +92,19 @@ existing prerelease posture until those gates justify a stronger release claim.
 ## Primitive helper policy
 
 The learning records, projections, reference store and runnable experiment use
-DevElation array, string, numeric and boolean helpers. The Engine refactor uses
+DevElation array, string, numeric, boolean and resource helpers. Prefer fluent
+chains for transformations, including map/filter/value pipelines, string
+normalization and numeric arithmetic. Keep type predicates explicit before
+constructing values so validation does not silently coerce malformed input. The Engine refactor uses
 those same primitives while preserving its historical comments and existing
 classification and attention behavior. The selected typed predicates and keyed
 mapping callbacks are available in the declared DevElation minimum, v1.3.39.
 
 Snapshot validation rejects runtime objects before invoking primitive predicates:
 DevElation intentionally unwraps value objects, whereas persisted experience
-records accept only plain scalar and array data. Explicit JSON flags preserve
+records accept only plain scalar and array data. The existing `Ref::is` helper
+rejects stream resources without taking ownership or closing the caller's handle;
+this behavior has regression coverage and is available in DevElation v1.3.39. Explicit JSON flags preserve
 floating-point types and throw on encoding failures. Native runtime inspection,
 UTC timestamps and clock reads remain where there is no equivalent helper with
 the required semantics. Regression coverage preserves scalar types, detached

@@ -19,7 +19,9 @@ final class ExperienceRecomposer
             if (!$experience instanceof Experience) {
                 throw new InvalidArgumentException('Expected Experience instances.');
             }
-            $outcomeIds = Arr::map($experience->outcomes(), static fn (Outcome $outcome): string => $outcome->id());
+            $outcomeIds = Arr::make($experience->outcomes())
+                ->map(static fn (Outcome $outcome): string => $outcome->id())
+                ->val();
             $projected = Dev::apply('automata.learning.examples', $adapter->project($experience));
             if (!Val::check($projected, 'is_iterable')) {
                 throw new InvalidArgumentException('Training projections must be iterable.');
