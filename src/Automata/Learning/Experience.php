@@ -61,7 +61,7 @@ final class Experience implements JsonSerializable
             if (!$statement instanceof Statement) {
                 throw new InvalidArgumentException('Expected normalized Statement instances.');
             }
-            $snapshots[] = $statement->toArray();
+            $snapshots[] = $statement->snapshot();
         }
         $experience = new self([
             'schema_version' => self::SCHEMA_VERSION,

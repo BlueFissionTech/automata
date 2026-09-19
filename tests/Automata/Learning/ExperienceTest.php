@@ -32,6 +32,21 @@ class ExperienceTest extends TestCase
         $this->assertSame($record, $restored->toArray());
     }
 
+    public function testStructuredEntitiesAndStatementContextUseSemanticSnapshots(): void
+    {
+        $statement = new Statement();
+        $statement->assign([
+            'subject' => ['name' => 'guest', 'description' => 'hotel guest'],
+            'object' => ['name' => 'luggage', 'description' => 'two bags'],
+            'context' => ['location' => 'lobby'],
+        ]);
+        $expected = $statement->snapshot();
+        $experience = Experience::fromStatements('structured-episode', [$statement], new Context());
+        $statement->field('context')->set('location', 'upstairs');
+        $this->assertSame($expected, $experience->toArray()['statements'][0]);
+        $this->assertSame('lobby', $experience->toArray()['statements'][0]['context']['data']['location']);
+    }
+
     public function testDelayedOutcomesPreserveTheOriginalAndStoreSnapshots(): void
     {
         $original = Experience::fromStatements('episode-1', [], new Context());
