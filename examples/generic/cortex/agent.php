@@ -112,7 +112,7 @@ $response->acknowledge($confirmation['id'], $deliver($confirmation, $scope));
 $checks = [
     'early_output_precedes_plan_and_effect' => $early['fragments'][0]['id'] === 'greeting' && $earlyWithoutEffect,
     'classifier_worker_produces_tool_plan' => $release['fragments'][0]['payload']['input']['intent'] === 'checkin',
-    'unknown_worker_confidence_remains_null' => $release['fragments'][0]['confidence'] === null,
+    'unknown_worker_confidence_remains_null' => $release['fragments'][0]['confidence'] === null && $orchestration->confidence() === null,
     'pending_identity_survives_agent_restore' => $replayed === $release,
     'governed_tool_effect_not_repeated_after_lost_ack' => $tool->effects === 1,
     'confirmation_after_successful_tool_receipt' => $confirmation['fragments'][0]['id'] === 'confirmation',

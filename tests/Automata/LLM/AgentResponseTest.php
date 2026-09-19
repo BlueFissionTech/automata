@@ -5,6 +5,7 @@ namespace BlueFission\Tests\Automata\LLM;
 use BlueFission\Arr;
 use BlueFission\Automata\LLM\Agent;
 use BlueFission\Automata\LLM\Agent\AgentSession;
+use BlueFission\Automata\LLM\Agent\Orchestration\Orchestrator;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTrace;
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
@@ -49,7 +50,8 @@ final class AgentResponseTest extends TestCase
             'plan' => $response->worker('action', fn () => ['status' => 'completed', 'output' => ['tool' => 'fixture']]),
             'format' => $response->worker('confirmation', fn () => ['status' => 'completed', 'output' => false]),
         ]]);
-        $agent->orchestrate();
+        $orchestration = $agent->orchestrate();
+        $this->assertNull($orchestration->confidence());
         $release = $response->prepare(0);
         $this->assertSame(['action'], array_column($release['fragments'], 'id'));
         $this->assertNull($release['fragments'][0]['confidence']);
@@ -72,6 +74,17 @@ final class AgentResponseTest extends TestCase
         $response->resolve('confirmation', 'done');
         $this->assertNull($response->prepare(0));
         $this->assertSame('failed', $response->state()['fragments']['action']['status']);
+    }
+
+    public function testOrchestrationConfidenceDistinguishesUnknownFromMeasuredZero(): void
+    {
+        foreach ([[null, null, null], [0.8, null, null], [0.0, 1.0, 0.5]] as [$first, $second, $expected]) {
+            $orchestrator = new Orchestrator(['workers' => [
+                'first' => fn () => ['output' => 'a', 'confidence' => $first],
+                'second' => fn () => ['output' => 'b', 'confidence' => $second],
+            ]]);
+            $this->assertSame($expected, $orchestrator->run()->confidence());
+        }
     }
 
     public function testCheckpointRestoresPendingReceiptButRejectsOtherSessionAndTask(): void

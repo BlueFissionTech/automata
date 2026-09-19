@@ -117,7 +117,8 @@ production methods, preparation, acknowledgement and cancellation. Its
 `worker($fragmentId, $producer)` wrapper fits the existing orchestrator. Producers
 explicitly return `['status' => 'completed', 'output' => $value]` or a `failed`
 result; optional confidence must satisfy the composer contract and otherwise
-stays null. Raw strings, partial statuses and missing output are rejected. A
+stays null. An explicit unknown worker confidence also keeps the orchestration
+aggregate unknown; known numeric zero remains a measurement. Raw strings, partial statuses and missing output are rejected. A
 failed result or exception fails the fragment; it does not prove receiver success.
 
 ```php
