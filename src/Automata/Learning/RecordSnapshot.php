@@ -2,6 +2,11 @@
 
 namespace BlueFission\Automata\Learning;
 
+use BlueFission\Arr;
+use BlueFission\Flag;
+use BlueFission\Num;
+use BlueFission\Str;
+use BlueFission\Val;
 use InvalidArgumentException;
 
 /** @internal Copies persisted data without retaining runtime objects or references. */
@@ -12,15 +17,19 @@ final class RecordSnapshot
         if ($depth > 32) {
             throw new InvalidArgumentException('Record exceeds the maximum snapshot depth.');
         }
-        if (is_array($value)) {
+        // Primitive helpers unwrap IVal objects; reject runtime values before using them.
+        if (is_object($value) || is_resource($value)) {
+            throw new InvalidArgumentException('Records accept only finite, serializable scalar and array values.');
+        }
+        if (Arr::is($value)) {
             $copy = [];
             foreach ($value as $key => $item) {
                 $copy[$key] = self::copy($item, $depth + 1);
             }
             return $copy;
         }
-        if ($value === null || is_bool($value) || is_int($value) || is_string($value)
-            || (is_float($value) && is_finite($value))) {
+        if (Val::isNull($value) || Flag::isBool($value) || Num::isInt($value) || Str::is($value)
+            || (Num::isFloat($value) && Num::check($value, 'is_finite'))) {
             return $value;
         }
         throw new InvalidArgumentException('Records accept only finite, serializable scalar and array values.');
@@ -28,7 +37,7 @@ final class RecordSnapshot
 
     public static function identifier(mixed $value, string $field): string
     {
-        if (!is_string($value) || trim($value) === '') {
+        if (is_object($value) || !Str::is($value) || Str::trim($value) === '') {
             throw new InvalidArgumentException($field . ' must be a nonempty string.');
         }
         return $value;

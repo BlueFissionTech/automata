@@ -2,6 +2,9 @@
 
 require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
+use BlueFission\Arr;
+use BlueFission\Num;
+use BlueFission\Str;
 use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\Context;
 use BlueFission\Automata\Language\Statement;
@@ -55,7 +58,7 @@ $memory->review();
 $adapter = new CallbackTrainingAdapter('concierge.intent', '1', static function (Experience $experience): iterable {
     foreach ($experience->outcomes() as $outcome) {
         $intent = $outcome->observations()['intent'] ?? null;
-        if ($outcome->successful() && is_string($intent)) {
+        if ($outcome->successful() && Str::is($intent)) {
             yield new TrainingExample($experience->id(), $outcome->id(),
                 $experience->toArray()['context']['data']['utterance'], $intent);
         }
@@ -70,7 +73,7 @@ $baselineCorrect = 0;
 $candidateCorrect = 0;
 $predictions = [];
 foreach ($holdout as [$text, $expected]) {
-    if (in_array($text, $batch->samples(), true)) {
+    if (Arr::has($batch->samples(), $text, true)) {
         throw new RuntimeException('Evaluation input leaked into the training corpus.');
     }
     $predicted = $candidate->predict($text);
@@ -82,23 +85,23 @@ $first = $store->get('concierge-0');
 $restored = new Experience(json_decode(json_encode($first,
     JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION), true, 512, JSON_THROW_ON_ERROR));
 $checks = [
-    'all_observed_examples_projected' => count($batch->samples()) === count($training),
-    'pending_experience_excluded' => !in_array('unknown request', $batch->samples(), true),
-    'episodic_snapshots_recorded' => count($memory->assessment()) === count($training),
+    'all_observed_examples_projected' => Arr::count($batch->samples()) === Arr::count($training),
+    'pending_experience_excluded' => !Arr::has($batch->samples(), 'unknown request', true),
+    'episodic_snapshots_recorded' => Arr::count($memory->assessment()) === Arr::count($training),
     'snapshot_round_trip' => $restored->toArray() === $first->toArray(),
     'candidate_improves_over_constant_prior' => $candidateCorrect > $baselineCorrect,
-    'all_held_out_predictions_correct' => $candidateCorrect === count($holdout),
+    'all_held_out_predictions_correct' => $candidateCorrect === Arr::count($holdout),
 ];
-$passed = !in_array(false, $checks, true);
+$passed = !Arr::has($checks, false, true);
 echo json_encode([
     'experiment' => 'cortex-experiential-foundation-v1',
     'fixture_kind' => 'synthetic',
     'passed' => $passed,
     'checks' => $checks,
-    'training_examples' => count($batch->samples()),
-    'evaluation_examples' => count($holdout),
-    'constant_prior_accuracy' => $baselineCorrect / count($holdout),
-    'candidate_accuracy' => $candidateCorrect / count($holdout),
+    'training_examples' => Arr::count($batch->samples()),
+    'evaluation_examples' => Arr::count($holdout),
+    'constant_prior_accuracy' => Num::divide($baselineCorrect, Arr::count($holdout)),
+    'candidate_accuracy' => Num::divide($candidateCorrect, Arr::count($holdout)),
     'predictions' => $predictions,
     'training_lineage' => $batch->toArray(),
     'limits' => ['No live provider or physical actions.',

@@ -2,6 +2,8 @@
 namespace BlueFission\Automata;
 
 use BlueFission\Func;
+use BlueFission\Arr;
+use BlueFission\Str;
 use BlueFission\Num;
 use BlueFission\Automata\Intelligence;
 use BlueFission\Behavioral\Behaviors\Action;
@@ -142,7 +144,7 @@ class Engine extends Intelligence implements ISphere {
 			}
 
 			Dev::do('automata.engine.classify.action1', [
-				'strategy' => is_string($name) ? $name : get_class($strategy),
+				'strategy' => Str::is($name) ? $name : get_class($strategy),
 				'input' => $input,
 				'output' => $result,
 				'executionTime' => $this->time(),
@@ -162,25 +164,27 @@ class Engine extends Intelligence implements ISphere {
 	// }
 
 	public function getTransactionSize() {
-		$this->_transaction_size = Num::pow(self::TRANSACTION_BASE_SIZE * $this->_level, self::TRANSACTION_MULTIPLIER);
+		$this->_transaction_size = Num::pow(Num::multiply(self::TRANSACTION_BASE_SIZE, $this->_level), self::TRANSACTION_MULTIPLIER);
 		return $this->_transaction_size;
 	}
 
 	protected function startclock() {
-		$this->_starttime = function_exists('getrusage') ? getrusage() : microtime(true);
+		$this->_starttime = Func::isCallable('getrusage') ? getrusage() : microtime(true);
 	}
 
 	protected function stopclock() {
-		if ( function_exists('getrusage') && is_array($this->_starttime) ) {
+		if ( Func::isCallable('getrusage') && Arr::is($this->_starttime) ) {
 			$this->_stoptime = getrusage();
 			$ru = $this->_starttime;
 			$rus = $this->_stoptime;
-			$this->_totaltime = ($rus["ru_utime.tv_sec"]*1000 + intval($rus["ru_utime.tv_usec"]/1000))
-				- ($ru["ru_utime.tv_sec"]*1000 + intval($ru["ru_utime.tv_usec"]/1000));
+			$this->_totaltime = Num::subtract(
+				Num::add(Num::multiply($rus["ru_utime.tv_sec"], 1000), Num::int(Num::divide($rus["ru_utime.tv_usec"], 1000))),
+				Num::add(Num::multiply($ru["ru_utime.tv_sec"], 1000), Num::int(Num::divide($ru["ru_utime.tv_usec"], 1000)))
+			);
 		} else {
 			$this->_stoptime = microtime(true);
 			$start = Num::isValid($this->_starttime) ? $this->_starttime : $this->_stoptime;
-			$this->_totaltime = ($this->_stoptime - $start);
+			$this->_totaltime = Num::subtract($this->_stoptime, $start);
 		}
 
 		if ( !Num::isValid($this->_avgtime) || $this->_avgtime <= 0 ) {
@@ -238,13 +242,13 @@ class Engine extends Intelligence implements ISphere {
 	protected function buildAttentionProfile(Sense $sense, $data, float $score): array
 	{
 		$stats = [];
-		if (is_array($data)) {
-			$stats = array_intersect_key($data, array_flip([
+		if (!is_object($data) && Arr::is($data)) {
+			$stats = Arr::filter($data, static fn ($value, $key) => Arr::has([
 				'count',
 				'mean1',
 				'variance1',
 				'std1',
-			]));
+			], $key, true));
 		}
 
 		return [
@@ -270,13 +274,13 @@ class Engine extends Intelligence implements ISphere {
 			return $this;
 		}
 
-		if ( is_string($strategy) && !class_exists($strategy) ) {
+		if ( !is_object($strategy) && Str::is($strategy) && !class_exists($strategy) ) {
 			return $this;
 		}
 
 		$strategyName = $name.'_strategy';
 		$instance = $strategy;
-		if ( is_string($strategy) ) {
+		if ( !is_object($strategy) && Str::is($strategy) ) {
 			$instance = new $strategy();
 		}
 		if ( !is_object($instance) ) {

@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Learning;
 
+use BlueFission\Arr;
 use BlueFission\DevElation as Dev;
 
 /** Process-local reference store. Hosts own durable storage and concurrency policy. */
@@ -19,6 +20,6 @@ final class InMemoryExperienceStore implements IExperienceStore
 
     public function experiences(): iterable
     {
-        yield from array_values($this->records);
+        yield from Arr::values($this->records);
     }
 }

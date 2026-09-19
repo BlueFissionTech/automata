@@ -2,6 +2,8 @@
 
 namespace BlueFission\Automata\Learning;
 
+use BlueFission\Arr;
+use BlueFission\Flag;
 use InvalidArgumentException;
 use JsonSerializable;
 
@@ -30,12 +32,13 @@ final class Outcome implements JsonSerializable
 
     public static function fromArray(array $record): self
     {
+        $record = RecordSnapshot::copy($record);
         foreach (['id', 'experience_id', 'source'] as $field) {
             RecordSnapshot::identifier($record[$field] ?? null, $field);
         }
-        if (!is_bool($record['successful'] ?? null)
-            || !is_array($record['observations'] ?? null)
-            || !is_array($record['attribution'] ?? null)) {
+        if (!Flag::isBool($record['successful'] ?? null)
+            || !Arr::is($record['observations'] ?? null)
+            || !Arr::is($record['attribution'] ?? null)) {
             throw new InvalidArgumentException('Malformed outcome record.');
         }
         return new self($record['id'], $record['experience_id'], $record['source'],

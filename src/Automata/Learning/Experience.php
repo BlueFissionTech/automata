@@ -4,6 +4,7 @@ namespace BlueFission\Automata\Learning;
 
 use BlueFission\Automata\Context;
 use BlueFission\Automata\Language\Statement;
+use BlueFission\Arr;
 use BlueFission\DevElation as Dev;
 use InvalidArgumentException;
 use JsonSerializable;
@@ -16,32 +17,33 @@ final class Experience implements JsonSerializable
 
     public function __construct(array $record)
     {
+        $record = RecordSnapshot::copy($record);
         if (($record['schema_version'] ?? null) !== self::SCHEMA_VERSION) {
             throw new InvalidArgumentException('Unsupported experience schema version.');
         }
         RecordSnapshot::identifier($record['id'] ?? null, 'experience id');
         RecordSnapshot::identifier($record['timestamp'] ?? null, 'timestamp');
         foreach (['statements', 'context', 'outcomes', 'provenance', 'metadata'] as $field) {
-            if (!is_array($record[$field] ?? null)) {
+            if (!Arr::is($record[$field] ?? null)) {
                 throw new InvalidArgumentException('Malformed experience field: ' . $field);
             }
         }
         foreach (['data', 'tags', 'normalizations'] as $field) {
-            if (!is_array($record['context'][$field] ?? null)) {
+            if (!Arr::is($record['context'][$field] ?? null)) {
                 throw new InvalidArgumentException('Malformed context field: ' . $field);
             }
         }
-        if (!array_is_list($record['statements']) || !array_is_list($record['outcomes'])) {
+        if (!Arr::check($record['statements'], 'array_is_list') || !Arr::check($record['outcomes'], 'array_is_list')) {
             throw new InvalidArgumentException('Statements and outcomes must be lists.');
         }
         foreach ($record['statements'] as $statement) {
-            if (!is_array($statement)) {
+            if (!Arr::is($statement)) {
                 throw new InvalidArgumentException('Each statement must be a semantic snapshot.');
             }
         }
         $seen = [];
         foreach ($record['outcomes'] as $outcomeRecord) {
-            if (!is_array($outcomeRecord)) {
+            if (!Arr::is($outcomeRecord)) {
                 throw new InvalidArgumentException('Each outcome must be a record.');
             }
             $outcome = Outcome::fromArray($outcomeRecord);
@@ -50,7 +52,7 @@ final class Experience implements JsonSerializable
             }
             $seen[$outcome->id()] = true;
         }
-        $this->record = RecordSnapshot::copy($record);
+        $this->record = $record;
     }
 
     /** @param Statement[] $statements */
@@ -101,7 +103,7 @@ final class Experience implements JsonSerializable
 
     public function id(): string { return $this->record['id']; }
     /** @return Outcome[] */
-    public function outcomes(): array { return array_map(Outcome::fromArray(...), $this->record['outcomes']); }
+    public function outcomes(): array { return Arr::map($this->record['outcomes'], Outcome::fromArray(...)); }
     public function toArray(): array { return $this->record; }
     public function jsonSerialize(): array { return $this->toArray(); }
 }

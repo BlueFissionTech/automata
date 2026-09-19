@@ -88,3 +88,20 @@ idempotency, concurrency semantics, memory validation, budgets and trace linkage
 through governed actions. A version increase is considered only after the relevant
 PRs are approved and merged and conformance evidence is reviewed. Maintain the
 existing prerelease posture until those gates justify a stronger release claim.
+
+## Primitive helper policy
+
+The learning records, projections, reference store and runnable experiment use
+DevElation array, string, numeric and boolean helpers. The Engine refactor uses
+those same primitives while preserving its historical comments and existing
+classification and attention behavior. The selected typed predicates and keyed
+mapping callbacks are available in the declared DevElation minimum, v1.3.39.
+
+Snapshot validation rejects runtime objects before invoking primitive predicates:
+DevElation intentionally unwraps value objects, whereas persisted experience
+records accept only plain scalar and array data. Explicit JSON flags preserve
+floating-point types and throw on encoding failures. Native runtime inspection,
+UTC timestamps and clock reads remain where there is no equivalent helper with
+the required semantics. Regression coverage preserves scalar types, detached
+references, rejection of value wrappers and nonfinite numbers, strategy class
+registration, and attention-statistic keys and values.

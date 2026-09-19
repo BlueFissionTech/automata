@@ -2,6 +2,8 @@
 
 namespace BlueFission\Automata\Learning;
 
+use BlueFission\Arr;
+use BlueFission\Val;
 use BlueFission\DevElation as Dev;
 use InvalidArgumentException;
 
@@ -17,9 +19,9 @@ final class ExperienceRecomposer
             if (!$experience instanceof Experience) {
                 throw new InvalidArgumentException('Expected Experience instances.');
             }
-            $outcomeIds = array_map(static fn (Outcome $outcome): string => $outcome->id(), $experience->outcomes());
+            $outcomeIds = Arr::map($experience->outcomes(), static fn (Outcome $outcome): string => $outcome->id());
             $projected = Dev::apply('automata.learning.examples', $adapter->project($experience));
-            if (!is_iterable($projected)) {
+            if (!Val::check($projected, 'is_iterable')) {
                 throw new InvalidArgumentException('Training projections must be iterable.');
             }
             foreach ($projected as $example) {
@@ -28,7 +30,7 @@ final class ExperienceRecomposer
                 }
                 $record = $example->toArray();
                 if ($record['experience_id'] !== $experience->id()
-                    || !in_array($record['outcome_id'], $outcomeIds, true)) {
+                    || !Arr::has($outcomeIds, $record['outcome_id'], true)) {
                     throw new InvalidArgumentException('Training example must cite an outcome from its source experience.');
                 }
                 $key = json_encode([$record['experience_id'], $record['outcome_id']], JSON_THROW_ON_ERROR);

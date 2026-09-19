@@ -7,6 +7,10 @@ use BlueFission\Automata\Language\Statement;
 use BlueFission\Automata\Learning\Experience;
 use BlueFission\Automata\Learning\InMemoryExperienceStore;
 use BlueFission\Automata\Learning\Outcome;
+use BlueFission\Arr;
+use BlueFission\Flag;
+use BlueFission\Num;
+use BlueFission\Str;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 
@@ -90,5 +94,30 @@ class ExperienceTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         Experience::fromStatements('episode-1', [], new Context(['callback' => static fn () => null]));
+    }
+
+    public function testSnapshotPreservesScalarTypesAndDetachesReferences(): void
+    {
+        $value = 'original';
+        $metadata = ['text' => &$value, 'values' => [null, false, true, 0, 1, 0.0, 1.5, '0', '']];
+        $experience = Experience::fromStatements('types', [], new Context(), ['metadata' => $metadata]);
+        $expected = $experience->toArray();
+        $value = 'changed';
+        $this->assertSame('original', $experience->toArray()['metadata']['text']);
+        $this->assertSame([null, false, true, 0, 1, 0.0, 1.5, '0', ''], $expected['metadata']['values']);
+        $this->assertSame($expected, (new Experience(json_decode(json_encode($experience,
+            JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION), true, 512, JSON_THROW_ON_ERROR)))->toArray());
+    }
+
+    public function testValueWrappersAndNonfiniteValuesAreNotPersistableScalars(): void
+    {
+        foreach ([new Arr([]), new Str('value'), new Num(1), new Flag(true), INF, NAN] as $invalid) {
+            try {
+                Experience::fromStatements('invalid', [], new Context(), ['metadata' => ['value' => $invalid]]);
+                $this->fail('Runtime wrappers and nonfinite numbers must be rejected.');
+            } catch (InvalidArgumentException $exception) {
+                $this->assertStringContainsString('serializable', $exception->getMessage());
+            }
+        }
     }
 }

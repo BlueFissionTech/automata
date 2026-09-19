@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Learning;
 
+use BlueFission\Arr;
 use InvalidArgumentException;
 use JsonSerializable;
 
@@ -26,8 +27,8 @@ final class TrainingBatch implements JsonSerializable
         ];
     }
 
-    public function samples(): array { return array_column($this->record['examples'], 'sample'); }
-    public function labels(): array { return array_column($this->record['examples'], 'label'); }
+    public function samples(): array { return Arr::map($this->record['examples'], static fn (array $record) => $record['sample']); }
+    public function labels(): array { return Arr::map($this->record['examples'], static fn (array $record) => $record['label']); }
     public function toArray(): array { return $this->record; }
     public function jsonSerialize(): array { return $this->toArray(); }
 }
