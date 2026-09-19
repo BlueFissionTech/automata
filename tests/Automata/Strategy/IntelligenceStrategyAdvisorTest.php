@@ -97,6 +97,36 @@ class IntelligenceStrategyAdvisorTest extends TestCase
         $this->assertSame(1, $deterministic->executions);
     }
 
+    public function testExplicitFalseAllowsAdaptiveSelectionAcrossAllowedModes(): void
+    {
+        $intelligence = new Intelligence();
+        $intelligence->recordStrategyFeedback('learned.rank', '1.0', [
+            'successful' => true, 'prediction_accuracy' => 1.0,
+        ], 'incident-routing');
+        $intelligence->recordStrategyFeedback('rules.ground', '1.0', [
+            'successful' => false, 'prediction_accuracy' => 0.0,
+        ], 'incident-routing');
+        $learned = $this->adapter('learned.rank', StrategyDefinition::MODE_LEARNED, 1);
+        $rules = $this->adapter('rules.ground', StrategyDefinition::MODE_DETERMINISTIC, 1);
+        $request = $this->request([
+            'candidates' => [
+                ['id' => 'rules.ground', 'version' => '1.0'],
+                ['id' => 'learned.rank', 'version' => '1.0'],
+            ],
+            'allowed_modes' => [StrategyDefinition::MODE_DETERMINISTIC, StrategyDefinition::MODE_LEARNED],
+            'selection_policy' => StrategyRouteRequest::SELECTION_ADAPTIVE,
+            'deterministic_preferred' => false,
+        ]);
+
+        $this->assertFalse($request->deterministic_preferred);
+        $result = (new StrategyRouter([$rules, $learned], $intelligence))->route($request, $this->authorization());
+        $this->assertSame('learned.rank', $result->selected_strategy['id']);
+        $this->assertSame(1, $learned->executions);
+        $this->assertSame(0, $rules->executions);
+        $this->assertTrue((new StrategyRouteRequest())->deterministic_preferred);
+        $this->assertTrue((new StrategyRouteRequest(['deterministic_preferred' => true]))->deterministic_preferred);
+    }
+
     public function testRouterObservationsBecomeReusableIntelligencePerformanceEvidence(): void
     {
         $intelligence = new Intelligence();

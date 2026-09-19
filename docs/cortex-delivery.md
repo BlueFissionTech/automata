@@ -13,7 +13,7 @@ APIs remain intact.
 | `Comprehension/Holoscene.php` | Keep; use existing `push()` seam | Example records and reviews the experience snapshots |
 | `Learning/*` | Add experiences, outcomes, store and projections | `tests/Automata/Learning` and Cortex command |
 | `Learning/ClassificationEvaluator.php` | Add held-out classification comparison | Improving candidate recommended; regression, overlap and unreliable evidence rejected |
-| `Intelligence.php`, `Strategy/Routing/*` | Keep existing authority/advice split; later bridge attributed feedback | Existing advisor tests cover reranking without bypassing eligibility |
+| `Learning/StrategyOutcomeFeedback.php`, `Intelligence.php`, `Strategy/Routing/*` | Bridge explicitly admitted outcomes into advisory scores | Adaptive route changes while eligibility, exact versions, authorization and invocation limits remain enforced |
 | `Strategy/IStrategy.php` | Keep interface; adapt batches | Example trains existing Naive Bayes pipeline |
 | `Goal/ManagesGoals.php` | Audit and extend shared criteria/dependencies later | Require multi-goal progress and blocked-prerequisite tests |
 | `Path/Graph.php`, `Path/Node.php` | Evaluate reuse for composite strategies | Require bounded traversal, fallback, early exit and cancellation |
@@ -69,6 +69,7 @@ Run:
 vendor/bin/phpunit --do-not-cache-result tests/Automata/Learning
 php examples/generic/cortex/run.php
 php examples/generic/cortex/evaluate.php
+php examples/generic/cortex/adapt.php
 ```
 
 The initial run recorded 12 synthetic training episodes and one pending review,
@@ -89,13 +90,48 @@ cancellation or resource-spend enforcement. Callers provide trusted prediction
 implementations and truthful training provenance; undisclosed pretraining and
 semantic duplicate detection are outside this evaluator's guarantees.
 
-These experiments do not establish open-world accuracy, generative quality, continual learning,
-route adaptation, safe operational execution, or production reliability.
+The adaptation command admits the evaluation's independently labelled outcomes,
+records exact strategy versions and context, and routes a new request through the
+existing advisor. The selected version changes from the constant prior to Bayes.
+It also probes duplicate feedback, deterministic preference, adapter eligibility,
+denied authorization, unregistered versions and a zero invocation budget.
+
+These experiments do not establish open-world accuracy, generative quality,
+continual learning, safe operational execution, or production reliability.
+
+## Attributed feedback contract
+
+`StrategyOutcomeFeedback::apply($experience, $outcomeId)` accepts only an attached
+outcome with explicit `strategy_id`, `strategy_version` and `context_key`
+attribution. The host decides which evidence to admit. Optional observations under
+`feedback` contain finite, nonnegative numbers for `accuracy`,
+`prediction_accuracy`, `score`, `confidence`, `latency_ms`, `cost` or `energy`;
+quality ratios must be at most one. Null metrics are omitted. Outcome success is
+preserved even when false, and numeric zero remains evidence. Unknown fields are
+rejected. Strategy ids and versions cannot contain `@`, the existing advisor's
+identity separator.
+
+Identical repeated evidence returns false after a successful application;
+conflicting evidence for the same experience/outcome pair is rejected. A learner
+exception leaves an uncertain receipt and prevents blind retry. Receipts expose
+lineage and application status, but both learner state and deduplication are
+process-local. Durable transactional recovery and reconciliation are future work.
+Feedback changes scores only; it cannot register models, grant authority or
+promote a candidate. Existing performance summaries may report zero for unsampled
+resource metrics; those defaults are not measurements.
+
+The route request constructor preserves an explicitly false
+`deterministic_preferred` value while retaining the true default. This narrow
+compatibility measure addresses the demo's reproduced failure with DevElation's
+legacy empty-value assignment behavior, tracked in
+[DevElation #258](https://github.com/BlueFissionTech/develation/issues/258).
+It does not repair generic mutation of existing objects; construct a new request
+when changing that policy until the upstream assignment contract is fixed.
 
 ## Release gates still open
 
 The first slice establishes snapshots and attributable training data. A production
-candidate still needs measured route adaptation, safe candidate promotion,
+candidate still needs representative route-adaptation evidence, safe candidate promotion,
 progressive multimodal responses, goal continuity, interruption recovery,
 idempotency, concurrency semantics, memory validation, budgets and trace linkage
 through governed actions. A version increase is considered only after the relevant

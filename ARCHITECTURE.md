@@ -427,3 +427,20 @@ reasons. It never calls train/save/load/accuracy or registers a strategy. Report
 quality comes only from held-out predictions. The caller supplies trusted,
 side-effect-free prediction implementations and owns model isolation, evidence
 admission and any later promotion. Existing routing governance remains separate.
+
+## 8. Strategy feedback boundary
+
+`Learning/StrategyOutcomeFeedback` projects a selected attached Outcome into the
+existing `Intelligence::recordStrategyFeedback()` seam. Attribution declares
+`strategy_id`, `strategy_version` and `context_key`; observations optionally carry
+an explicit `feedback` metric map. The Outcome supplies observed success. Hosts
+admit trustworthy evidence before invoking the bridge. The bridge does not infer
+causality, authenticate sources, register candidates, promote models or authorize
+execution. Intelligence retains its existing contextual and global aggregation.
+
+Receipts bind experience/outcome evidence to exact targets and distinguish applied
+from uncertain learner writes. In-memory replay checks precede learner mutation;
+uncertain writes require reconciliation rather than blind retries. Receipt state
+must live as long as the associated learner; durable restart/transaction semantics
+are not claimed. The integrated example composes classification evaluation,
+experience outcomes, advisory learning and the existing governed StrategyRouter.
