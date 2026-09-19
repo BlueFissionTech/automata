@@ -12,6 +12,7 @@ APIs remain intact.
 | `Language/Statement.php`, `Context.php` | Keep; capture snapshots | Input mutation cannot rewrite recorded experience |
 | `Comprehension/Holoscene.php` | Keep; use existing `push()` seam | Example records and reviews the experience snapshots |
 | `Learning/*` | Add experiences, outcomes, store and projections | `tests/Automata/Learning` and Cortex command |
+| `Learning/ClassificationEvaluator.php` | Add held-out classification comparison | Improving candidate recommended; regression, overlap and unreliable evidence rejected |
 | `Intelligence.php`, `Strategy/Routing/*` | Keep existing authority/advice split; later bridge attributed feedback | Existing advisor tests cover reranking without bypassing eligibility |
 | `Strategy/IStrategy.php` | Keep interface; adapt batches | Example trains existing Naive Bayes pipeline |
 | `Goal/ManagesGoals.php` | Audit and extend shared criteria/dependencies later | Require multi-goal progress and blocked-prerequisite tests |
@@ -67,6 +68,7 @@ Run:
 ```sh
 vendor/bin/phpunit --do-not-cache-result tests/Automata/Learning
 php examples/generic/cortex/run.php
+php examples/generic/cortex/evaluate.php
 ```
 
 The initial run recorded 12 synthetic training episodes and one pending review,
@@ -76,7 +78,18 @@ fixture requests correctly versus 2/6 for a constant prior. The command emits ea
 prediction and its expected label, training lineage and boolean conformance gates.
 
 These fixtures intentionally exercise composition with a small, clean vocabulary.
-They do not establish open-world accuracy, generative quality, continual learning,
+The candidate-evaluation command reuses those fixtures and existing strategy
+implementations. It compares distinct exact model versions, rejects overlap with
+either declared training corpus, and recommends only strict improvement meeting
+sample/quality/latency policy. It then rejects a worse candidate while leaving the
+incumbent installed in the caller's variable. Per-example evidence includes
+experience/outcome ids, predictions, failures and elapsed milliseconds. Unknown
+cost/energy remain unknown. Sample limits and post-run latency checks are not
+cancellation or resource-spend enforcement. Callers provide trusted prediction
+implementations and truthful training provenance; undisclosed pretraining and
+semantic duplicate detection are outside this evaluator's guarantees.
+
+These experiments do not establish open-world accuracy, generative quality, continual learning,
 route adaptation, safe operational execution, or production reliability.
 
 ## Release gates still open
