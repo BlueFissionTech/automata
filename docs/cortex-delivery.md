@@ -19,7 +19,7 @@ APIs remain intact.
 | `Path/Graph.php`, `Path/Node.php` | Evaluate reuse for composite strategies | Require bounded traversal, fallback, early exit and cancellation |
 | `Parsing/*`, DevElation parser | Adapt executable strategies later | Require deterministic output and governed tool calls |
 | `LLM/Agent/Memory/*` | Keep event storage; add explicit durable experience adapter later | Require restoration and conflicting-write tests |
-| Response composition | Add after experience contracts | Require dependency-gated partial emission and no repeated actions |
+| `Response/*` | Add weighted composition and terminal delivery receipts | Progressive output, lost-ack restart, cancellation and fallback are demonstrated with a deduplicating fixture sink |
 
 ## Review sequence
 
@@ -70,6 +70,7 @@ vendor/bin/phpunit --do-not-cache-result tests/Automata/Learning
 php examples/generic/cortex/run.php
 php examples/generic/cortex/evaluate.php
 php examples/generic/cortex/adapt.php
+php examples/generic/cortex/respond.php
 ```
 
 The initial run recorded 12 synthetic training episodes and one pending review,
@@ -98,6 +99,14 @@ denied authorization, unregistered versions and a zero invocation budget.
 
 These experiments do not establish open-world accuracy, generative quality,
 continual learning, safe operational execution, or production reliability.
+
+The response command adds twelve gates around progressive output, required
+fragments, successful dependency receipts, stable delivery identity after a lost
+acknowledgement, cancellation and deadline fallback. Its single simulated action
+is deduplicated by a receiver whose state survives the caller's simulated restart.
+This is evidence for the composition protocol; durable storage, concurrent writers,
+Agent/worker/TaskTrace integration and production delivery remain open.
+See [the response contract](response-composition.md).
 
 ## Attributed feedback contract
 
@@ -132,7 +141,7 @@ when changing that policy until the upstream assignment contract is fixed.
 
 The first slice establishes snapshots and attributable training data. A production
 candidate still needs representative route-adaptation evidence, safe candidate promotion,
-progressive multimodal responses, goal continuity, interruption recovery,
+integrated multimodal responses, goal continuity, durable interruption recovery,
 idempotency, concurrency semantics, memory validation, budgets and trace linkage
 through governed actions. A version increase is considered only after the relevant
 PRs are approved and merged and conformance evidence is reviewed. Maintain the

@@ -682,3 +682,23 @@ The Cortex proof must evaluate a classifier, apply attributed held-out observati
 show changed future route preference, and retain exact-version, eligibility,
 authorization and resource-limit checks. Replay guarantees are process-local;
 durable, transactional feedback and model promotion remain subsequent work.
+
+## 10. Progressive response composition
+
+Response envelopes declare fixed fragment identities, channels, weights, blocking
+requirements and dependencies before work. Independently produced fragments may
+report progress and resolve through fluent APIs. A configured threshold cannot
+fall below its policy floor, and no threshold bypasses a failed or incomplete
+blocking requirement. Confirmation fragments wait for successful receiver receipts
+for their dependencies; a prepared command alone is not evidence of success.
+
+Releases have stable identities and explicit per-fragment completion receipts.
+Data-only checkpoints preserve pending and acknowledged delivery state. Hosts own
+trusted checkpoint storage, receiver idempotency and actual effect authorization.
+Cancellation stops new output and late producers while retaining in-flight evidence
+for reconciliation. Predeclared nonblocking fallback content cannot prove the
+original operation succeeded. The demo must show progressive output, a lost-ack
+restart, a single simulated effect, failure/fallback and cancellation.
+
+Direct Agent/worker/TaskTrace adapters and concurrent transactional persistence
+remain subsequent integration work; the generic composer does not execute effects.

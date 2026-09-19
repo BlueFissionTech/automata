@@ -36,6 +36,15 @@ selection across their modes. No model is automatically promoted or deployed.
 Feedback receipts retain the source and strategy/version/context lineage. This is
 process-local evidence; durable recovery, provider costs and energy are not proved.
 
-Subsequent slices add controlled promotion, durable governed adaptive routes, progressive
-response dependencies, composite/scripted strategies, and shared goal criteria.
+Run `php examples/generic/cortex/respond.php` for progressive response composition.
+It uses the existing classifier, waits for blocking requirements, releases an
+early acknowledgement and a simulated action separately, and withholds confirmation
+until a successful receiver receipt. A lost-ack restart reuses the same delivery
+identity; a retained fixture receiver performs only one effect. Additional probes
+exercise cancellation and deadline fallback. See
+[`docs/response-composition.md`](../../../docs/response-composition.md) for the
+checkpoint, terminal receipt and host persistence contract.
+
+Subsequent slices add controlled promotion, durable governed adaptive routes,
+Agent/worker/TaskTrace response integration, composite/scripted strategies and shared goal criteria.
 Each slice must report its actual measurements and unresolved release gates.

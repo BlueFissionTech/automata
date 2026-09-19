@@ -444,3 +444,18 @@ uncertain writes require reconciliation rather than blind retries. Receipt state
 must live as long as the associated learner; durable restart/transaction semantics
 are not claimed. The integrated example composes classification evaluation,
 experience outcomes, advisory learning and the existing governed StrategyRouter.
+
+## 9. Progressive response state
+
+Response definitions are immutable and validated before work. The composer owns
+serialized production transitions, weighted readiness, pending releases and
+terminal receiver receipts. It shares the internal plain-data snapshot validator
+with learning records. Prepared release ids bind the response, sequence and
+canonical fragment content; successful primary receipts gate dependent output.
+
+A versioned checkpoint replays transition history and retains pending identities.
+Receiver idempotency, atomic storage and external effect authorization remain
+outside the composer. Cancellation stops production and new releases while keeping
+in-flight receipt reconciliation possible. Fallback content is explicitly marked
+and never substitutes for original operational success. See
+`docs/response-composition.md` for the protocol and executable evidence.
