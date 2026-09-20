@@ -17,7 +17,8 @@ For commands and expected gate counts, start with the
    observed `Outcome` records. The host decides which sources and labels to trust.
 2. Use an `ITrainingAdapter` and `ExperienceRecomposer` to obtain a `TrainingBatch`
    with projection identity and experience/outcome lineage. Train an existing
-   strategy explicitly; recomposition does not train it automatically.
+   candidate through `LearningCoordinator` under explicit training policy and host
+   approval; recomposition does not train it automatically.
 3. Wrap distinct trained strategies as `ModelCandidate` objects and compare them
    using `ClassificationEvaluator` and a separate labelled holdout.
 4. Use `StrategyOutcomeFeedback` to update advisory route scores from admitted
@@ -30,8 +31,9 @@ For commands and expected gate counts, start with the
 
 See [strategy routing](strategy-routing.md), [model activation](model-lifecycle.md)
 and [response composition](response-composition.md) for the individual contracts.
-The six demos exercise these seams separately; a combined persistent adaptive
-runtime is still to be built.
+The learning demo connects experience capture, training, activation and Agent
+responses in one process. Persistent workers and broader strategy/goal integration
+remain open. See [continual learning](continual-learning.md).
 
 ## Evidence-backed change map
 
@@ -41,6 +43,7 @@ runtime is still to be built.
 | `Comprehension/Holoscene.php` | Keep; use existing `push()` seam | Example records and reviews the experience snapshots |
 | `Learning/*` | Add experiences, outcomes, store and projections | `tests/Automata/Learning` and Cortex command |
 | `Learning/ClassificationEvaluator.php` | Add held-out classification comparison | Improving candidate recommended; regression, overlap and unreliable evidence rejected |
+| `Learning/LearningCoordinator.php`, `TrainingPolicy.php` | Coordinate evidence-triggered isolated candidate training | Accumulation, pressure, approval, uncertain failure, retries and changed future Agent responses |
 | `Learning/ModelLifecycle.php` | Own a process-local active reference and revision | Fresh evaluation and explicit approval precede activation; actual inference changes and rollback are demonstrated |
 | `Learning/StrategyOutcomeFeedback.php`, `Intelligence.php`, `Strategy/Routing/*` | Bridge explicitly admitted outcomes into advisory scores | Adaptive route changes while eligibility, exact versions, authorization and invocation limits remain enforced |
 | `Strategy/IStrategy.php` | Keep interface; adapt batches | Example trains existing Naive Bayes pipeline |
@@ -104,6 +107,7 @@ php examples/generic/cortex/adapt.php
 php examples/generic/cortex/respond.php
 php examples/generic/cortex/agent.php
 php examples/generic/cortex/promote.php
+php examples/generic/cortex/learn.php
 ```
 
 The initial run recorded 12 synthetic training episodes and one pending review,
@@ -151,7 +155,9 @@ through the active model reference before and after transitions. This establishe
 process-local behavior, without model persistence or deployment. See
 [the lifecycle contract](model-lifecycle.md).
 
-All six commands run in CI and currently expose 63 gates. The versioned
+All seven commands run in CI and currently expose 78 gates. The learning command
+adds 15 gates that connect recorded experience, policy-triggered training, separate
+activation approval and receipt-gated Agent responses. The versioned
 [`fixture-v1.json`](../examples/generic/cortex/fixture-v1.json) and
 [`baseline-v1.json`](../examples/generic/cortex/baseline-v1.json) pin the corpus,
 projection lineage and all six expected predictions. Constant and single-wrong
@@ -196,8 +202,8 @@ activation/rollback. Production and broader Cortex integration still require:
 
 - Durable experience, feedback and response stores with authenticated restoration,
   receiver idempotency, concurrent-write rules and interrupted-worker recovery.
-- A learning coordinator and training policies/triggers, model artifact persistence,
-  and a combined governed adaptive runtime with representative evaluation data.
+- Durable/background training workers, model artifact persistence, richer experiential
+  strategy adapters and representative evaluation data for the combined runtime.
 - Composite/scripted strategies over existing graph/parser seams, shared goal
   criteria and dependencies, and explicit experience/session/trace integration.
 - Integrated multimodal execution, resource budgets and reconciliation when hosted
