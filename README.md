@@ -85,7 +85,7 @@ php examples/generic/cortex/workflow.php
 php examples/generic/cortex/sensory.php
 ```
 
-Together they report 108 boolean conformance gates as JSON and exit nonzero on
+Together they report 112 boolean conformance gates as JSON and exit nonzero on
 failure. They cover real classifier predictions, routing changes, receipt-gated
 responses, model activation/rollback and [sensory ingestion](docs/sensory-ingestion.md).
 The small frozen corpus proves repeatable

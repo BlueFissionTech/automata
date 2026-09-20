@@ -13,6 +13,8 @@ use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Automata\Language\Preparer;
 use BlueFission\Str;
 use BlueFission\DevElation as Dev;
+use InvalidArgumentException;
+use LogicException;
 
 /**
  * Possible senses: visual, textual, auditory
@@ -29,8 +31,9 @@ use BlueFission\DevElation as Dev;
  * or a hard resource budget. Media decoding and Experience creation are separate
  * responsibilities; a Sense instance does not implement those integrations.
  *
- * invoke() mutates sweep state and may recursively enhance the same input.
- * Call reset() between independent observations when reusing an instance.
+ * invoke() starts an independent observation and may enhance it internally.
+ * Its return and outer COMPLETE event retain the original sweep before pruning;
+ * nested sweep events remain available to callers interested in enhancement.
  */
 class Sense extends Obj {
 	use Programmable {
@@ -66,6 +69,8 @@ class Sense extends Obj {
 	private $_matrix = [];
 	private $_buffer = [];
 	private $_bufferSize = 32;
+	/** Prevent public callback reentry while internal enhancement owns the state. */
+	private bool $_invoking = false;
 
 	protected $_preparation;
 
@@ -89,13 +94,15 @@ class Sense extends Obj {
 
 		// Default preparation function for input processing
 		$this->_preparation = function ( $input ) {
-			// Legacy truthiness excludes empty input and the string "0".
-	        if ($input) {
+			// Custom callbacks can normalize other types; the default requires text.
+			// Literal "0" is content, not the absence of an observation.
+			if (!is_string($input)) {
+				throw new InvalidArgumentException('Default Sense preparation requires text.');
+			}
+	        if ($input !== '') {
 	        	if ($this->_depth == 0) {
 	        		$preparer = new Preparer();
-					$array = $preparer->tokenize($input);
-					// Known gap: this branch falls through to [] instead of returning
-					// the tokens. Deeper sweeps currently use the substring path below.
+					return Arr::make($preparer->tokenize($input))->values()->val();
 				} else {
 					// die(var_dump($input));
 	        		// return str_split ( (string)$input, $this->_settings['chunksize'] );
@@ -121,28 +128,44 @@ class Sense extends Obj {
 	/**
      * Resets the Sense object to its initial configuration.
      *
-     * Only settings, collection contents and depth are reset. The matrix and
-     * captured input remain allocated; this is not a full data-erasure operation.
+     * Clears captured data, settings and depth. This removes retained references,
+     * not snapshots already delivered or bytes in a secure memory wipe.
+     * Reset during an active observation is denied.
+     * @return $this
      */
 	public function reset()
+	{
+		$this->assertIdle();
+		$this->_invoking = true;
+		try { $this->resetState(); }
+		finally { $this->_invoking = false; }
+		return $this;
+	}
+
+	/** Clear retained observation state while the guard also protects reset hooks. */
+	private function resetState(): void
 	{
         Dev::do('sensory.sense.reset', ['settings' => $this->_settings]);
 		$this->_settings = $this->_config;
 		$this->_map->clear();
 		$this->_depth = -1;
+		$this->_matrix = [];
+		$this->_buffer = [];
+		$this->_input = null;
 	}
 
 	/**
      * Builds the internal matrix for storing input data.
      *
-     * Chunks fill rows of dimensions[0] columns. The existing matrix is reused
-     * rather than cleared, so this method does not promise a fresh snapshot.
+     * Chunks fill rows of dimensions[0] columns in a fresh matrix per sweep.
      *
      * @param array $input The input data to build the matrix from.
      */
 	protected function build( $input )
 	{
         $input = Dev::apply('sensory.sense.build_input', $input);
+		$input = $this->validatedChunks($input);
+		$this->_matrix = [];
 		$data = [];
 		foreach ($input as $piece) {
 			// if ( $this->_depth > 0) {
@@ -184,20 +207,26 @@ class Sense extends Obj {
 	protected function prepare( $input ) {
         $input = Dev::apply('sensory.sense.prepare_input', $input);
 		$result = call_user_func_array($this->_preparation, [$input]);
-        return Dev::apply('sensory.sense.prepare_result', $result);
+        return $this->validatedChunks(Dev::apply('sensory.sense.prepare_result', $result));
 	}
 
 	/**
      * Sets a custom preparation function for processing input data.
      *
      * The callback runs for every sweep, including recursive enhancements, and
-     * must return an array of chunks. It is not validated here. This legacy
-     * setter returns null rather than supporting fluent chaining.
+     * must return an array of string chunks. Registration checks callability;
+     * invocation validates the chunks before success. Replacement mid-sweep is denied.
+     * @return $this
      *
      * @param callable $function The custom preparation function.
      */
 	public function setPreparation( $function ) {
+		$this->assertIdle();
+		if (!is_callable($function)) {
+			throw new InvalidArgumentException('Sense preparation must be callable.');
+		}
 		$this->_preparation = $function;
+		return $this;
 	}
 
 	/**
@@ -220,15 +249,28 @@ class Sense extends Obj {
 	/**
      * Invokes the sense processing on the given input.
      *
-     * Each call increments depth, clears the sweep buffer/map, and builds chunk
-     * statistics. SUCCESS describes a sweep before focus() may enhance it again;
-     * COMPLETE can therefore occur more than once during a single outer call.
-     * The return value is the deepest available focus result. Exceptions from
-     * preparation, hooks, collection operations or listeners propagate.
+     * Public calls reset prior state and validate configuration. SUCCESS/COMPLETE
+     * describe each sweep before pruning; the final COMPLETE and return retain the
+     * original observation. Exceptions propagate and release the guard so the next
+     * call starts cleanly. This does not bound arbitrary callback execution time.
      *
      * @param mixed $input The input data to process.
      */
 	public function invoke( $input ) {
+		$this->assertIdle();
+		$this->_invoking = true;
+		try {
+			$this->resetState();
+			$this->validateSettings();
+			return $this->sweep($input);
+		} finally {
+			$this->_invoking = false;
+		}
+	}
+
+	/** Run an internal sweep without clearing its parent's enhancement state. */
+	private function sweep($input)
+	{
 		$this->_depth++;
 
 		$parent = $this->_parent;
@@ -246,7 +288,9 @@ class Sense extends Obj {
 		
 		$size = count($input)*$this->_settings['quality'];
 
-		$increment = floor( 1 / $this->_settings['quality'] );
+		// Clamp the stride before integer conversion, including tiny valid quality
+		// values whose reciprocal overflows. At most the first chunk is sampled then.
+		$increment = (int) min(max(1, count($input)), floor(1 / $this->_settings['quality']));
 		$multiplier = .001;
 
 		$col = $row = $i = $j = 0;
@@ -285,6 +329,13 @@ class Sense extends Obj {
 			// }
 
 			// $chunk = trim($_this->_matrix[$row]);
+			// Derive coordinates from a flat sample position. Incrementing both rows
+			// and columns by the stride previously jumped to absent matrix rows.
+			$position = $i * $increment;
+			if ($position >= count($input)) { break; }
+			$row = intdiv($position, $this->_settings['dimensions'][0]);
+			$col = $position % $this->_settings['dimensions'][0];
+			if ($row >= $this->_settings['dimensions'][1]) { break; }
 			$chunk = $this->_matrix[$row][$col];
 
 			/* 
@@ -301,8 +352,9 @@ class Sense extends Obj {
 				$translation = $this->buffer($chunk);
 				// $translation = $this->translate($chunk);
 				// echo "$chunk\n";
-				if ( !$this->_map->has($chunk) ) {
-					$this->_settings['attention'] += $this->_settings['attention'] < self::MAX_ATTENTION ? $this->_settings['dimensions'][$j]*$this->_settings['quality'] : 0; // increase attention from novelty
+				if ( !$this->_map->has($translation) ) {
+					$this->_settings['attention'] = min(self::MAX_ATTENTION,
+						$this->_settings['attention'] + $this->_settings['dimensions'][$j]*$this->_settings['quality']); // increase attention from novelty
 					$multiplier = .001;
 				} else {
 					// Or prepare to get bored.
@@ -310,7 +362,10 @@ class Sense extends Obj {
 				}
 
 				if ( $this->_settings['quality'] > 0 && $this->_settings['quality'] < 1 ) {
-					$this->_settings['quality'] += $multiplier;
+					// Enhancement reuses this value; keep adaptation inside the same
+					// domain validated at entry, even when boredom crosses zero.
+					$this->_settings['quality'] = max(PHP_FLOAT_MIN,
+						min(1.0, $this->_settings['quality'] + $multiplier));
 				}
 
 				if ( $parent && !$parent->can($translation) ) {
@@ -320,8 +375,9 @@ class Sense extends Obj {
 				$this->_map->add($chunk, $translation);
 
 				if ( $translation == $this->_settings['flags'][$j] ) {
-					$this->_settings['attention'] += $this->_settings['attention'] < self::MAX_ATTENTION ? $this->_settings['dimensions'][$j]*$this->_settings['quality'] : 0; // increase attention from activity
-					$this->_settings['sensitivity'] += $this->_settings['sensitivity'] <= self::MAX_SENSITIVITY ? 1 : 0;
+					$this->_settings['attention'] = min(self::MAX_ATTENTION,
+						$this->_settings['attention'] + $this->_settings['dimensions'][$j]*$this->_settings['quality']); // increase attention from activity
+					$this->_settings['sensitivity'] = min(self::MAX_SENSITIVITY, $this->_settings['sensitivity'] + 1);
 
 					// $parent->perform($translation, $chunk);
 					// $this->dispatch($translation, $chunk);
@@ -331,14 +387,6 @@ class Sense extends Obj {
 			$i++;
 			$this->_settings['attention']--;
 			// $k++;
-			$col+=$increment;
-			if ( $col >= $this->_settings['dimensions'][0]) {
-				$col = 0;
-				$row+=$increment;
-				if ( $row >= $this->_settings['dimensions'][1]) {
-					break; // Add more dimensions here or break into next "frame" of experience
-				}
-			}
 		}
 
 		$this->_map->sort();
@@ -355,12 +403,15 @@ class Sense extends Obj {
      * Sets the parent object for the Sense instance.
      *
      * invoke() expects the parent to expose can() and behavior(). Assignment
-     * does not validate that contract and currently does not return this instance.
+     * does not validate that parent protocol. Replacement mid-sweep is denied.
+     * @return $this
      *
      * @param object $obj The parent object.
      */
 	public function setParent( $obj ) {
+		$this->assertIdle();
 		$this->_parent = $obj;
+		return $this;
 	}
 
 	/**
@@ -387,13 +438,12 @@ class Sense extends Obj {
 		// $data = $data[0];
 		$this->dispatch('OnSweep', $data);
 
-		$deepResult = null;
 		
 		if ( $data['variance1'] < 1 ) {
 
 			$this->tweak();
 			$this->_map->optimize();
-			$data = $this->_map->data();
+			// Pruning changes the internal map, never this sweep's observed $data.
 
 			// $this->invoke($this->_matrix);
 			$event = new Action('DoEnhance');
@@ -401,7 +451,7 @@ class Sense extends Obj {
 			$this->dispatch($event);
 
 			if ($this->_depth < self::MAX_DEPTH) {
-				$deepResult = $this->invoke($this->_input); // Recurse until it gets bored
+				$this->sweep($this->_input); // Recurse until it gets bored
 			}
 			// $this->dispatch('DoEnhance', ['config'=>$this->_config,'input'=>$this->_matrix]);
 		}
@@ -410,10 +460,10 @@ class Sense extends Obj {
 		// $data['values'] = null;
 		// die(var_dump($data['values']));
 		$this->_map->optimize();
-		$data = $this->_map->data();
+		// COMPLETE retains the matching SUCCESS snapshot. The outer one arrives last.
         Dev::do('sensory.sense.complete', ['data' => $data]);
 		$this->dispatch(Event::COMPLETE, $data);
-		return $deepResult ?? $data;
+		return $data;
 		// if ( $this->_config['attention'] ) {
 		// 	$this->_config['quality'] =
 		// }
@@ -446,6 +496,58 @@ class Sense extends Obj {
 			'settings' => $this->_settings,
 			'depth' => $this->_depth,
 		];
+	}
+
+	/** Deny public mutation/reentry while a synchronous observation owns state. */
+	private function assertIdle(): void
+	{
+		if ($this->_invoking) {
+			throw new LogicException('Sense is already processing an observation.');
+		}
+	}
+
+	/** Validate extension output before matrix construction; never coerce chunks. */
+	private function validatedChunks($chunks): array
+	{
+		if (!is_array($chunks)) {
+			throw new InvalidArgumentException('Sense preparation must return an array of strings.');
+		}
+		foreach ($chunks as $chunk) {
+			if (!is_string($chunk)) {
+				throw new InvalidArgumentException('Sense chunks must be strings.');
+			}
+		}
+		return Arr::make($chunks)->values()->val();
+	}
+
+	/** Validate loop/index inputs without coercing strings, booleans or nonfinite values. */
+	private function validateSettings(): void
+	{
+		$quality = $this->_settings['quality'];
+		if ((!is_int($quality) && !is_float($quality)) || !is_finite((float)$quality)
+			|| $quality <= 0 || $quality > 1) {
+			throw new InvalidArgumentException('Sense quality must be a finite number in (0, 1].');
+		}
+		foreach (['attention' => self::MAX_ATTENTION, 'sensitivity' => self::MAX_SENSITIVITY,
+			'chunksize' => self::MAX_ATTENTION] as $key => $maximum) {
+			$value = $this->_settings[$key];
+			if (!is_int($value) || $value < ($key === 'chunksize' ? 1 : 0) || $value > $maximum) {
+				throw new InvalidArgumentException('Invalid Sense setting: ' . $key);
+			}
+		}
+		$dimensions = $this->_settings['dimensions'];
+		if (!is_array($dimensions) || !array_is_list($dimensions) || count($dimensions) < 2) {
+			throw new InvalidArgumentException('Sense dimensions require at least two positive integer sizes.');
+		}
+		foreach ($dimensions as $dimension) {
+			if (!is_int($dimension) || $dimension < 1 || $dimension > self::MAX_ATTENTION) {
+				throw new InvalidArgumentException('Invalid Sense dimension.');
+			}
+		}
+		$flags = $this->_settings['flags'];
+		if (!is_array($flags) || !array_is_list($flags) || $flags === []) {
+			throw new InvalidArgumentException('Sense flags must be a nonempty list.');
+		}
 	}
 
 	/**
@@ -527,13 +629,22 @@ class Sense extends Obj {
 	private function tweak( ) {
 		$order = [
 			// 'attention'=>['up', 1, self::MAX_ATTENTION],
-			'chunksize'=>['down', 1, $this->_config['dimensions']],
+			'chunksize'=>['down', 1, self::MAX_ATTENTION],
 			'tolerance'=>['down', 1, 100],
 			// 'sensitivity'=>['up', 1, $self::MAX_SENSITIVITY],
 			'dimensions'=>['up', 1, 7],
 		];
 
 		foreach ( $order as $attr=>$limits ) {
+			// Dimensions are an array, not a scalar tuning parameter. Scalar
+			// adjustments must remain within bounds for the following sweep.
+			if (!is_int($this->_settings[$attr]) && !is_float($this->_settings[$attr])) {
+				continue;
+			}
+			if (($limits[0] === 'down' && $this->_settings[$attr] <= $limits[1])
+				|| ($limits[0] === 'up' && $this->_settings[$attr] >= $limits[2])) {
+				continue;
+			}
 			if ($this->_settings[$attr] >= $limits[1] && $this->_settings[$attr] <= $limits[2]) {
 				$this->_settings[$attr] += $limits[0] == 'up' ? 1 : -1;
 				
