@@ -53,6 +53,15 @@ returns, including false, are treated as uncertain. A `trained` result means tha
 this callback completed; measured quality still comes from independent evaluation.
 No change to `IStrategy` or existing projection adapters is required.
 
+The snippet assumes host-provided values: `$incumbent` is an independently trained
+`ModelCandidate`; `$projected` and `$holdout` are `TrainingBatch` objects with the
+same projection identity and disjoint training/holdout evidence; `$lifecycle` is a
+`ModelLifecycle` owner initialized with the incumbent. `$hostPolicy->reviewTraining()`
+and `$reviewActivation` must each return an explicit `GovernanceDecision`. The
+[complete runnable example](../examples/generic/cortex/learn.php) constructs these
+objects using synthetic evidence and approvals. Its approvals are fixture policy,
+not a production authorization implementation.
+
 ## Evidence and pressure
 
 `TrainingPolicy` defaults to a minimum of ten examples, ten new examples per unit

@@ -5,8 +5,8 @@ strategy routing and simulation. It combines symbolic reasoning and machine
 learning with explicit governance, evidence and trace contracts.
 
 The Cortex example assembles these capabilities into executable experiments:
-record experience, project training data, compare models, adapt routing, compose
-responses and approve model activation or rollback. See the
+record experience, project training data, approve isolated candidate training,
+compare models, adapt routing, compose responses and approve model activation or rollback. See the
 [Cortex guide](docs/cortex-delivery.md) and [runnable examples](examples/generic/cortex/README.md).
 The Cortex additions on this branch are staged for review; these docs do not imply
 that they are available in a published release.
@@ -102,6 +102,15 @@ Language prediction example:
 ```bash
 php examples/markov_logistics_language.php
 ```
+
+## Documentation
+
+Use the [documentation index](docs/README.md) to find API guides by task. For the
+experience-to-response loop, begin with the
+[host adoption checklist](docs/cortex-delivery.md#host-adoption-checklist), then
+[candidate training](docs/continual-learning.md), [model activation](docs/model-lifecycle.md)
+and [response delivery](docs/response-composition.md). Each guide describes the
+host responsibilities and links to executable evidence.
 
 ## Contributing
 
