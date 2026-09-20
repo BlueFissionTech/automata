@@ -7,6 +7,10 @@ then asks a trusted host for a `GovernanceDecision`. It accepts only the exact
 steering needs a new candidate and a new evaluation.
 
 ```php
+use BlueFission\Automata\Learning\ClassificationEvaluator;
+use BlueFission\Automata\Learning\ModelLifecycle;
+use BlueFission\Automata\LLM\Agent\Governance\GovernanceDecision;
+
 $lifecycle = new ModelLifecycle($incumbent, new ClassificationEvaluator());
 $receipt = $lifecycle->promote('review-42', $lifecycle->revision(), $candidate, $holdout,
     static fn (array $transition): GovernanceDecision => $hostPolicy->review($transition));
@@ -51,7 +55,8 @@ Run `php examples/generic/cortex/run.php` and
 `php examples/generic/cortex/promote.php`. The foundation demo projects 12 annotated
 experiences, excludes a pending experience, checks exact lineage and all six held-out
 predictions. The promotion demo changes actual inference, rejects a regression,
-rolls back, and rejects stale replay. These run in CI alongside the other Cortex
+rolls back, replays historical receipts without activation, and rejects new requests
+with stale revisions. These run in CI alongside the other Cortex
 demos; missing required contracts or files fail execution, with no optional skip.
 
 `fixture-v1.json` contains the versioned synthetic corpus. `baseline-v1.json` pins

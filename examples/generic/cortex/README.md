@@ -6,6 +6,26 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
+These contracts are staged development work. Use a checkout containing all six
+scripts and install its Composer dependencies before running from the repository
+root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
+toolchain. No provider credentials, network calls or external services are needed
+to execute the demos after installation.
+
+| Command (`php examples/generic/cortex/...`) | Gates | Observable result |
+| --- | ---: | --- |
+| `run.php` | 11 | Experience projection, exact frozen lineage/predictions and negative controls |
+| `evaluate.php` | 5 | Better candidate recommended; regression rejected and unknown cost preserved |
+| `adapt.php` | 10 | Admitted feedback changes routing while policy gates remain enforced |
+| `respond.php` | 12 | Progressive release, terminal receipts, replay, cancellation and fallback |
+| `agent.php` | 17 | Agent workers, governed fixture tools, scope checks and TaskTrace |
+| `promote.php` | 8 | Approved activation changes inference; rollback restores it |
+
+Each command emits JSON evidence and exits nonzero if a required gate fails. All
+63 gates run in CI alongside PHPUnit. Treat these as separate contract experiments;
+they do not yet form one persistent adaptive application. The
+[delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.
+
 Run `php examples/generic/cortex/run.php` from the repository root. The command
 prints machine-readable evidence and exits nonzero when its conformance checks
 fail. No network, credentials, or external side effects are required.
