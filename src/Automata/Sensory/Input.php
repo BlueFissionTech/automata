@@ -11,8 +11,12 @@ use BlueFission\Str;
 use BlueFission\DevElation as Dev;
 
 /**
- * Input class handles the processing of input data through a series of processors.
- * It extends Dispatcher to utilize event-driven behavior.
+ * Synchronous, ordered input transformations with event-based output delivery.
+ *
+ * Each processor receives the preceding processor's result. The final value is
+ * delivered as Event::COMPLETE context; scan() does not return that value.
+ * Dispatches supplies the dispatcher implementation without a base class.
+ * This stage does not infer meaning, create an Experience, or authorize input.
  */
 class Input implements IDispatcher
 {
@@ -54,6 +58,9 @@ class Input implements IDispatcher
     /**
      * Sets or gets the name of the input source.
      *
+     * Legacy truthiness controls getter mode: an empty string or "0" reads the
+     * existing name. Setting a name currently returns null, not this instance.
+     *
      * @param string $name Optional name to set.
      * @return string|null The name of the input source if no name is provided to set.
      */
@@ -68,6 +75,9 @@ class Input implements IDispatcher
     /**
      * Adds a processor function to the list of processors.
      *
+     * Despite the setter name, this appends; it does not replace prior stages.
+     * Callability is checked only when PHP invokes the processor during scan().
+     *
      * @param callable $processorFunction The processor function to add.
      */
     public function setProcessor($processorFunction)
@@ -78,12 +88,16 @@ class Input implements IDispatcher
     /**
      * Processes the input data through all registered processors and dispatches a complete event.
      *
+     * The optional processor remains registered for subsequent scans. Failures
+     * propagate to the caller; a failed processor prevents the completion event.
+     * Consumers must subscribe before scanning to receive this synchronous event.
+     *
      * @param mixed $data The input data to process.
      * @param callable|null $processor Optional additional processor function.
      */
     public function scan($data, $processor = null)
     {
-        // Add the additional processor function if provided
+        // Registration is persistent, including processors supplied for this scan.
         if ($processor) {
             $this->_processors[] = Dev::apply('sensory.input.extra_processor', $processor);
         }
@@ -120,7 +134,7 @@ class Input implements IDispatcher
             $args = null;
         }
 
-        // Call the parent dispatch method
+        // Use the aliased trait method to avoid recursively calling this override.
         return $this->__dispatchFromTrait($behavior, $args);
     }
 
