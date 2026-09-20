@@ -13,6 +13,11 @@ For commands and expected gate counts, start with the
 
 ## Integration flow
 
+Before experience capture, applications can use `Input` for normalization and
+`Sense` for descriptive chunk measurements. The separate [sensory example](sensory-ingestion.md)
+demonstrates this bounded ingress assembly and its compatibility limitations.
+It does not infer labels or grant evidence admission from attention measurements.
+
 1. Capture an `Experience` from statements and context, then attach explicitly
    observed `Outcome` records. The host decides which sources and labels to trust.
 2. Use an `ITrainingAdapter` and `ExperienceRecomposer` to obtain a `TrainingBatch`
