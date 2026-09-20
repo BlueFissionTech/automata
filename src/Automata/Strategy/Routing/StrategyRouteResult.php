@@ -61,6 +61,13 @@ class StrategyRouteResult extends RoutingValue
 
     protected $_lockDataType = true;
 
+    public function __construct(array $data = [])
+    {
+        // Preserve the adapter's exact output type through the second routing carrier.
+        if (array_key_exists('output', $data)) { $this->_data['output'] = $data['output']; }
+        parent::__construct($data);
+    }
+
     public function completed(): bool
     {
         return $this->status === self::STATUS_COMPLETED;

@@ -6,7 +6,7 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
-These contracts are staged development work. Use a checkout containing all seven
+These contracts are staged development work. Use a checkout containing all eight
 scripts and install its Composer dependencies before running from the repository
 root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
 toolchain. No provider credentials, network calls or external services are needed
@@ -21,10 +21,12 @@ to execute the demos after installation.
 | `agent.php` | 17 | Agent workers, governed fixture tools, scope checks and TaskTrace |
 | `promote.php` | 8 | Approved activation changes inference; rollback restores it |
 | `learn.php` | 15 | Recorded experience triggers approved training, activation and changed Agent plans |
+| `workflow.php` | 12 | Graph execution, overlapping workers, fan-in and ordinary Intelligence selection |
 
 Each command emits JSON evidence and exits nonzero if a required gate fails. All
-78 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
-loop in one process; durable and asynchronous execution remain open. The
+90 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
+loop in one process; `workflow.php` adds cooperative Fiber overlap. Durable worker
+recovery and asynchronous response producers remain open. The
 [delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.
 
 Run `php examples/generic/cortex/run.php` from the repository root. The command
@@ -92,6 +94,13 @@ and activation, and changes a future Agent plan while preserving tool approval
 and delivery receipts. See [continual learning](../../../docs/continual-learning.md)
 for pressure signals, callback contracts, retention and uncertain-failure handling.
 
-Subsequent slices add durable governed adaptive routes,
-concurrent response persistence, composite/scripted strategies and shared goal criteria.
+Run `php examples/generic/cortex/workflow.php` for the graph execution proof: a real
+classifier and an independent context worker overlap through Fibers before a join
+composes their results. The command also verifies ordinary Intelligence selection,
+denial, cancellation, trace correlation and plan export/import. See
+[strategy workflows](../../../docs/strategy-workflows.md) for conditional edges,
+fallback, bounded retries, race/threshold completion and host responsibilities.
+
+Subsequent slices add learned and durable adaptive routes,
+concurrent response persistence, scripted strategies and shared goal criteria.
 Each slice must report its actual measurements and unresolved release gates.
