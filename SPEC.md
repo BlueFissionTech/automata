@@ -715,3 +715,21 @@ Checkpoints restore between producer calls and reject a different session or tas
 Host authorization, tenant/actor identity, receiver evidence and durable storage
 remain separate requirements. A runnable proof must use real governed Agent tools,
 show denied execution and revoked permission, and delay confirmation until receipts.
+
+## 12. Controlled model activation
+
+A process-local lifecycle owns the active candidate reference and a monotonic
+revision. Promotion evaluates the exact candidate against the current incumbent
+before asking a trusted host for an explicit approved GovernanceDecision. Pending,
+denied or steered decisions cannot activate a model. Rollback separately authorizes
+return to the previous instance. Requests bind an id, expected revision and exact
+model/evidence; identical retries return historical receipts without new effects.
+Conflicting retries, stale revisions, reused versions, reentrant mutations and full
+retention bounds fail before invoking models or host callbacks. The host must keep
+model instances immutable throughout their registered lifetime.
+
+The synthetic proof must freeze its corpus and expected labels, detect constant
+and single-wrong predictions, demonstrate activation changing actual predictions,
+reject a regression, then restore the previous model. This is not durable model
+deployment, concurrent coordination, permission to execute tools or production
+quality certification.

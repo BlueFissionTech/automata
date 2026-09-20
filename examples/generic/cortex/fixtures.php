@@ -1,26 +1,10 @@
 <?php
 
-// Synthetic, independently labelled concierge observations.
-$training = [
-    ['breakfast restaurant directions', 'directions'],
-    ['where breakfast restaurant', 'directions'],
-    ['find elevator directions', 'directions'],
-    ['where elevator location', 'directions'],
-    ['transport luggage bags', 'luggage'],
-    ['bring luggage upstairs', 'luggage'],
-    ['carry bags upstairs', 'luggage'],
-    ['luggage delivery transport', 'luggage'],
-    ['reservation checkin arrival', 'checkin'],
-    ['confirm reservation booking', 'checkin'],
-    ['checkin booking room', 'checkin'],
-    ['reservation room arrival', 'checkin'],
-];
-$holdout = [
-    ['breakfast location', 'directions'],
-    ['find elevator', 'directions'],
-    ['transport bags upstairs', 'luggage'],
-    ['bring luggage', 'luggage'],
-    ['confirm booking', 'checkin'],
-    ['reservation arrival', 'checkin'],
-];
-return ['training' => $training, 'holdout' => $holdout];
+// Versioned synthetic observations. Hash decoded JSON so checkout line endings do not matter.
+$fixture = json_decode(file_get_contents(__DIR__ . '/fixture-v1.json'), true, 512, JSON_THROW_ON_ERROR);
+$baseline = json_decode(file_get_contents(__DIR__ . '/baseline-v1.json'), true, 512, JSON_THROW_ON_ERROR);
+$digest = hash('sha256', json_encode($fixture, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
+if ($fixture['id'] !== $baseline['fixture_id'] || $digest !== $baseline['fixture_sha256']) {
+    throw new RuntimeException('Cortex fixture differs from the reviewed regression baseline.');
+}
+return ['training' => $fixture['training'], 'holdout' => $fixture['evaluation']];

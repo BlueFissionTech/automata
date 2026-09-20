@@ -53,6 +53,18 @@ and revocation after preparation, cancellation and uncertain effects without ret
 The host receiver ledger is retained in memory across a simulated caller restart;
 the example does not prove durable recovery, concurrency or production authorization.
 
-Subsequent slices add controlled promotion, durable governed adaptive routes,
+Run `php examples/generic/cortex/promote.php` for controlled reference activation
+and rollback. Fresh evaluation and explicit host approval precede activation;
+regressions, denial, stale revisions and conflicting retries cannot replace the
+active model. The example observes actual prediction changes and reversal. This
+does not deploy models or mutate unrelated strategy registries. See
+[`docs/model-lifecycle.md`](../../../docs/model-lifecycle.md) for ownership and retry limits.
+
+The shared corpus is frozen in `fixture-v1.json`; `baseline-v1.json` pins its digest,
+projection lineage and all six expected predictions. The foundation demo also checks
+constant and single-wrong negative controls. Baseline changes require explicit review
+and a new version, rather than accepting new output merely because it was produced.
+
+Subsequent slices add durable governed adaptive routes,
 concurrent response persistence, composite/scripted strategies and shared goal criteria.
 Each slice must report its actual measurements and unresolved release gates.
