@@ -65,7 +65,7 @@ final class TrainingPolicy
             $weighted = Num::make($value)->multiply($this->weights[$name])->val();
             $pressure = Num::make($pressure)->add($name === 'training_cost' ? -$weighted : $weighted)->val();
         }
-        $nonnegativePressure = Num::make($pressure)->max(0.0);
+        $nonnegativePressure = Num::make(0.0)->max($pressure);
         $pressure = RecordSnapshot::number(Dev::apply('automata.learning.pressure', $nonnegativePressure), 'filtered training pressure');
         $enough = Arr::count($rows) >= $this->minimumExamples;
         $eligible = $enough && ($signals['operator_requested'] || $pressure >= $this->minimumPressure);

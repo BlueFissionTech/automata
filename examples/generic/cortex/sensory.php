@@ -73,7 +73,7 @@ $again = $capture->capture('again', $first['context']['data']['raw_text'], 'synt
 $detached = $first;
 $detached['context']['data']['utterance'] = 'changed';
 $rejected = 0;
-foreach ([null, " \t", str_repeat('x', 257), str_repeat('word ', 33)] as $invalid) {
+foreach ([null, " \t", Str::make('x')->repeat(257)->val(), Str::make('word ')->repeat(33)->val()] as $invalid) {
     try { $capture->capture('invalid', $invalid, 'fixture', 'invalid-trace'); }
     catch (InvalidArgumentException) { ++$rejected; }
 }
