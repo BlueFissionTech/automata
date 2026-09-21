@@ -1,0 +1,17 @@
+{
+  "baseline_version": 1,
+  "fixture_id": "cortex-concierge-v1",
+  "fixture_sha256": "bcbf77590b0a5e33a43ebcc60ef9337dafa256bf3efab80babf07d628525ebc9",
+  "projection_id": "concierge.intent",
+  "projection_version": "1",
+  "training_experience_ids": ["concierge-0", "concierge-1", "concierge-2", "concierge-3", "concierge-4", "concierge-5", "concierge-6", "concierge-7", "concierge-8", "concierge-9", "concierge-10", "concierge-11"],
+  "training_outcome_ids": ["label-0", "label-1", "label-2", "label-3", "label-4", "label-5", "label-6", "label-7", "label-8", "label-9", "label-10", "label-11"],
+  "predictions": [
+    {"input": "breakfast location", "expected": "directions", "predicted": "directions"},
+    {"input": "find elevator", "expected": "directions", "predicted": "directions"},
+    {"input": "transport bags upstairs", "expected": "luggage", "predicted": "luggage"},
+    {"input": "bring luggage", "expected": "luggage", "predicted": "luggage"},
+    {"input": "confirm booking", "expected": "checkin", "predicted": "checkin"},
+    {"input": "reservation arrival", "expected": "checkin", "predicted": "checkin"}
+  ]
+}

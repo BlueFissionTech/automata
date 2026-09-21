@@ -10,6 +10,7 @@ Run commands from the repository root. PHP examples and the default test suite n
 | `php examples/generic/cortex/respond.php` | Demonstrate progressive response, lost-ack recovery, fallback and cancellation | In-memory simulated receiver; no live effects or durable exactly-once guarantee |
 | `php examples/generic/cortex/agent.php` | Integrate response workers, governed Agent tools and TaskTrace | Local synthetic effects; host scope/receipt fixtures; no provider calls or durable/concurrent guarantee |
 | `php examples/generic/cortex/evaluate.php` | Compare exact candidate versions and reject regressions | Local synthetic computation; recommendations do not install models or authorize actions |
+| `php examples/generic/cortex/promote.php` | Activate an evaluated model, reject regression and roll back | Synthetic explicit host approvals; process-local reference changes only |
 | `powershell -File scripts/bf-keryx.ps1 -Action capabilities -Json` | Discover reviewed wrapper capabilities | Read-only discovery; availability is not permission |
 | `powershell -File scripts/bf-keryx.ps1 -Action repo-index-status -RepoPath <repo> -HeadSha <default-head> -Json` | Verify retrieval snapshot against the current default-branch head | Read-only; refresh missing or stale snapshots with repo-index |
 | `powershell -File scripts/bf-keryx.ps1 -Action repo-index-search -RepoPath <repo> -Query <terms> -SourceKind <kind> -Json` | Retrieve narrowly scoped source cards | Read-only; retain repository ownership and secret boundaries |

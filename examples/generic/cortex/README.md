@@ -6,6 +6,26 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
+These contracts are staged development work. Use a checkout containing all six
+scripts and install its Composer dependencies before running from the repository
+root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
+toolchain. No provider credentials, network calls or external services are needed
+to execute the demos after installation.
+
+| Command (`php examples/generic/cortex/...`) | Gates | Observable result |
+| --- | ---: | --- |
+| `run.php` | 11 | Experience projection, exact frozen lineage/predictions and negative controls |
+| `evaluate.php` | 5 | Better candidate recommended; regression rejected and unknown cost preserved |
+| `adapt.php` | 10 | Admitted feedback changes routing while policy gates remain enforced |
+| `respond.php` | 12 | Progressive release, terminal receipts, replay, cancellation and fallback |
+| `agent.php` | 17 | Agent workers, governed fixture tools, scope checks and TaskTrace |
+| `promote.php` | 8 | Approved activation changes inference; rollback restores it |
+
+Each command emits JSON evidence and exits nonzero if a required gate fails. All
+63 gates run in CI alongside PHPUnit. Treat these as separate contract experiments;
+they do not yet form one persistent adaptive application. The
+[delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.
+
 Run `php examples/generic/cortex/run.php` from the repository root. The command
 prints machine-readable evidence and exits nonzero when its conformance checks
 fail. No network, credentials, or external side effects are required.
@@ -53,6 +73,18 @@ and revocation after preparation, cancellation and uncertain effects without ret
 The host receiver ledger is retained in memory across a simulated caller restart;
 the example does not prove durable recovery, concurrency or production authorization.
 
-Subsequent slices add controlled promotion, durable governed adaptive routes,
+Run `php examples/generic/cortex/promote.php` for controlled reference activation
+and rollback. Fresh evaluation and explicit host approval precede activation;
+regressions, denial, stale revisions and conflicting retries cannot replace the
+active model. The example observes actual prediction changes and reversal. This
+does not deploy models or mutate unrelated strategy registries. See
+[`docs/model-lifecycle.md`](../../../docs/model-lifecycle.md) for ownership and retry limits.
+
+The shared corpus is frozen in `fixture-v1.json`; `baseline-v1.json` pins its digest,
+projection lineage and all six expected predictions. The foundation demo also checks
+constant and single-wrong negative controls. Baseline changes require explicit review
+and a new version, rather than accepting new output merely because it was produced.
+
+Subsequent slices add durable governed adaptive routes,
 concurrent response persistence, composite/scripted strategies and shared goal criteria.
 Each slice must report its actual measurements and unresolved release gates.

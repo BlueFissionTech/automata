@@ -65,6 +65,16 @@ foreach ($holdout as [$text, $expected]) {
 $first = $store->get('concierge-0');
 $restored = new Experience(json_decode(json_encode($first,
     JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION), true, 512, JSON_THROW_ON_ERROR));
+$baseline = json_decode(file_get_contents(__DIR__ . '/baseline-v1.json'), true, 512, JSON_THROW_ON_ERROR);
+$matchesBaseline = static fn (array $observed): bool => $observed === $baseline['predictions'];
+$constantPredictions = Arr::make($predictions)
+    ->map(static fn (array $row): array => [...$row, 'predicted' => 'directions'])->values()->val();
+$singleWrongPrediction = $predictions;
+$singleWrongPrediction[0]['predicted'] = '__incorrect__';
+$expectedTraining = Arr::make($training)->map(static fn (array $row, int $index): array => [
+    'experience_id' => $baseline['training_experience_ids'][$index],
+    'outcome_id' => $baseline['training_outcome_ids'][$index], 'sample' => $row[0], 'label' => $row[1],
+])->values()->val();
 $checks = [
     'all_observed_examples_projected' => Arr::count($batch->samples()) === Arr::count($training),
     'pending_experience_excluded' => !Arr::has($batch->samples(), 'unknown request', true),
@@ -72,11 +82,20 @@ $checks = [
     'snapshot_round_trip' => $restored->toArray() === $first->toArray(),
     'candidate_improves_over_constant_prior' => $candidateCorrect > $baselineCorrect,
     'all_held_out_predictions_correct' => $candidateCorrect === $evaluationCount,
+    'baseline_version_and_projection_match' => $baseline['baseline_version'] === 1
+        && $batch->toArray()['projection_id'] === $baseline['projection_id']
+        && $batch->toArray()['projection_version'] === $baseline['projection_version'],
+    'projected_training_matches_frozen_baseline' => $batch->toArray()['examples'] === $expectedTraining,
+    'every_prediction_matches_frozen_baseline' => $matchesBaseline($predictions),
+    'constant_negative_control_rejected' => !$matchesBaseline($constantPredictions),
+    'single_wrong_negative_control_rejected' => !$matchesBaseline($singleWrongPrediction),
 ];
 $passed = !Arr::has($checks, false, true);
 echo json_encode([
     'experiment' => 'cortex-experiential-foundation-v1',
     'fixture_kind' => 'synthetic',
+    'fixture_id' => $baseline['fixture_id'],
+    'fixture_sha256' => $baseline['fixture_sha256'],
     'passed' => $passed,
     'checks' => $checks,
     'training_examples' => Arr::count($batch->samples()),
@@ -86,6 +105,6 @@ echo json_encode([
     'predictions' => $predictions,
     'training_lineage' => $batch->toArray(),
     'limits' => ['No live provider or physical actions.',
-        'Candidate promotion, route feedback, response scheduling and durable recovery are subsequent slices.'],
+        'See the companion evaluation, feedback, response and promotion demos; durable recovery remains separate.'],
 ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_PRESERVE_ZERO_FRACTION) . PHP_EOL;
 exit($passed ? 0 : 1);

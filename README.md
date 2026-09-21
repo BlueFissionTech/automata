@@ -1,6 +1,15 @@
 # BlueFission Automata
 
-The `bluefission/automata` library is a comprehensive PHP framework designed to facilitate the development and deployment of artificial intelligence systems. It combines classical Good Old-Fashioned AI (GOFAI) techniques with modern machine learning methodologies, providing a multifaceted approach to artificial intelligence. This library is suitable for researchers, developers, and enthusiasts looking to explore and implement AI in their projects.
+`bluefission/automata` is a PHP library for intelligence, agents, memory, language,
+strategy routing and simulation. It combines symbolic reasoning and machine
+learning with explicit governance, evidence and trace contracts.
+
+The Cortex example assembles these capabilities into executable experiments:
+record experience, project training data, compare models, adapt routing, compose
+responses and approve model activation or rollback. See the
+[Cortex guide](docs/cortex-delivery.md) and [runnable examples](examples/generic/cortex/README.md).
+The Cortex additions on this branch are staged for review; these docs do not imply
+that they are available in a published release.
 
 ## Features
 
@@ -22,13 +31,16 @@ The `bluefission/automata` library is a comprehensive PHP framework designed to 
 - **Typed Generation Runs**: Describe provider-neutral generation requests, steps, artifacts, diagnostics, partial outcomes, policy, evidence, and adapter-owned execution. See [Typed Generation Runs](docs/typed-generation-runs.md).
 - **Agent Capabilities**: Register deterministic tool contracts, descriptive capability definitions, exact scoped autonomy grants, lifecycle hooks, session memory, Holoscene comprehension, orchestration patterns, DevElation-backed agent state/goal decisions, interpreter-facing integration contracts, and persona orchestration contracts around LLM agent loops. See [Agent Capabilities](docs/agent-capabilities.md), [Capability Registry And Autonomy](docs/agent-capability-registry.md), and [Agent Persona Orchestration Contracts](docs/agent-persona-orchestration-contracts.md).
 - **Adaptive, Deterministic-First Strategy Routing**: Select exact, side-effect-free deterministic, learned, or generative strategy adapters under autonomy, eligibility, budget, trace, and explicit escalation policy. Optional `Intelligence` advice learns contextual quality and efficiency without bypassing those gates. See [Strategy Routing](docs/strategy-routing.md).
+- **Experiential Learning**: Capture immutable experience and outcome snapshots, project attributable training batches, compare exact model versions on held-out evidence, and admit feedback into advisory routing. See [Cortex learning contracts](docs/cortex-delivery.md).
+- **Governed Model Activation**: Evaluate candidates before explicit host approval, activate a process-local model reference, and retain revision-bound promotion and rollback receipts. See [Model Lifecycle](docs/model-lifecycle.md).
+- **Progressive Responses**: Coordinate weighted fragments, required dependencies, delivery acknowledgements and cancellation, including synchronous Agent workers and TaskTrace integration. See [Response Composition](docs/response-composition.md).
 - **LLM Lane Pressure Management**: Assess semantic, operational, and execution pressure in provider-neutral agent workflows, with deterministic recommendations and a read-only LLM tool wrapper.
 - **Feature Engineering**: Provides robust tools for transforming raw data into features that better represent the underlying processes to predictive models.
 - **Data Science**: Basic machine learning functionalities alongside data manipulation, preparation, and visualization tools.
 - **Input Management**: Sophisticated input type detection and handling, ensuring that data flows seamlessly through processing pipelines.
 - **Modular Connectivity**: Connect module outputs to other module inputs, creating flexible and dynamic pipeline chains for complex data processing tasks.
 - **Carrier-Backed Adapters**: Normalize runtime state over Develation `Arr`, `Obj`, and `IData` carriers without forcing unrelated modules into one implementation.
-- **Develation-Native Evaluation Seams**: Core orchestration modules now accept DevElation `Func` evaluators and prefer `Num`, `Arr`, and `Str` helpers for shared numeric, collection, and string handling where that materially improves interoperability.
+- **DevElation Primitives and Evaluators**: Use `Func` evaluators and readable fluent collection, string, numeric and supported object transformations, with strict validation before value construction.
 
 ## Using GOFAI and Modern ML Techniques
 
@@ -38,11 +50,43 @@ The `bluefission/automata` library is a comprehensive PHP framework designed to 
 
 ## Getting Started
 
-To get started with `bluefission/automata`, clone the repository and include it in your PHP project:
+The library requires PHP 8.2 or newer. Install a published package into an application
+with Composer, then load `vendor/autoload.php`:
 
 ```bash
-git clone https://github.com/bluefission/automata.git
+composer require bluefission/automata
 ```
+
+To run repository examples, check out the revision you intend to evaluate and
+install its dependencies. Composer archives exclude examples and tests. The current
+CI environment uses PHP 8.3 for the locked development toolchain.
+
+```bash
+git clone https://github.com/BlueFissionTech/automata.git
+cd automata
+# Select the reviewed branch or tag before installing dependencies.
+composer install
+php vendor/bin/phpunit --do-not-cache-result
+```
+
+The Cortex demos use synthetic fixtures and require no credentials or hosted model
+calls. Run them from the repository root after installing dependencies:
+
+```bash
+php examples/generic/cortex/run.php
+php examples/generic/cortex/evaluate.php
+php examples/generic/cortex/adapt.php
+php examples/generic/cortex/respond.php
+php examples/generic/cortex/agent.php
+php examples/generic/cortex/promote.php
+```
+
+Together they report 63 boolean conformance gates as JSON and exit nonzero on
+failure. They cover real classifier predictions, routing changes, receipt-gated
+responses and model activation/rollback. The small frozen corpus proves repeatable
+behavior; it does not establish open-world accuracy. Stores, model ownership and
+fixture receiver ledgers remain process-local. Durable recovery, concurrent writers
+and the combined adaptive runtime remain open work.
 
 Monte Carlo examples:
 
@@ -59,7 +103,10 @@ php examples/markov_logistics_language.php
 
 ## Contributing
 
-We welcome contributions to the `bluefission/automata` project. Please read the CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests to us.
+Include focused tests and a runnable example for behavioral changes. Pull requests
+should explain intent, acceptance criteria, exact validation commands and known
+limits. See the [delivery and release gates](docs/cortex-delivery.md#release-gates-still-open)
+for the Cortex work and [operator entrypoints](TOOLS.md) for repository workflows.
 
 Shared contributor guidance for ecosystem boundaries, dependency notes, public
 issue hygiene, coordination, and evidence expectations lives in
@@ -67,4 +114,4 @@ issue hygiene, coordination, and evidence expectations lives in
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+The package declares the MIT license in [composer.json](composer.json).

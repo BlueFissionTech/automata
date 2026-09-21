@@ -468,3 +468,20 @@ orchestrator callable contract. Workers produce data; receipt authentication and
 tool delivery stay with the governed host. The handle records correlated lifecycle
 events without copying response payloads into telemetry. Snapshot/restore operates
 between synchronous producer calls; it cannot resume an interrupted producer.
+
+## 11. Model lifecycle boundary
+
+`Learning/ModelLifecycle` composes ClassificationEvaluator, ModelCandidate and
+the existing GovernanceDecision contract. It holds an active model stack, revision
+and bounded process-local request receipts. It evaluates internally rather than
+accepting caller-supplied recommendation reports. Host approval receives the exact
+transition and measured report as detached data. Only an approved decision changes
+the active reference; rollback removes the last activation and increments revision.
+Reentrant mutation is rejected while prediction or approval code runs.
+
+Receipts are historical observations, not instructions or restored authority. No
+serialization of strategies or restore API is provided. Hosts own immutable model
+artifacts, side-effect-free prediction/approval callbacks, evidence trust, durable
+storage, deployment and synchronization across lifecycle instances. Version binding
+detects object reuse within this instance; it cannot detect mutation inside a
+caller-owned strategy or authenticate a model artifact.
