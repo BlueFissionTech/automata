@@ -17,28 +17,7 @@ use BlueFission\Automata\Learning\TrainingExample;
 use BlueFission\Automata\Strategy\NaiveBayesTextClassification;
 
 // Synthetic, independently labelled fixtures. No model is asked to grade itself.
-$training = [
-    ['breakfast restaurant directions', 'directions'],
-    ['where breakfast restaurant', 'directions'],
-    ['find elevator directions', 'directions'],
-    ['where elevator location', 'directions'],
-    ['transport luggage bags', 'luggage'],
-    ['bring luggage upstairs', 'luggage'],
-    ['carry bags upstairs', 'luggage'],
-    ['luggage delivery transport', 'luggage'],
-    ['reservation checkin arrival', 'checkin'],
-    ['confirm reservation booking', 'checkin'],
-    ['checkin booking room', 'checkin'],
-    ['reservation room arrival', 'checkin'],
-];
-$holdout = [
-    ['breakfast location', 'directions'],
-    ['find elevator', 'directions'],
-    ['transport bags upstairs', 'luggage'],
-    ['bring luggage', 'luggage'],
-    ['confirm booking', 'checkin'],
-    ['reservation arrival', 'checkin'],
-];
+['training' => $training, 'holdout' => $holdout] = require __DIR__ . '/fixtures.php';
 $store = new InMemoryExperienceStore();
 $memory = new Holoscene('concierge-training-fixtures');
 foreach ($training as $index => [$text, $intent]) {

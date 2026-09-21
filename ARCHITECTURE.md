@@ -415,3 +415,15 @@ the Naive Bayes public pipeline with the entire projected batch and evaluates a
 separate fixture set, avoiding the strategy's internal random split. This proves
 composition and bounded classification, not production recovery or general
 conversational competence. See [the delivery plan](docs/cortex-delivery.md).
+
+## 7. Candidate evaluation boundary
+
+`Learning/ModelCandidate` binds a caller-owned `IStrategy` to an exact id/version
+and its declared `TrainingBatch`. `ClassificationEvaluator` compares two distinct
+instances on a separately attributed batch. It validates projection compatibility,
+lineage separation and exact sample separation before any prediction, then emits
+a data-only report with policy, identities, lineage, measurements and rejection
+reasons. It never calls train/save/load/accuracy or registers a strategy. Reported
+quality comes only from held-out predictions. The caller supplies trusted,
+side-effect-free prediction implementations and owns model isolation, evidence
+admission and any later promotion. Existing routing governance remains separate.
