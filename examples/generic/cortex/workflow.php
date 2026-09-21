@@ -92,7 +92,7 @@ $cancelled->cancel();
 $pending->resume();
 $checks['cancel_preserves_inflight_receipt'] = $cancelled->result()->status() === 'cancelled'
     && $cancelled->result()->toArray()['nodes']['intent']['status'] === 'completed' && $cancelled->ready() === [];
-$checks['task_trace_records_node_routes'] = count($trace->toArray()['spans']) >= 3;
+$checks['task_trace_records_node_routes'] = Arr::make($trace->toArray()['spans'])->count() >= 3;
 $passed = !Arr::has($checks, false, true);
 echo json_encode(['experiment' => 'cortex-workflow-v1', 'passed' => $passed, 'checks' => $checks,
     'result' => $run->result()->toArray(), 'calls' => $calls, 'trace' => $trace->toArray(),

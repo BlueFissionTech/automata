@@ -42,7 +42,7 @@ final class ResponseFragment
         if ($record['fallback'] !== null) {
             $fallback = $record['fallback'];
             if ($record['blocking'] || !Arr::is($fallback) || !Arr::hasKey($fallback, 'payload')
-                || Arr::count(array_diff(array_keys($fallback), ['payload', 'confidence'])) > 0) {
+                || Arr::make($fallback)->keys()->diff(['payload', 'confidence'])->count() > 0) {
                 throw new InvalidArgumentException('Only nonblocking fragments may declare fallback payload/confidence.');
             }
             $confidence = $fallback['confidence'] ?? null;

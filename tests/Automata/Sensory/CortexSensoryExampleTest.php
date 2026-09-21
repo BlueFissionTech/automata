@@ -2,6 +2,7 @@
 
 namespace BlueFission\Tests\Automata\Sensory;
 
+use BlueFission\Arr;
 use BlueFission\Examples\Cortex\SensoryCapture;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -21,7 +22,7 @@ final class CortexSensoryExampleTest extends TestCase
         $data = $record['context']['data'];
         $this->assertSame($raw, $data['raw_text']);
         $this->assertSame('do not book 0', $data['utterance']);
-        $this->assertSame(['do', 'not', 'book', '0'], array_column($data['sensory']['chunks'], 'text'));
+        $this->assertSame(['do', 'not', 'book', '0'], Arr::make($data['sensory']['chunks'])->map(static fn (array $row) => $row['text'])->values()->val());
         $this->assertSame(4, $data['sensory']['distinct_chunks']);
         $this->assertSame(hash('sha256', $raw), $record['provenance']['raw_sha256']);
         $this->assertSame('fixture-source', $record['provenance']['source']);

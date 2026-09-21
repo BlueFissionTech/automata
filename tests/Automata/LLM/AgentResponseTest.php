@@ -53,7 +53,7 @@ final class AgentResponseTest extends TestCase
         $orchestration = $agent->orchestrate();
         $this->assertNull($orchestration->confidence());
         $release = $response->prepare(0);
-        $this->assertSame(['action'], array_column($release['fragments'], 'id'));
+        $this->assertSame(['action'], Arr::make($release['fragments'])->map(static fn (array $row) => $row['id'])->values()->val());
         $this->assertNull($release['fragments'][0]['confidence']);
         $this->assertSame($release, $response->prepare(1));
         $receipt = ['action' => ['successful' => true, 'evidence' => ['receiver' => 'fixture']]];
@@ -61,7 +61,7 @@ final class AgentResponseTest extends TestCase
         $this->assertFalse($response->acknowledge($release['id'], $receipt));
         $this->assertFalse($response->prepare(2)['fragments'][0]['payload']);
         $spans = Arr::make($agent->taskTrace()->spans())->map(fn ($span) => $span->toArray())->val();
-        $acks = array_values(array_filter($spans, fn ($span) => $span['name'] === 'response.acknowledge'));
+        $acks = Arr::make($spans)->filter(fn ($span) => $span['name'] === 'response.acknowledge')->values()->val();
         $this->assertCount(1, $acks);
         $this->assertSame('response-1', $acks[0]['metadata']['response_id']);
         $this->assertSame('task-1', $acks[0]['task_id']);
@@ -194,7 +194,10 @@ final class AgentResponseTest extends TestCase
         $agent = $this->agent();
         $snapshot = $agent->startResponse($this->envelope())->snapshot();
         foreach ([['schema_version' => 2], ['composer' => []], ['unexpected' => true]] as $change) {
-            try { $agent->restoreResponse(array_replace($snapshot, $change)); $this->fail('Expected schema rejection.'); }
+            $invalidSnapshot = $snapshot;
+            // Replacement must preserve empty fields used to probe strict rejection.
+            foreach ($change as $field => $value) { $invalidSnapshot[$field] = $value; }
+            try { $agent->restoreResponse($invalidSnapshot); $this->fail('Expected schema rejection.'); }
             catch (InvalidArgumentException) { $this->addToAssertionCount(1); }
         }
         $response = $agent->startResponse($this->envelope());

@@ -16,10 +16,12 @@ final class StrategyWorkflow
     {
         RecordSnapshot::identifier($id, 'workflow id');
         RecordSnapshot::identifier($version, 'workflow version');
-        if (count($outputs) > 128) { throw new InvalidArgumentException('Too many output nodes.'); }
+        $outputCount = Arr::make($outputs)->count();
+        if ($outputCount > 128) { throw new InvalidArgumentException('Too many output nodes.'); }
         $outputs = RecordSnapshot::copy($outputs);
         $nodes = $graph->nodes();
-        if (count($nodes) < 1 || count($nodes) > 128) { throw new InvalidArgumentException('Workflows require 1..128 nodes.'); }
+        $nodeCount = Arr::make($nodes)->count();
+        if ($nodeCount < 1 || $nodeCount > 128) { throw new InvalidArgumentException('Workflows require 1..128 nodes.'); }
         $configs = [];
         $edges = [];
         foreach ($nodes as $node) {
@@ -33,9 +35,9 @@ final class StrategyWorkflow
             $config += ['allowed_modes' => ['deterministic'], 'limits' => [], 'join' => 'all', 'maximum_attempts' => 1, 'retry_codes' => []];
             if (!is_array($config['allowed_modes']) || !array_is_list($config['allowed_modes']) || $config['allowed_modes'] === []) { throw new InvalidArgumentException('Invalid allowed strategy modes.'); }
             foreach ($config['allowed_modes'] as $mode) {
-                if (!in_array($mode, ['deterministic', 'learned', 'generative'], true)) { throw new InvalidArgumentException('Invalid allowed strategy mode.'); }
+                if (!Arr::make(['deterministic', 'learned', 'generative'])->has($mode, true)) { throw new InvalidArgumentException('Invalid allowed strategy mode.'); }
             }
-            if (!in_array($config['join'], ['all', 'any'], true) || !is_int($config['maximum_attempts'])
+            if (!Arr::make(['all', 'any'])->has($config['join'], true) || !is_int($config['maximum_attempts'])
                 || $config['maximum_attempts'] < 1 || $config['maximum_attempts'] > 8 || !is_array($config['retry_codes']) || !array_is_list($config['retry_codes'])) { throw new InvalidArgumentException('Invalid join or retry bounds.'); }
             foreach ($config['retry_codes'] as $code) { RecordSnapshot::identifier($code, 'retry code'); }
             if (!is_array($config['limits'])) { throw new InvalidArgumentException('Node limits must be a map.'); }
@@ -47,34 +49,36 @@ final class StrategyWorkflow
                 $edge = RecordSnapshot::copy($graph->edgeAttributes($name, $to));
                 self::keys($edge, ['on', 'when']);
                 $edge += ['on' => 'completed'];
-                if (!in_array($edge['on'], ['completed', 'failed'], true)) { throw new InvalidArgumentException('Invalid edge status.'); }
-                if (array_key_exists('when', $edge)) {
+                if (!Arr::make(['completed', 'failed'])->has($edge['on'], true)) { throw new InvalidArgumentException('Invalid edge status.'); }
+                if (Arr::make($edge)->hasKey('when')) {
                     $when = $edge['when'];
                     if (!is_array($when)) { throw new InvalidArgumentException('Invalid edge condition.'); }
                     self::keys($when, ['path', 'equals']);
-                    if (!isset($when['path']) || !is_array($when['path']) || !array_is_list($when['path']) || count($when['path']) > 16 || !array_key_exists('equals', $when)) { throw new InvalidArgumentException('Condition requires path and equals.'); }
+                    if (!isset($when['path']) || !is_array($when['path']) || !array_is_list($when['path']) || Arr::make($when['path'])->count() > 16 || !Arr::make($when)->hasKey('equals')) { throw new InvalidArgumentException('Condition requires path and equals.'); }
                     foreach ($when['path'] as $key) {
                         if (!is_int($key) && !is_string($key)) { throw new InvalidArgumentException('Invalid condition path.'); }
                     }
                 }
                 $edges[] = ['from' => $name, 'to' => $to, ...$edge];
-                if (count($edges) > 512) { throw new InvalidArgumentException('Workflows allow at most 512 edges.'); }
+                if (Arr::make($edges)->count() > 512) { throw new InvalidArgumentException('Workflows allow at most 512 edges.'); }
             }
         }
-        $degrees = array_fill_keys(array_keys($configs), 0);
+        $degrees = Arr::make($configs)->map(static fn (): int => 0)->val();
         foreach ($edges as $edge) { ++$degrees[$edge['to']]; }
-        $queue = Arr::make($degrees)->filter(static fn ($degree) => $degree === 0)->keys()->val();
+        $queue = Arr::make($degrees)->filter(static fn ($degree) => $degree === 0)->keys();
         $visited = 0;
-        while ($queue !== []) {
-            $from = array_shift($queue);
+        while ($queue->count() > 0) {
+            $from = $queue->shift();
             ++$visited;
             foreach ($edges as $edge) { if ($edge['from'] === $from && --$degrees[$edge['to']] === 0) { $queue[] = $edge['to']; } }
         }
-        if ($visited !== count($configs)) { throw new InvalidArgumentException('Workflow cycles are not permitted; use bounded node retries.'); }
-        if (!array_is_list($outputs) || $outputs === [] || count(array_unique($outputs, SORT_REGULAR)) !== count($outputs)) { throw new InvalidArgumentException('Output nodes must be a unique nonempty list.'); }
+        if ($visited !== Arr::make($configs)->count()) { throw new InvalidArgumentException('Workflow cycles are not permitted; use bounded node retries.'); }
+        // Keep SORT_REGULAR at this validation boundary: Arr::unique() uses
+        // SORT_STRING, which can coerce malformed values before they are rejected.
+        if (!array_is_list($outputs) || $outputs === [] || Arr::make(array_unique($outputs, SORT_REGULAR))->count() !== $outputCount) { throw new InvalidArgumentException('Output nodes must be a unique nonempty list.'); }
         foreach ($outputs as $output) { if (!is_string($output) || !isset($configs[$output])) { throw new InvalidArgumentException('Unknown output node.'); } }
-        $minimumOutputs ??= count($outputs);
-        if ($minimumOutputs < 1 || $minimumOutputs > count($outputs)) { throw new InvalidArgumentException('Invalid output completion threshold.'); }
+        $minimumOutputs ??= $outputCount;
+        if ($minimumOutputs < 1 || $minimumOutputs > $outputCount) { throw new InvalidArgumentException('Invalid output completion threshold.'); }
         $this->record = RecordSnapshot::copy(['schema_version' => 1, 'id' => $id, 'version' => $version,
             'nodes' => Arr::make($configs)->map(static fn ($config, $name) => ['id' => $name, 'config' => $config])->values()->val(),
             'edges' => $edges, 'outputs' => $outputs, 'minimum_outputs' => $minimumOutputs]);
@@ -87,8 +91,8 @@ final class StrategyWorkflow
     {
         self::keys($record, ['schema_version', 'id', 'version', 'nodes', 'edges', 'outputs', 'minimum_outputs']);
         if (($record['schema_version'] ?? null) !== 1 || !is_array($record['nodes'] ?? null) || !array_is_list($record['nodes'])
-            || count($record['nodes']) > 128 || !is_array($record['edges'] ?? null) || !array_is_list($record['edges'])
-            || count($record['edges']) > 512 || !is_array($record['outputs'] ?? null) || !is_int($record['minimum_outputs'] ?? null)) { throw new InvalidArgumentException('Invalid workflow record.'); }
+            || Arr::make($record['nodes'])->count() > 128 || !is_array($record['edges'] ?? null) || !array_is_list($record['edges'])
+            || Arr::make($record['edges'])->count() > 512 || !is_array($record['outputs'] ?? null) || !is_int($record['minimum_outputs'] ?? null)) { throw new InvalidArgumentException('Invalid workflow record.'); }
         $record = RecordSnapshot::copy($record);
         RecordSnapshot::identifier($record['id'] ?? null, 'workflow id');
         RecordSnapshot::identifier($record['version'] ?? null, 'workflow version');
@@ -118,6 +122,6 @@ final class StrategyWorkflow
 
     private static function keys(array $record, array $allowed): void
     {
-        if (array_diff(array_keys($record), $allowed) !== []) { throw new InvalidArgumentException('Unknown workflow field.'); }
+        if (Arr::make($record)->keys()->diff($allowed)->val() !== []) { throw new InvalidArgumentException('Unknown workflow field.'); }
     }
 }
