@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Learning;
 
+use BlueFission\Security\Hash;
 use BlueFission\Arr;
 use BlueFission\Num;
 use BlueFission\Str;
@@ -58,7 +59,7 @@ final class StrategyOutcomeFeedback
         $feedback = ['successful' => $outcome['successful'],
             ...Arr::make($metrics)->filter(static fn ($value): bool => $value !== null)->val()];
         // Snapshot-only values; the tuple cannot alias concatenated component ids.
-        $key = hash('sha256', serialize([$experience->id(), $outcomeId]));
+        $key = Hash::value(serialize([$experience->id(), $outcomeId]), 'sha256');
         if (isset($this->entries[$key])) {
             if ($this->entries[$key]['outcome'] !== $outcome) {
                 throw new InvalidArgumentException('Feedback identity already has different outcome evidence.');
