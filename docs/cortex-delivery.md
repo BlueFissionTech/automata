@@ -71,6 +71,7 @@ php examples/generic/cortex/run.php
 php examples/generic/cortex/evaluate.php
 php examples/generic/cortex/adapt.php
 php examples/generic/cortex/respond.php
+php examples/generic/cortex/agent.php
 ```
 
 The initial run recorded 12 synthetic training episodes and one pending review,
@@ -105,7 +106,11 @@ fragments, successful dependency receipts, stable delivery identity after a lost
 acknowledgement, cancellation and deadline fallback. Its single simulated action
 is deduplicated by a receiver whose state survives the caller's simulated restart.
 This is evidence for the composition protocol; durable storage, concurrent writers,
-Agent/worker/TaskTrace integration and production delivery remain open.
+and production delivery remain open. The Agent command adds synchronous worker
+adapters, task/session-bound response handles and correlated TaskTrace events. It
+uses real tool approval checks and host fixtures for scope, revoked permission,
+cancellation and uncertain effects. This proves the integrated execution path;
+authenticated durable receipt adapters and interrupted worker recovery remain open.
 See [the response contract](response-composition.md).
 
 ## Attributed feedback contract
