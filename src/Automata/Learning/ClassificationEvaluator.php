@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Learning;
 
+use BlueFission\Security\Hash;
 use BlueFission\Arr;
 use BlueFission\Flag;
 use BlueFission\Num;
@@ -169,6 +170,6 @@ final class ClassificationEvaluator
         // Plain snapshot data only. Serialize preserves scalar types and array order;
         // this fingerprint is never decoded and does not imply semantic deduplication.
         return ['experience:' . $row['experience_id'], 'outcome:' . $row['outcome_id'],
-            'sample:' . hash('sha256', serialize($row['sample']))];
+            'sample:' . Hash::value(serialize($row['sample']), 'sha256')];
     }
 }
