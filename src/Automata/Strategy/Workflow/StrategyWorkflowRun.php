@@ -52,7 +52,7 @@ final class StrategyWorkflowRun
     /** Executes one attempt. Authorization is refreshed for every retry and every node. */
     public function execute(string $nodeId): self
     {
-        if (!in_array($nodeId, $this->ready(), true)) { throw new LogicException('Node is not eligible for dispatch.'); }
+        if (!Arr::make($this->ready())->has($nodeId, true)) { throw new LogicException('Node is not eligible for dispatch.'); }
         $config = $this->configs[$nodeId];
         $parents = [];
         foreach ($this->incoming($nodeId) as $edge) {
@@ -61,7 +61,7 @@ final class StrategyWorkflowRun
                 $parents[$edge['from']] = ['status' => $parent['status'], 'code' => $parent['code'], 'output' => $parent['output']];
             }
         }
-        $attempt = count($this->nodes[$nodeId]['attempts']) + 1;
+        $attempt = Arr::make($this->nodes[$nodeId]['attempts'])->count() + 1;
         $request = new StrategyRouteRequest([
             'id' => $this->id . ':' . $nodeId . ':' . $attempt, 'subject_id' => $this->subjectId,
             'capability_id' => $config['capability_id'], 'capability_version' => $config['capability_version'],
@@ -90,7 +90,7 @@ final class StrategyWorkflowRun
                 $route = $this->router->route($request, $authorization, $this->trace);
                 $receipt['code'] = $route->code;
                 $receipt['status'] = match ($route->status) { 'completed' => 'completed', 'failed' => 'failed', default => 'denied' };
-                if (in_array($route->code, [StrategyRouter::CODE_EXECUTION_EXCEPTION, StrategyRouter::CODE_ACTUAL_BUDGET_EXCEEDED], true)) { $receipt['status'] = 'uncertain'; }
+                if (Arr::make([StrategyRouter::CODE_EXECUTION_EXCEPTION, StrategyRouter::CODE_ACTUAL_BUDGET_EXCEEDED])->has($route->code, true)) { $receipt['status'] = 'uncertain'; }
                 // Do not retain arbitrary exception diagnostics or coerce runtime output into evidence.
                 $receipt['output'] = RecordSnapshot::copy($route->output, 8);
                 $receipt['selected_strategy'] = RecordSnapshot::copy($route->selected_strategy, 8);
@@ -128,10 +128,14 @@ final class StrategyWorkflowRun
     private function advance(): void
     {
         if ($this->status !== 'running') { return; }
-        $outputs = [];
-        foreach ($this->plan['outputs'] as $id) { if ($this->nodes[$id]['status'] === 'completed') { $outputs[$id] = $this->nodes[$id]['output']; } }
-        if (count($outputs) >= $this->plan['minimum_outputs']) {
-            $this->outputs = $outputs;
+        // Output ids are validated as unique strings by the plan. Preserve their
+        // declared order and keys through filtering, including false/null payloads.
+        $outputs = Arr::make($this->plan['outputs'])->flip()
+            ->map(fn (int $index, string $id): array => $this->nodes[$id])
+            ->filter(static fn (array $node): bool => $node['status'] === 'completed')
+            ->map(static fn (array $node): mixed => $node['output']);
+        if ($outputs->count() >= $this->plan['minimum_outputs']) {
+            $this->outputs = $outputs->val();
             $this->close('completed');
             return;
         }
@@ -166,8 +170,8 @@ final class StrategyWorkflowRun
     {
         $node = $this->nodes[$id];
         return $node['status'] === 'pending' || ($node['status'] === 'failed'
-            && count($node['attempts']) < $this->configs[$id]['maximum_attempts']
-            && in_array($node['code'], $this->configs[$id]['retry_codes'], true));
+            && Arr::make($node['attempts'])->count() < $this->configs[$id]['maximum_attempts']
+            && Arr::make($this->configs[$id]['retry_codes'])->has($node['code'], true));
     }
 
     private function running(): bool
@@ -195,7 +199,7 @@ final class StrategyWorkflowRun
             elseif ($this->configs[$id]['join'] === 'all') { return false; }
         }
         if ($this->configs[$id]['join'] === 'any' && $matches > 0) { return true; }
-        return $waiting ? null : $matches === count($edges);
+        return $waiting ? null : $matches === Arr::make($edges)->count();
     }
 
     private function matches(array $edge): bool
@@ -205,7 +209,7 @@ final class StrategyWorkflowRun
         if (!isset($edge['when'])) { return true; }
         $value = $node['output'];
         foreach ($edge['when']['path'] as $key) {
-            if (!is_array($value) || !array_key_exists($key, $value)) { return false; }
+            if (!is_array($value) || !Arr::make($value)->hasKey($key)) { return false; }
             $value = $value[$key];
         }
         return $value === $edge['when']['equals'];

@@ -2,6 +2,8 @@
 
 namespace BlueFission\Tests\Automata\Sensory;
 
+use BlueFission\Arr;
+use BlueFission\Str;
 use BlueFission\Examples\Cortex\SensoryCapture;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -21,7 +23,7 @@ final class CortexSensoryExampleTest extends TestCase
         $data = $record['context']['data'];
         $this->assertSame($raw, $data['raw_text']);
         $this->assertSame('do not book 0', $data['utterance']);
-        $this->assertSame(['do', 'not', 'book', '0'], array_column($data['sensory']['chunks'], 'text'));
+        $this->assertSame(['do', 'not', 'book', '0'], Arr::make($data['sensory']['chunks'])->map(static fn (array $row) => $row['text'])->values()->val());
         $this->assertSame(4, $data['sensory']['distinct_chunks']);
         $this->assertSame(hash('sha256', $raw), $record['provenance']['raw_sha256']);
         $this->assertSame('fixture-source', $record['provenance']['source']);
@@ -72,6 +74,6 @@ final class CortexSensoryExampleTest extends TestCase
     public static function invalidInputs(): array
     {
         return [ [null], [false], [0], [[]], [new \stdClass()], [''], [" \t\n"],
-            ["hello\0world"], ['café'], [str_repeat('a', 257)], [str_repeat('a ', 33)] ];
+            ["hello\0world"], ['café'], [Str::make('a')->repeat(257)->val()], [Str::make('a ')->repeat(33)->val()] ];
     }
 }

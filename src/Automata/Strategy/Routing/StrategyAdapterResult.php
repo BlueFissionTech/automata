@@ -42,7 +42,7 @@ class StrategyAdapterResult extends RoutingValue
     public function __construct(array $data = [])
     {
         // Legacy Obj::assign ignores empty values; false and zero are valid results.
-        if (array_key_exists('output', $data)) { $this->_data['output'] = $data['output']; }
+        if (Arr::make($data)->hasKey('output')) { $this->_data['output'] = $data['output']; }
         parent::__construct($data);
     }
 

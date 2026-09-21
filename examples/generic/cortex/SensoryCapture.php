@@ -49,7 +49,7 @@ final class SensoryCapture
             // This domain policy retains negation and literal "0" as evidence.
             // Reuse the same word boundaries on every sweep, avoiding substring
             // enhancement changing the observation's token meaning mid-analysis.
-            $sense->setPreparation(static fn (string $text): array => explode(' ', $text));
+            $sense->setPreparation(static fn (string $text): array => Str::make($text)->split(' ')->val());
             $firstSweep = null;
             $sweeps = $completions = 0;
             $sense->behavior(new Event(Event::SUCCESS), static function ($event) use (&$firstSweep, &$sweeps): void {
@@ -113,13 +113,12 @@ final class SensoryCapture
      */
     private static function normalize(mixed $raw): string
     {
-        if (!is_string($raw) || strlen($raw) > self::MAX_BYTES
+        if (!is_string($raw) || Str::make($raw)->len() > self::MAX_BYTES
             || !preg_match('/\A[\x20-\x7E\t\r\n]+\z/', $raw)) {
             throw new InvalidArgumentException('Expected at most 256 bytes of ASCII text.');
         }
-        $text = Str::make($raw)->trim()->lower()->val();
-        $text = preg_replace('/\s+/', ' ', $text);
-        if ($text === '' || count(explode(' ', $text)) > self::MAX_WORDS) {
+        $text = Str::make($raw)->trim()->lower()->replacePattern('/\s+/', ' ')->val();
+        if ($text === '' || Str::make($text)->split(' ')->count() > self::MAX_WORDS) {
             throw new InvalidArgumentException('Expected between 1 and 32 words.');
         }
         return $text;

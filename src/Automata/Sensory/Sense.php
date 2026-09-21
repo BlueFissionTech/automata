@@ -5,6 +5,7 @@ namespace BlueFission\Automata\Sensory;
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Obj;
 use BlueFission\Arr;
+use BlueFission\Num;
 use BlueFission\Behavioral\Programmable;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\Action;
@@ -180,7 +181,7 @@ class Sense extends Obj {
 		$j = 0;
 		// $remainder = $this->_settings['dimensions'][0];
 		foreach ($this->_matrix as $row) {
-			if ( count($this->_matrix[$i]) < $this->_settings['dimensions'][0] ) {
+			if ( Arr::make($this->_matrix[$i])->count() < $this->_settings['dimensions'][0] ) {
 				// $remainer -= count($this->_matrix[$i]);
 				break;
 			}
@@ -286,11 +287,15 @@ class Sense extends Obj {
 		// die(var_dump($this->_input));
 		// var_dump($input);
 		
-		$size = count($input)*$this->_settings['quality'];
+		$inputCount = Arr::make($input)->count();
+		$size = Num::make($inputCount)->multiply($this->_settings['quality'])->val();
 
 		// Clamp the stride before integer conversion, including tiny valid quality
 		// values whose reciprocal overflows. At most the first chunk is sampled then.
-		$increment = (int) min(max(1, count($input)), floor(1 / $this->_settings['quality']));
+		$maximumStride = Num::make($inputCount)->max(1);
+		$inverseQuality = Num::make(1)->divide($this->_settings['quality'])->val();
+		// Keep floor rather than nearest rounding for the sampling stride.
+		$increment = (int) Num::make($maximumStride)->min(floor($inverseQuality));
 		$multiplier = .001;
 
 		$col = $row = $i = $j = 0;
@@ -331,8 +336,8 @@ class Sense extends Obj {
 			// $chunk = trim($_this->_matrix[$row]);
 			// Derive coordinates from a flat sample position. Incrementing both rows
 			// and columns by the stride previously jumped to absent matrix rows.
-			$position = $i * $increment;
-			if ($position >= count($input)) { break; }
+			$position = (int) Num::make($i)->multiply($increment)->val();
+			if ($position >= $inputCount) { break; }
 			$row = intdiv($position, $this->_settings['dimensions'][0]);
 			$col = $position % $this->_settings['dimensions'][0];
 			if ($row >= $this->_settings['dimensions'][1]) { break; }
@@ -353,8 +358,9 @@ class Sense extends Obj {
 				// $translation = $this->translate($chunk);
 				// echo "$chunk\n";
 				if ( !$this->_map->has($translation) ) {
-					$this->_settings['attention'] = min(self::MAX_ATTENTION,
-						$this->_settings['attention'] + $this->_settings['dimensions'][$j]*$this->_settings['quality']); // increase attention from novelty
+					$attentionGain = Num::make($this->_settings['dimensions'][$j])->multiply($this->_settings['quality'])->val();
+					$nextAttention = Num::make($this->_settings['attention'])->add($attentionGain)->val();
+					$this->_settings['attention'] = Num::make(self::MAX_ATTENTION)->min($nextAttention); // increase attention from novelty
 					$multiplier = .001;
 				} else {
 					// Or prepare to get bored.
@@ -364,8 +370,8 @@ class Sense extends Obj {
 				if ( $this->_settings['quality'] > 0 && $this->_settings['quality'] < 1 ) {
 					// Enhancement reuses this value; keep adaptation inside the same
 					// domain validated at entry, even when boredom crosses zero.
-					$this->_settings['quality'] = max(PHP_FLOAT_MIN,
-						min(1.0, $this->_settings['quality'] + $multiplier));
+					$boundedQuality = Num::make($this->_settings['quality'])->add($multiplier)->min(1.0);
+					$this->_settings['quality'] = Num::make($boundedQuality)->max(PHP_FLOAT_MIN);
 				}
 
 				if ( $parent && !$parent->can($translation) ) {
@@ -375,9 +381,10 @@ class Sense extends Obj {
 				$this->_map->add($chunk, $translation);
 
 				if ( $translation == $this->_settings['flags'][$j] ) {
-					$this->_settings['attention'] = min(self::MAX_ATTENTION,
-						$this->_settings['attention'] + $this->_settings['dimensions'][$j]*$this->_settings['quality']); // increase attention from activity
-					$this->_settings['sensitivity'] = min(self::MAX_SENSITIVITY, $this->_settings['sensitivity'] + 1);
+					$attentionGain = Num::make($this->_settings['dimensions'][$j])->multiply($this->_settings['quality'])->val();
+					$nextAttention = Num::make($this->_settings['attention'])->add($attentionGain)->val();
+					$this->_settings['attention'] = Num::make(self::MAX_ATTENTION)->min($nextAttention); // increase attention from activity
+					$this->_settings['sensitivity'] = Num::make($this->_settings['sensitivity'])->add(1)->min(self::MAX_SENSITIVITY);
 
 					// $parent->perform($translation, $chunk);
 					// $this->dispatch($translation, $chunk);
@@ -484,8 +491,9 @@ class Sense extends Obj {
 			return 0.0;
 		}
 
-		$used = max(0, $initial - $remaining);
-		return max(0.0, min(1.0, $used / $initial));
+		$used = Num::make($initial)->subtract($remaining)->max(0);
+		$ratio = Num::make($used)->divide($initial)->min(1.0);
+		return (float) Num::make($ratio)->max(0.0);
 	}
 
 	/** Expose current configuration, mutable sweep settings and recursion depth. */
@@ -536,7 +544,7 @@ class Sense extends Obj {
 			}
 		}
 		$dimensions = $this->_settings['dimensions'];
-		if (!is_array($dimensions) || !array_is_list($dimensions) || count($dimensions) < 2) {
+		if (!is_array($dimensions) || !array_is_list($dimensions) || Arr::make($dimensions)->count() < 2) {
 			throw new InvalidArgumentException('Sense dimensions require at least two positive integer sizes.');
 		}
 		foreach ($dimensions as $dimension) {
@@ -582,11 +590,11 @@ class Sense extends Obj {
 	private function longest_common_substring($words) {
 	    // $words = array_map('strtolower', array_map('trim', $words));
 	    $sortByStrlen = static function ($a, $b): int {
-			if (strlen($a) === strlen($b)) {
+			if (Str::make($a)->len() === Str::make($b)->len()) {
 				return strcmp($a, $b);
 			}
 
-			return (strlen($a) < strlen($b)) ? -1 : 1;
+			return (Str::make($a)->len() < Str::make($b)->len()) ? -1 : 1;
 		};
 
 	    usort($words, $sortByStrlen);

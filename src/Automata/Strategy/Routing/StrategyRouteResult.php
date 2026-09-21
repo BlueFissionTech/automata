@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Strategy\Routing;
 
+use BlueFission\Arr;
 use BlueFission\DataTypes;
 
 class StrategyRouteResult extends RoutingValue
@@ -64,7 +65,7 @@ class StrategyRouteResult extends RoutingValue
     public function __construct(array $data = [])
     {
         // Preserve the adapter's exact output type through the second routing carrier.
-        if (array_key_exists('output', $data)) { $this->_data['output'] = $data['output']; }
+        if (Arr::make($data)->hasKey('output')) { $this->_data['output'] = $data['output']; }
         parent::__construct($data);
     }
 

@@ -20,9 +20,10 @@ final class RecordSnapshot
             throw new InvalidArgumentException('Records accept only finite, serializable scalar and array values.');
         }
         if (Arr::is($value)) {
-            $copy = [];
-            foreach ($value as $key => $item) { $copy[$key] = self::copy($item, $depth + 1); }
-            return $copy;
+            // Preserve keys and order while recursively detaching every value.
+            return Arr::make($value)
+                ->map(static fn (mixed $item): mixed => self::copy($item, $depth + 1))
+                ->val();
         }
         if (Val::isNull($value) || Flag::isBool($value) || Num::isInt($value) || Str::is($value)
             || (Num::isFloat($value) && Num::check($value, 'is_finite'))) { return $value; }
@@ -57,6 +58,8 @@ final class RecordSnapshot
     {
         if (!Arr::is($value)) { return $value; }
         $ordered = Arr::make($value)->map(self::ordered(...))->val();
+        // Canonical fingerprints require key-preserving SORT_STRING ordering;
+        // Arr::sort() sorts values and reindexes, so it is not equivalent here.
         if (!Arr::check($ordered, 'array_is_list')) { ksort($ordered, SORT_STRING); }
         return $ordered;
     }
@@ -70,7 +73,7 @@ final class RecordSnapshot
                 hash_update($hash, 'a' . Arr::count($item) . ':');
                 foreach ($item as $key => $entry) { $visit($key); $visit($entry); }
             } elseif (Str::is($item)) {
-                hash_update($hash, 's' . strlen($item) . ':' . $item);
+                hash_update($hash, 's' . Str::make($item)->len() . ':' . $item);
             } elseif (Num::isFloat($item)) {
                 hash_update($hash, 'd' . pack('E', $item));
             } elseif (Num::isInt($item)) {

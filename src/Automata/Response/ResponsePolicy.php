@@ -13,7 +13,7 @@ final class ResponsePolicy
     public function __construct(array $record = [])
     {
         $record = RecordSnapshot::copy($record);
-        if (Arr::count(array_diff(array_keys($record), ['threshold', 'minimum_threshold'])) > 0) {
+        if (Arr::make($record)->keys()->diff(['threshold', 'minimum_threshold'])->count() > 0) {
             throw new InvalidArgumentException('Unknown response policy field.');
         }
         $record = ['threshold' => 1.0, 'minimum_threshold' => 1.0, ...$record];
