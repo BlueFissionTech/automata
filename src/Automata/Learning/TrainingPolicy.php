@@ -27,7 +27,7 @@ final class TrainingPolicy
         }
         $this->minimumPressure = RecordSnapshot::number($minimumPressure, 'minimum pressure');
         if ($this->minimumPressure <= 0) { throw new InvalidArgumentException('Minimum pressure must be positive.'); }
-        $normalized = array_fill_keys(TrainingTrigger::SIGNALS, 1.0);
+        $normalized = Arr::make(TrainingTrigger::SIGNALS)->flip()->map(static fn (): float => 1.0)->val();
         foreach (RecordSnapshot::copy($weights) as $name => $value) {
             if (!Arr::has(TrainingTrigger::SIGNALS, $name, true)) { throw new InvalidArgumentException('Unknown pressure weight.'); }
             $normalized[$name] = RecordSnapshot::number($value, 'pressure weight', 0, 1000);
@@ -65,7 +65,8 @@ final class TrainingPolicy
             $weighted = Num::make($value)->multiply($this->weights[$name])->val();
             $pressure = Num::make($pressure)->add($name === 'training_cost' ? -$weighted : $weighted)->val();
         }
-        $pressure = RecordSnapshot::number(Dev::apply('automata.learning.pressure', max(0.0, $pressure)), 'filtered training pressure');
+        $nonnegativePressure = Num::make($pressure)->max(0.0);
+        $pressure = RecordSnapshot::number(Dev::apply('automata.learning.pressure', $nonnegativePressure), 'filtered training pressure');
         $enough = Arr::count($rows) >= $this->minimumExamples;
         $eligible = $enough && ($signals['operator_requested'] || $pressure >= $this->minimumPressure);
         return ['eligible' => $eligible, 'reason' => !$enough ? 'insufficient_examples' : ($eligible ? null : 'insufficient_pressure'),
