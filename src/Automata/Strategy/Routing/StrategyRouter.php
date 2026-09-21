@@ -156,7 +156,9 @@ class StrategyRouter
         // without rewriting the caller's request or its original audit identity.
         // Obj contains value wrappers, so a shallow clone would share mutable
         // limits with the original request. Rebuild from detached field values.
-        $effectiveRequest = new StrategyRouteRequest(array_replace($request->toArray(), ['limits' => $limits]));
+        $effectiveData = $request->toArray();
+        $effectiveData['limits'] = $limits;
+        $effectiveRequest = new StrategyRouteRequest($effectiveData);
         [$candidates, $advice] = $this->orderedCandidates($request);
 
         foreach ($candidates as $index => $candidate) {

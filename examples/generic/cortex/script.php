@@ -58,7 +58,7 @@ $checks['zero_is_preserved'] = $strategy->predict(['name' => '0', 'mode' => 'sta
 $checks['independent_runs'] = $firstRun['run_id'] !== $strategy->lastResult()->toArray()['run_id'];
 $checks['hybrid_slot_composes'] = $strategy->predict(['name' => 'Ada', 'mode' => 'explain']) === 'Hello Ada. Your request is ready for review.';
 $generated = $strategy->lastResult()->toArray();
-$checks['slot_freshly_authorized'] = array_column($generated['authorizations'], 'operation') === ['execute', 'generate'];
+$checks['slot_freshly_authorized'] = Arr::make($generated['authorizations'])->map(static fn (array $row) => $row['operation'])->values()->val() === ['execute', 'generate'];
 $checks['completed_generation_receipt'] = $generated['generations'][0]['status'] === 'completed' && $generated['generation_calls'] === 1;
 $checks['unknown_metrics_remain_unknown'] = $generated['cost'] === null && $generated['confidence'] === null;
 $beforeExit = $generator->calls;
@@ -79,7 +79,7 @@ $checks['unknown_budget_not_treated_as_free'] = !$adapter->eligibility(new Strat
 $intelligence = new Intelligence();
 $intelligence->registerStrategy($strategy, 'script');
 $checks['ordinary_intelligence_uses_script'] = $intelligence->predict(['name' => 'Ada', 'mode' => 'status']) === 'Hello Ada. Status: pending.';
-$checks['trace_links_source_and_result'] = count($trace->toArray()['spans']) === 6 && $firstRun['source_sha256'] === hash('sha256', $source);
+$checks['trace_links_source_and_result'] = Arr::make($trace->toArray()['spans'])->count() === 6 && $firstRun['source_sha256'] === hash('sha256', $source);
 $passed = !Arr::has($checks, false, true);
 echo json_encode(['experiment' => 'cortex-script-v1', 'passed' => $passed, 'checks' => $checks,
     'generated' => $generated, 'trace' => $trace->toArray(), 'limits' => [

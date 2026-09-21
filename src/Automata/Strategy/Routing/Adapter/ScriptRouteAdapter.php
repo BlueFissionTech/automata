@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Strategy\Routing\Adapter;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Strategy\ScriptStrategy;
 use BlueFission\Automata\Strategy\Routing\{IStrategyRouteAdapter, StrategyDefinition, StrategyEligibility, StrategyUsage, StrategyRouteRequest, StrategyAdapterResult};
 use RuntimeException;
@@ -27,8 +28,11 @@ final class ScriptRouteAdapter implements IStrategyRouteAdapter
     {
         $limits = $request->limits ?? [];
         $eligible = $request->subject_id === $this->strategy->identity()['subject_id'];
+        // Do not let primitive construction coerce a malformed host request.
+        if (!is_array($limits)) { throw new \TypeError('Script limits must be an array.'); }
+        $limitValues = Arr::make($limits);
         foreach (['max_cost', 'max_energy', 'max_latency_ms'] as $key) {
-            if (array_key_exists($key, $limits)) { $eligible = false; }
+            if ($limitValues->hasKey($key)) { $eligible = false; }
         }
         return new StrategyEligibility(['eligible' => $eligible, 'code' => $eligible ? 'eligible' : 'script_scope_or_budget_unsupported',
             'evidence' => ['cost_known' => false, 'provider_retry_count_known' => false]]);

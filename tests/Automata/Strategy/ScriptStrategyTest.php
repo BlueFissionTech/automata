@@ -2,6 +2,7 @@
 
 namespace BlueFission\Tests\Automata\Strategy;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Strategy\ScriptStrategy;
 use BlueFission\Automata\Strategy\Script\ScriptExecution;
 use BlueFission\Automata\Strategy\Routing\Adapter\ScriptRouteAdapter;
@@ -167,7 +168,7 @@ final class ScriptStrategyTest extends TestCase
         }, function ($r) use (&$requests) { $requests[] = $r; return self::approve($r); }, $generator, 1);
         $this->assertSame('denied', $strategy->run([])->status());
         $this->assertSame(1, $generator->calls);
-        $this->assertSame(['execute', 'generate'], array_column($requests, 'operation'));
+        $this->assertSame(['execute', 'generate'], Arr::make($requests)->map(static fn (array $row) => $row['operation'])->values()->val());
         $this->assertSame(1, $requests[1]['generation_index']);
     }
 

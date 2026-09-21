@@ -62,7 +62,7 @@ class StrategyRouteRequest extends RoutingValue
         // False/zero/empty input are data; an explicit empty mode set denies all
         // modes. Preserve both when rebuilding a request with effective limits.
         foreach (['input', 'allowed_modes'] as $key) {
-            if (array_key_exists($key, $data)) { $this->_data[$key] = $data[$key]; }
+            if (Arr::make($data)->hasKey($key)) { $this->_data[$key] = $data[$key]; }
         }
         // Legacy Obj::assign ignores empty values. Seed the typed default so an
         // explicit false survives construction without relaxing the default policy.

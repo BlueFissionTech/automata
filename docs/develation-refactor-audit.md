@@ -52,3 +52,17 @@ Chronicler storage internals such as `WeightedCollection`, `PriorityQueue`, and 
 `BlueFission\Automata\Collections\OrganizedCollection` is now a deprecated compatibility adapter over `BlueFission\Chronicler\Storage\Structures\WeightedCollection`. Existing Automata surfaces that typehint or expose `OrganizedCollection` can stay stable while downstream libraries migrate.
 
 New weighted/ranked storage should use Chronicler `WeightedCollection` directly when callers need generic ranking, reinforcement, decay, statistics, or storage semantics. Keep `OrganizedCollection` only where the Automata API contract already exposes it or where behavior/handler collections still depend on its legacy return shapes. If downstream consumers move off `OrganizedCollection`, it can be sunset in a later major-compatible deprecation plan.
+
+## Cortex implementation conventions
+
+Learning, response composition, workflows, sensory capture and script execution follow the same DevElation conventions as the rest of Automata:
+
+- Keep arrays in `Arr` through meaningful transformations such as `filter()->map()->values()`. Materialize with `val()` at a typed array or serialization boundary. Preserve map keys when they carry lineage or node identities.
+- Use `Str` for normalization, splitting and byte lengths, after validating the input's actual type. Use `Num` for accumulated values, bounds and unit conversions; name intermediate values when a terminal operation ends a chain.
+- Keep strict type, finite-number and schema predicates before constructing value objects. Primitive construction must not turn malformed evidence into an accepted record.
+- Use existing fluent object APIs where they preserve ownership. Snapshot data explicitly when creating another request; cloning an `Obj` can retain shared value wrappers. Empty, false and zero fields must survive constructor defaults and record replacement.
+- Keep state transitions, authorization, generator dispatch and uncertain side effects in explicit execution order. A transformation callback must not hide or reorder these operations.
+
+Some native operations have a distinct contract and remain deliberate. Canonical maps use `ksort(..., SORT_STRING)` because value sorting loses key identity. Workflow validation retains `array_unique(..., SORT_REGULAR)` because `Arr::unique()` uses string comparison. Sampling uses `floor`, while elapsed-time receipts use `ceil`; nearest rounding is not equivalent. JSON, binary float encoding, hashes and runtime/extension predicates remain boundary operations. `Str::replace()` accepts scalar strings, so array-pattern replacement must retain its existing semantics. `Arr::merge()` recursively combines arrays and must not substitute for exact field replacement.
+
+Refactors are checked against the existing behavioral suites and executable Cortex examples, particularly strict rejection, detached snapshots, false/zero/null payloads, canonical fingerprints, authorization and cancellation receipts. See [the Cortex examples](../examples/generic/cortex/README.md) for the runnable gates; helper use alone does not establish correctness.

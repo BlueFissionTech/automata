@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\Strategy\Script;
 
 use BlueFission\Arr;
+use BlueFission\Num;
 use BlueFission\Automata\LLM\Agent\Capability\AutonomyDecision;
 use BlueFission\Automata\Support\RecordSnapshot;
 use BlueFission\Parsing\Contracts\IGenerator;
@@ -68,8 +69,10 @@ final class ScriptExecution implements IGenerator
         return new ScriptResult($this->identity + [
             'status' => $this->status, 'output' => $this->output, 'diagnostic' => $this->diagnostic,
             'authorizations' => $this->authorizations, 'generations' => $this->generations,
-            'generation_calls' => Arr::count(Arr::make($this->generations)->filter(static fn ($g) => $g['dispatched'])->val()),
-            'elapsed_ms' => (int) ceil((hrtime(true) - $started) / 1e6),
+            'generation_calls' => Arr::make($this->generations)->filter(static fn ($g) => $g['dispatched'])->count(),
+            // Ceiling retains conservative whole-millisecond reporting; Num::round()
+            // would under-report durations below the next integer millisecond.
+            'elapsed_ms' => (int) ceil(Num::make(hrtime(true))->subtract($started)->divide(1e6)->val()),
             'cost' => null, 'confidence' => null,
         ]);
     }
@@ -82,10 +85,10 @@ final class ScriptExecution implements IGenerator
     public function generate(Element $element): string
     {
         $this->assertRunning();
-        if (!$this->generator || count($this->generations) >= $this->maximumGenerations) {
+        if (!$this->generator || Arr::make($this->generations)->count() >= $this->maximumGenerations) {
             $this->deny($this->generator ? 'generation_limit' : 'generator_unavailable');
         }
-        $index = count($this->generations);
+        $index = Arr::make($this->generations)->count();
         $this->generations[] = ['ordinal' => $index + 1, 'status' => 'pending', 'dispatched' => false];
         try {
             $attributes = RecordSnapshot::copy($element->getAttributes());

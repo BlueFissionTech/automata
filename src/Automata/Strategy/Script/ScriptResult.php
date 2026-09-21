@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Strategy\Script;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Support\RecordSnapshot;
 
 /** Detached execution evidence; restoring a report never restores execution authority. */
@@ -13,7 +14,7 @@ final class ScriptResult
     public function __construct(array $data) { $this->data = RecordSnapshot::copy($data); }
 
     /** Completed rendering and explicit early exit both provide usable output. */
-    public function succeeded(): bool { return in_array($this->status(), ['completed', 'early_exit'], true); }
+    public function succeeded(): bool { return Arr::make(['completed', 'early_exit'])->has($this->status(), true); }
 
     /** Denied, cancelled and uncertain are distinct terminal states. */
     public function status(): string { return $this->data['status']; }
