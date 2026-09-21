@@ -11,6 +11,8 @@ use BlueFission\Arr;
 use BlueFission\Automata\Learning\{CallbackTrainingAdapter, Experience, ExperienceRecomposer, InMemoryExperienceStore, Outcome, TrainingExample};
 use BlueFission\Automata\Strategy\NaiveBayesTextClassification;
 use BlueFission\Examples\Cortex\SensoryCapture;
+use BlueFission\Automata\Sensory\Sense;
+use BlueFission\Behavioral\Behaviors\Event;
 
 // This is the ingress companion to run.php. Every training and evaluation text
 // passes through Input -> Sense before explicit projection to an Experience.
@@ -84,6 +86,18 @@ $damagedSamples = $batch->samples();
 $damagedSamples[0] = '';
 $restored = new Experience(json_decode(json_encode($unlabelled[0],
     JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION), true, 512, JSON_THROW_ON_ERROR));
+// Also prove the uncustomized library path. Collection timestamps may differ
+// between observations, so compare content rather than asserting time equality.
+$defaultSense = new Sense();
+$completed = null;
+$defaultSense->behavior(new Event(Event::COMPLETE), static function ($event) use (&$completed): void {
+    $completed = $event->context;
+});
+$defaultWords = $defaultSense->invoke('blue blue green');
+$completionMatches = $completed === $defaultWords;
+$defaultZero = $defaultSense->invoke('0');
+$defaultAgain = $defaultSense->invoke('blue blue green');
+$words = static fn (array $data): array => Arr::make($data['values'])->values()->map(static fn (array $row) => $row['value'])->values()->val();
 $checks = [
     'input_normalization_matches_frozen_samples' => $matchesProjection($batch->samples()),
     'real_sense_preserves_first_sweep_chunks' => Arr::make($sensory['chunks'])->map(static fn (array $row) => $row['text'])->values()->val() === Str::make($training[0][0])->split(' ')->val(),
@@ -104,6 +118,11 @@ $checks = [
     'all_held_out_predictions_correct' => $correct === Arr::make($holdout)->count(),
     'constant_prediction_control_loses' => $correct > $constantCorrect,
     'lost_content_control_rejected' => !$matchesProjection($damagedSamples),
+    'default_preparation_retains_words' => $words($defaultWords) === ['blue', 'green'] && $defaultWords['total'] === 3.0,
+    'default_preparation_retains_zero' => $words($defaultZero) === ['0'],
+    'default_outer_completion_matches_result' => $completionMatches,
+    'default_repeated_calls_are_independent' => $words($defaultAgain) === $words($defaultWords)
+        && $defaultAgain['total'] === $defaultWords['total'],
 ];
 $passed = !Arr::make($checks)->has(false, true);
 echo json_encode([
@@ -114,7 +133,7 @@ echo json_encode([
     'correct_predictions' => $correct, 'constant_correct_predictions' => $constantCorrect,
     'predictions' => $predictions, 'training_lineage' => $batch->toArray(),
     'limits' => ['Bounded ASCII text and synthetic labels only; no multimodal decoding.',
-        'Custom preparation and first-sweep capture accommodate legacy Sense limitations.',
+        'Custom preparation preserves domain words; the default language preparer removes noise words.',
         'CRC32 grouping may collide; attention is heuristic, not confidence, permission or a hard budget.',
         'Inspection hints are advisory; the preserved text, host admission and external labels remain separate.',
         'No InputArray queue, durable recovery, production qualification or model activation.'],

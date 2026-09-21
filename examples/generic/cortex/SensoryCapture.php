@@ -38,8 +38,7 @@ final class SensoryCapture
     public function capture(string $id, mixed $raw, string $source, string $trace): Experience
     {
         $observed = null;
-        $input = new Input(self::normalize(...));
-        $input->name($source);
+        $input = (new Input(self::normalize(...)))->name($source);
 
         // Completion is synchronous. Register before scan() and consume context,
         // rather than expecting scan() to return its transformed payload.
@@ -47,8 +46,8 @@ final class SensoryCapture
             $text = $event->context;
             $sense = new Sense();
 
-            // The default depth-zero preparer currently loses its tokens. This
-            // documented extension point also retains negation and literal "0".
+            // Default language preparation intentionally removes noise words.
+            // This domain policy retains negation and literal "0" as evidence.
             // Reuse the same word boundaries on every sweep, avoiding substring
             // enhancement changing the observation's token meaning mid-analysis.
             $sense->setPreparation(static fn (string $text): array => Str::make($text)->split(' ')->val());
@@ -56,28 +55,28 @@ final class SensoryCapture
             $sweeps = $completions = 0;
             $sense->behavior(new Event(Event::SUCCESS), static function ($event) use (&$firstSweep, &$sweeps): void {
                 ++$sweeps;
-                // SUCCESS precedes optimize(), which may discard rare chunks.
-                // First-sweep evidence must survive later recursive completions.
+                // Verify that the public return matches its original SUCCESS
+                // even though enhancement can emit more nested sweep events.
                 $firstSweep ??= $event->context;
             });
             $sense->behavior(new Event(Event::COMPLETE), static function () use (&$completions): void {
                 ++$completions;
             });
-            $sense->invoke($text);
-            if (!is_array($firstSweep) || $completions === 0) {
-                throw new RuntimeException('Sense did not produce an observable sweep and completion.');
+            $observation = $sense->invoke($text);
+            if (!is_array($firstSweep) || $observation !== $firstSweep || $completions === 0) {
+                throw new RuntimeException('Sense did not retain its original observable sweep.');
             }
 
             // Store text and weights, not CRC32 keys as semantic identities. The
             // preserved utterance remains authoritative when grouping is lossy.
-            $chunks = Arr::make($firstSweep['values'])
+            $chunks = Arr::make($observation['values'])
                 ->map(static fn (array $entry): array => [
                     'text' => $entry['value'], 'weight' => (float)$entry['weight'],
                 ])->values()->val();
             $observed = ['utterance' => $text, 'sensory' => [
                 'chunks' => $chunks,
-                'distinct_chunks' => $firstSweep['count'],
-                'weight_variance' => (float)$firstSweep['variance1'],
+                'distinct_chunks' => $observation['count'],
+                'weight_variance' => (float)$observation['variance1'],
                 'sweeps' => $sweeps,
                 'completion_events' => $completions,
                 'depth' => $sense->attentionState()['depth'],
@@ -85,7 +84,7 @@ final class SensoryCapture
                 'confidence' => null,
                 // An explicit fixture policy: sparse/repetitive text merits
                 // inspection. This hint neither blocks labels nor grants authority.
-                'inspection_hint' => $firstSweep['count'] < 2 ? 'inspect' : 'standard',
+                'inspection_hint' => $observation['count'] < 2 ? 'inspect' : 'standard',
             ]];
         });
         $input->scan($raw);

@@ -9,6 +9,7 @@ use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Collections\Collection;
 use BlueFission\Str;
 use BlueFission\DevElation as Dev;
+use InvalidArgumentException;
 
 /**
  * Synchronous, ordered input transformations with event-based output delivery.
@@ -44,45 +45,53 @@ class Input implements IDispatcher
     {
         $this->__dispatchesConstruct();
 
-        if (!$processor) {
+        if ($processor === null) {
             $processor = function($data) {
                 return $data;
             };
         }
 
         $this->_processors = new Collection();
-        $this->_processors[] = Dev::apply('sensory.input.processor', $processor);
+        $this->setProcessor(Dev::apply('sensory.input.processor', $processor));
         Dev::do('sensory.input.construct', ['processor' => $processor, 'instance' => $this]);
     }
 
     /**
      * Sets or gets the name of the input source.
      *
-     * Legacy truthiness controls getter mode: an empty string or "0" reads the
-     * existing name. Setting a name currently returns null, not this instance.
+     * Null/empty string reads the existing name. A nonempty string, including
+     * "0", sets it and returns this instance for fluent registration.
      *
      * @param string $name Optional name to set.
-     * @return string|null The name of the input source if no name is provided to set.
+     * @return string|null|$this The existing name in getter mode, otherwise this instance.
      */
     public function name($name = '')
     {
-        if (!$name) {
+        if ($name === '' || $name === null) {
             return $this->_name;
         }
+        if (!is_string($name)) {
+            throw new InvalidArgumentException('Input name must be a string.');
+        }
         $this->_name = $name;
+        return $this;
     }
 
     /**
      * Adds a processor function to the list of processors.
      *
      * Despite the setter name, this appends; it does not replace prior stages.
-     * Callability is checked only when PHP invokes the processor during scan().
+     * Callability is checked before registration. Returns this instance.
      *
      * @param callable $processorFunction The processor function to add.
      */
     public function setProcessor($processorFunction)
     {
+        if (!is_callable($processorFunction)) {
+            throw new InvalidArgumentException('Input processor must be callable.');
+        }
         $this->_processors[] = $processorFunction;
+        return $this;
     }
 
     /**
@@ -91,6 +100,7 @@ class Input implements IDispatcher
      * The optional processor remains registered for subsequent scans. Failures
      * propagate to the caller; a failed processor prevents the completion event.
      * Consumers must subscribe before scanning to receive this synchronous event.
+     * Returns this instance, while processed output remains in the event context.
      *
      * @param mixed $data The input data to process.
      * @param callable|null $processor Optional additional processor function.
@@ -98,8 +108,8 @@ class Input implements IDispatcher
     public function scan($data, $processor = null)
     {
         // Registration is persistent, including processors supplied for this scan.
-        if ($processor) {
-            $this->_processors[] = Dev::apply('sensory.input.extra_processor', $processor);
+        if ($processor !== null) {
+            $this->setProcessor(Dev::apply('sensory.input.extra_processor', $processor));
         }
 
         // Process the data through all processors
@@ -112,6 +122,7 @@ class Input implements IDispatcher
         $data = Dev::apply('sensory.input.scan_result', $data);
         $this->dispatch(Event::COMPLETE, $data);
         Dev::do('sensory.input.scan', ['data' => $data]);
+        return $this;
     }
 
     /**

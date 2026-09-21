@@ -35,12 +35,13 @@ host-selected text and source/trace identity
 - Each observation creates a fresh Input/Sense pair, so persistent processors and
   recursive sweep state cannot carry over from another observation.
 - `Sense::setPreparation()` supplies fixed word boundaries for every sweep. This
-  bypasses the existing default depth-zero token-loss defect and preserves words
-  such as `not` that the default language preparer treats as noise.
-- Capture the first `SUCCESS` event before optimization. Later optimization can
-  discard low-frequency chunks, and recursive `COMPLETE` events may repeat. The
-  example records event counts instead of treating every completion as a new
-  observation. Raw and normalized text remain separate from grouped chunks.
+  domain policy preserves words such as `not` that the default language preparer
+  treats as noise. Default preparation now returns its tokens, including `"0"`.
+- Consume the public return from `invoke()`: it retains the original sweep before
+  optimization. The final outer `COMPLETE` describes the same observation; nested
+  events may still repeat during enhancement. The example verifies the return
+  against first `SUCCESS` and records event counts instead of treating each event
+  as another observation. Raw and normalized text remain separate from grouped chunks.
 - Admit 1–32 words and at most 256 raw bytes of ASCII text. Reject unsupported,
   empty and oversized content before analysis; do not truncate or coerce it.
   These are fixture input bounds, not execution deadlines. Unicode, media,
@@ -55,12 +56,15 @@ Source names and hashes are provenance fields, not authentication credentials.
 
 ## Observable proof
 
-The command emits 18 boolean gates and exits nonzero on failure. It checks actual
+The command emits 22 boolean gates and exits nonzero on failure. It checks actual
 normalization, retained chunks/events, bounded fixture recursion, source digest,
 negation/zero, repetition-sensitive inspection, unknown confidence, isolated
 observations, detached snapshots/round trips, rejected input, label-gated
 projection, disjoint holdout and classifier predictions. Constant predictions and
 deliberate loss of training content are negative controls.
+
+Four additional gates exercise uncustomized Sense preparation, literal zero,
+outer completion/return parity and independent repeated invocations.
 
 Focused regression tests:
 
@@ -69,7 +73,27 @@ php vendor/bin/phpunit --do-not-cache-result tests/Automata/Sensory
 php examples/generic/cortex/sensory.php
 ```
 
-All three legacy sensory classes retain their implementation. The example proves
-a bounded integration through existing extension points, not general sensory
-maturity. Future work should repair default preparation, define sweep/reset and
-queue contracts, and qualify modality-specific adapters before expanding scope.
+## Updated library contracts
+
+Each public `Sense::invoke()` resets prior observation state. `reset()` also clears
+the captured input, matrix and buffer; listeners' previously delivered snapshots
+are unaffected. Public invoke/reset/setter reentry during a sweep throws
+`LogicException`; internal enhancement remains supported. Exceptions release the
+guard so a corrected next observation can run. Custom preparation and build hooks
+must supply arrays of strings. Invalid sampling/configuration fails before success.
+
+Novelty looks up the translated key actually used for grouping, so repeated chunks
+do not repeatedly earn novelty attention. Sampling derives valid row/column
+coordinates from a flat position. Attention remains a heuristic; hosts still own
+strict time, memory and execution limits.
+
+`Input::name()` setters, `setProcessor()` and `scan()`, plus Sense preparation/parent
+setters and `reset()`, return their instance for chaining. Input results still
+arrive in COMPLETE context. Only null selects the constructor's identity processor;
+invalid callbacks now fail at registration. Optional scan processors remain
+registered for future scans. Literal source name `"0"` is now settable.
+
+These are behavioral compatibility changes: callers that relied on null mutator
+returns, implicit coercion, retained sweep depth or the deepest/pruned result should
+adapt before upgrading. The example proves bounded integration, not general sensory
+maturity. Queue contracts and modality-specific adapters remain unqualified.
