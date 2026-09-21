@@ -27,6 +27,15 @@ truthful training provenance, evidence admission, semantic duplication, statisti
 confidence, provider spend and any later promotion. Small synthetic fixture wins
 alone do not establish production quality.
 
-Subsequent slices add attributed feedback, controlled promotion, governed adaptive routes, progressive
+Run `php examples/generic/cortex/adapt.php` for the next step: explicitly admit
+attributed benchmark outcomes into advisory strategy feedback, then observe a
+new request select the better candidate. Its ten gates also check replay handling,
+deterministic preference, eligibility, authorization, exact versions and invocation
+budgets. The host pre-registers both strategies and explicitly allows adaptive
+selection across their modes. No model is automatically promoted or deployed.
+Feedback receipts retain the source and strategy/version/context lineage. This is
+process-local evidence; durable recovery, provider costs and energy are not proved.
+
+Subsequent slices add controlled promotion, durable governed adaptive routes, progressive
 response dependencies, composite/scripted strategies, and shared goal criteria.
 Each slice must report its actual measurements and unresolved release gates.
