@@ -2,6 +2,7 @@
 
 namespace BlueFission\Tests\Automata\Response;
 
+use BlueFission\Arr;
 use BlueFission\Automata\Response\ResponseComposer;
 use BlueFission\Automata\Response\ResponseEnvelope;
 use BlueFission\Automata\Response\ResponseFragment;
@@ -14,9 +15,7 @@ final class ResponseComposerTest extends TestCase
 {
     private function composer(array $fragments, float $threshold = 1.0): ResponseComposer
     {
-        return new ResponseComposer(new ResponseEnvelope('response-1', array_map(
-            static fn (array $record): ResponseFragment => new ResponseFragment($record), $fragments
-        ), ['trace_id' => 'trace-1', 'experience_id' => 'experience-1']),
+        return new ResponseComposer(new ResponseEnvelope('response-1', Arr::make($fragments)->map(static fn (array $record): ResponseFragment => new ResponseFragment($record))->val(), ['trace_id' => 'trace-1', 'experience_id' => 'experience-1']),
             new ResponsePolicy(['threshold' => $threshold, 'minimum_threshold' => $threshold]));
     }
 
@@ -40,7 +39,7 @@ final class ResponseComposerTest extends TestCase
         $this->assertEqualsWithDelta(0.65, $composer->state()['completion'], 0.00001);
         $this->assertNull($composer->prepare(0));
         $release = $composer->resolve('approval', ['approved' => true])->prepare(1);
-        $this->assertSame(['approval', 'speech'], array_column($release['fragments'], 'id'));
+        $this->assertSame(['approval', 'speech'], Arr::make($release['fragments'])->map(static fn (array $row) => $row['id'])->values()->val());
         $this->assertSame('trace-1', $release['trace']['trace_id']);
     }
 
@@ -52,11 +51,11 @@ final class ResponseComposerTest extends TestCase
         ]);
         $composer->resolve('confirm', 'The fixture action completed.')->resolve('act', ['operation' => 'fixture']);
         $first = $composer->prepare(0);
-        $this->assertSame(['act'], array_column($first['fragments'], 'id'));
+        $this->assertSame(['act'], Arr::make($first['fragments'])->map(static fn (array $row) => $row['id'])->values()->val());
         $this->assertSame($first, $composer->prepare(1));
         $this->assertTrue($composer->acknowledge($first['id'], $this->receipts($first)));
         $second = $composer->prepare(2);
-        $this->assertSame(['confirm'], array_column($second['fragments'], 'id'));
+        $this->assertSame(['confirm'], Arr::make($second['fragments'])->map(static fn (array $row) => $row['id'])->values()->val());
         $this->assertNotSame($first['id'], $second['id']);
         $composer->acknowledge($second['id'], $this->receipts($second));
         $this->assertNull($composer->prepare(3));
@@ -186,7 +185,7 @@ final class ResponseComposerTest extends TestCase
         ])->resolve('a', $payload)->resolve('b', false)->resolve('c', null);
         $reference = 7;
         $release = $composer->prepare(0);
-        $this->assertSame(['b', 'a', 'c'], array_column($release['fragments'], 'id'));
+        $this->assertSame(['b', 'a', 'c'], Arr::make($release['fragments'])->map(static fn (array $row) => $row['id'])->values()->val());
         $this->assertSame(['value' => 0.0], $release['fragments'][1]['payload']);
     }
 
@@ -212,7 +211,7 @@ final class ResponseComposerTest extends TestCase
         $release = $composer->prepare(1);
         $reverse = function (mixed $value) use (&$reverse): mixed {
             if (!is_array($value)) { return $value; }
-            $result = array_map($reverse, $value);
+            $result = Arr::make($value)->map($reverse)->val();
             if (!array_is_list($result)) { krsort($result); }
             return $result;
         };
