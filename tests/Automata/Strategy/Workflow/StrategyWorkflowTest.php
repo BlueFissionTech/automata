@@ -2,6 +2,8 @@
 
 namespace BlueFission\Tests\Automata\Strategy\Workflow;
 
+use BlueFission\Str;
+use BlueFission\Arr;
 use BlueFission\Automata\Intelligence;
 use BlueFission\Automata\LLM\Agent\Capability\AutonomyDecision;
 use BlueFission\Automata\Path\Graph;
@@ -66,7 +68,7 @@ final class StrategyWorkflowTest extends TestCase
         $graph->connect('answer', 'classify'); // The captured plan cannot change.
         $calls = [];
         $strategy = new CompositeStrategy($restored, $this->router([
-            'classify' => fn ($input) => strtoupper($input['root']),
+            'classify' => fn ($input) => Str::make($input['root'])->upper()->val(),
             'answer' => fn ($input) => $input['predecessors']['classify']['output'] . '!',
         ], $calls), $this->approve(...), 'actor');
         $intelligence = new Intelligence();
@@ -248,7 +250,7 @@ final class StrategyWorkflowTest extends TestCase
         $calls = [];
         $strategy = new CompositeStrategy($plan, $this->router([
             'a' => fn () => ['value' => 0], 'yes' => fn () => 'matched', 'no' => fn () => 'wrong',
-            'join' => fn ($input) => array_keys($input['predecessors']),
+            'join' => fn ($input) => Arr::make($input['predecessors'])->keys()->val(),
         ], $calls), $this->approve(...), 'actor');
         self::assertSame(['join' => ['yes']], $strategy->predict(null));
         self::assertSame(['a', 'yes', 'join'], $calls);
@@ -385,7 +387,7 @@ final class StrategyWorkflowTest extends TestCase
         ]), ['join']);
         $strategy = new CompositeStrategy($plan, $this->router([
             'a' => static function () { Fiber::suspend(); return 'late'; }, 'b' => fn () => 'first',
-            'join' => fn ($input) => array_keys($input['predecessors']),
+            'join' => fn ($input) => Arr::make($input['predecessors'])->keys()->val(),
         ], $calls), $this->approve(...), 'actor');
         $run = $strategy->start(null);
         $slow = new Fiber(fn () => $run->execute('a'));
@@ -402,7 +404,7 @@ final class StrategyWorkflowTest extends TestCase
     {
         $innerCalls = $outerCalls = [];
         $inner = new CompositeStrategy(new StrategyWorkflow('inner', '1', $this->graph(['leaf' => []]), ['leaf']),
-            $this->router(['leaf' => fn ($input) => strtoupper($input['root'])], $innerCalls), $this->approve(...), 'actor');
+            $this->router(['leaf' => fn ($input) => Str::make($input['root'])->upper()->val()], $innerCalls), $this->approve(...), 'actor');
         $outer = new CompositeStrategy(new StrategyWorkflow('outer', '1', $this->graph(['nested' => []]), ['nested']),
             $this->router(['nested' => fn ($input) => $inner->predict($input['root'])], $outerCalls), $this->approve(...), 'actor');
         self::assertSame(['nested' => ['leaf' => 'HELLO']], $outer->predict('hello'));
@@ -467,6 +469,6 @@ final class StrategyWorkflowTest extends TestCase
         $receipt = $run->result()->toArray()['nodes']['a']['attempts'][0];
         self::assertSame('reviewed-packet', $receipt['authorization']['packet_id']);
         self::assertSame('actor', $receipt['authorization']['subject_id']);
-        self::assertSame(64, strlen($receipt['input_fingerprint']));
+        self::assertSame(64, Str::make($receipt['input_fingerprint'])->len());
     }
 }
