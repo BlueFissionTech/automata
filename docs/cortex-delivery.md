@@ -72,7 +72,8 @@ contracts to be included in the selected package version.
 | `Learning/StrategyOutcomeFeedback.php`, `Intelligence.php`, `Strategy/Routing/*` | Bridge explicitly admitted outcomes into advisory scores | Adaptive route changes while eligibility, exact versions, authorization and invocation limits remain enforced |
 | `Strategy/IStrategy.php` | Keep interface; adapt batches | Example trains existing Naive Bayes pipeline |
 | `Goal/ManagesGoals.php` | Audit and extend shared criteria/dependencies later | Require multi-goal progress and blocked-prerequisite tests |
-| `Path/Graph.php`, `Path/Node.php` | Evaluate reuse for composite strategies | Require bounded traversal, fallback, early exit and cancellation |
+| `Path/Graph.php`, `Path/Node.php` | Reuse shared topology for workflow proposals | Captured plans reject cycles and detach from later graph mutation |
+| `Strategy/Workflow/*`, `Strategy/CompositeStrategy.php` | Capture versioned graph proposals and execute through StrategyRouter | Bounded traversal, conditions, fallback/retry, thresholds, cancellation and cooperative Fiber overlap; durable runs and learned routes remain open |
 | `Parsing/*`, DevElation parser | Adapt executable strategies later | Require deterministic output and governed tool calls |
 | `LLM/Agent/Memory/*` | Keep event storage; add explicit durable experience adapter later | Require restoration and conflicting-write tests |
 | `Response/*` | Add weighted composition and terminal delivery receipts | Progressive output, lost-ack restart, cancellation and fallback are demonstrated with a deduplicating fixture sink |
@@ -88,8 +89,9 @@ contracts to be included in the selected package version.
    progressive output, cancellation, resumable emission state and Agent workers.
    Governed process-local model activation and rollback follow, then evidence-triggered
    candidate training connects the loop to future Agent responses.
-4. Composite and scripted strategies: use existing graph/parser seams, enforce
-   budgets and governance, and prove fallback and early exit.
+4. Composite workflows now reuse graph seams with bounded dispatch, per-node
+   governance, fallback and early exit. Learned routes, shared nested budgets and
+   scripted strategies over parser seams remain subsequent work.
 5. Goal graph integration: shared criteria, prerequisites, decomposition validation,
    convergence and observed multi-goal progress.
 6. Persistence and full conformance: recovery, idempotency, hostile memory input,
@@ -133,6 +135,7 @@ php examples/generic/cortex/respond.php
 php examples/generic/cortex/agent.php
 php examples/generic/cortex/promote.php
 php examples/generic/cortex/learn.php
+php examples/generic/cortex/workflow.php
 ```
 
 The initial run recorded 12 synthetic training episodes and one pending review,
@@ -182,7 +185,9 @@ through the active model reference before and after transitions. This establishe
 process-local behavior, without model persistence or deployment. See
 [the lifecycle contract](model-lifecycle.md).
 
-All seven commands run in CI and currently expose 78 gates. The learning command
+All eight commands run in CI and currently expose 90 gates. The workflow command
+adds twelve gates for graph execution and overlapping workers; see
+[strategy workflows](strategy-workflows.md). The learning command
 adds 15 gates that connect recorded experience, policy-triggered training, separate
 activation approval and receipt-gated Agent responses. The versioned
 [`fixture-v1.json`](../examples/generic/cortex/fixture-v1.json) and
@@ -232,8 +237,9 @@ Production and broader Cortex integration still require:
   receiver idempotency, concurrent-write rules and interrupted-worker recovery.
 - Durable/background training workers, model artifact persistence, richer experiential
   strategy adapters and representative evaluation data for the combined runtime.
-- Composite/scripted strategies over existing graph/parser seams, shared goal
-  criteria and dependencies, and explicit experience/session/trace integration.
+- Learned route construction and reinforcement, shared nested workflow budgets,
+  scripted strategies over existing parser seams, shared goal criteria and
+  dependencies, and explicit experience/session/trace integration.
 - Integrated multimodal execution, resource budgets and reconciliation when hosted
   execution has uncertain billing or effects.
 

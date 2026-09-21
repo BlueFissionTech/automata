@@ -17,6 +17,7 @@ class StrategyRouter
     public const CODE_AUTHORIZATION_DENIED = 'authorization_denied';
     public const CODE_AUTHORIZATION_MISMATCH = 'authorization_mismatch';
     public const CODE_UNKNOWN_STRATEGY = 'unknown_strategy';
+    public const CODE_STRATEGY_IDENTITY_MISMATCH = 'strategy_identity_mismatch';
     public const CODE_CAPABILITY_MISMATCH = 'capability_mismatch';
     public const CODE_STRATEGY_UNAVAILABLE = 'strategy_unavailable';
     public const CODE_MODE_NOT_ALLOWED = 'mode_not_allowed';
@@ -164,6 +165,10 @@ class StrategyRouter
             }
 
             $definition = $adapter->definition();
+            if ($definition->id !== $id || $definition->version !== $version) {
+                $attempts[] = $this->attempt($id, $version, $definition->mode, self::CODE_STRATEGY_IDENTITY_MISMATCH);
+                continue;
+            }
             if (
                 $definition->capability_id !== $request->capability_id
                 || $definition->capability_version !== $request->capability_version
