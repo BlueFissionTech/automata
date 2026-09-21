@@ -146,7 +146,7 @@ final class ModelLifecycle
         }
         if ($applied) {
             if ($binding['operation'] === 'promote') { $this->activeStack[] = $target; }
-            else { array_pop($this->activeStack); }
+            else { $this->activeStack = Arr::make($this->activeStack)->slice(0, -1)->val(); }
             ++$this->revision;
         }
         $this->requests[$id] = ['binding' => $binding, 'receipt' => $receipt];
