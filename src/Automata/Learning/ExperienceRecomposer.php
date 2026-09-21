@@ -20,8 +20,7 @@ final class ExperienceRecomposer
                 throw new InvalidArgumentException('Expected Experience instances.');
             }
             $outcomeIds = Arr::make($experience->outcomes())
-                ->map(static fn (Outcome $outcome): string => $outcome->id())
-                ->val();
+                ->map(static fn (Outcome $outcome): string => $outcome->id());
             $projected = Dev::apply('automata.learning.examples', $adapter->project($experience));
             if (!Val::check($projected, 'is_iterable')) {
                 throw new InvalidArgumentException('Training projections must be iterable.');
@@ -32,7 +31,7 @@ final class ExperienceRecomposer
                 }
                 $record = $example->toArray();
                 if ($record['experience_id'] !== $experience->id()
-                    || !Arr::has($outcomeIds, $record['outcome_id'], true)) {
+                    || !$outcomeIds->has($record['outcome_id'], true)) {
                     throw new InvalidArgumentException('Training example must cite an outcome from its source experience.');
                 }
                 $key = json_encode([$record['experience_id'], $record['outcome_id']], JSON_THROW_ON_ERROR);

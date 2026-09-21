@@ -199,7 +199,7 @@ final class ResponseComposer
             foreach ($record['events'] as $event) {
                 if (!Arr::is($event) || !Str::is($event['type'] ?? null) || !isset($fields[$event['type']])
                     || Arr::count($event) !== Arr::count($fields[$event['type']])
-                    || array_diff(array_keys($event), $fields[$event['type']]) !== []) {
+                    || Arr::make($event)->keys()->diff($fields[$event['type']])->val() !== []) {
                     throw new InvalidArgumentException('Malformed response event.');
                 }
                 switch ($event['type']) {
