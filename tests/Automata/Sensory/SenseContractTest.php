@@ -2,6 +2,9 @@
 
 namespace BlueFission\Tests\Automata\Sensory;
 
+use BlueFission\Str;
+use BlueFission\Arr;
+use BlueFission\Automata\Support\StructureFactory;
 use BlueFission\Automata\Sensory\Sense;
 use BlueFission\Behavioral\Behaviors\Event;
 use InvalidArgumentException;
@@ -24,7 +27,7 @@ final class SenseContractTest extends TestCase
             $completed = $event->context;
         });
         $result = $sense->invoke('blue blue green');
-        $this->assertSame(['blue', 'green'], array_column(array_values($first['values']), 'value'));
+        $this->assertSame(['blue', 'green'], Arr::make($first['values'])->values()->map(static fn (array $row) => $row['value'])->values()->val());
         $this->assertSame($first, $result);
         $this->assertSame($result, $completed);
         $this->assertSame(2, $result['count']);
@@ -36,14 +39,14 @@ final class SenseContractTest extends TestCase
     {
         $sense = new Sense();
         $zero = $sense->invoke('0');
-        $this->assertSame('0', array_values($zero['values'])[0]['value']);
+        $this->assertSame('0', Arr::make($zero['values'])->values()->val()[0]['value']);
         $this->assertGreaterThanOrEqual(1, $sense->attentionState()['settings']['chunksize']);
         $first = $sense->invoke('blue green');
         $sense->invoke('longer observation with unrelated words');
         $again = $sense->invoke('blue green');
         // Collection timestamps legitimately differ; content and weights must not.
-        $this->assertSame(array_column(array_values($first['values']), 'value'),
-            array_column(array_values($again['values']), 'value'));
+        $this->assertSame(Arr::make($first['values'])->values()->map(static fn (array $row) => $row['value'])->values()->val(),
+            Arr::make($again['values'])->values()->map(static fn (array $row) => $row['value'])->values()->val());
         $this->assertSame($first['count'], $again['count']);
         $this->assertSame($first['total'], $again['total']);
         $this->assertSame([], $sense->invoke('')['values']);
@@ -75,7 +78,7 @@ final class SenseContractTest extends TestCase
         try { $sense->invoke('test'); $this->fail('Malformed preparation was accepted.'); }
         catch (InvalidArgumentException) { $this->assertSame(0, $events); }
         $sense->setPreparation(static fn (): array => ['recovered']);
-        $this->assertSame('recovered', array_values($sense->invoke('test')['values'])[0]['value']);
+        $this->assertSame('recovered', Arr::make($sense->invoke('test')['values'])->values()->val()[0]['value']);
     }
 
     /** Values must be an array of string chunks, not implicit string coercions. */
@@ -119,7 +122,7 @@ final class SenseContractTest extends TestCase
             }
         });
         $result = $sense->invoke('blue green');
-        $this->assertSame(['blue', 'green'], array_column(array_values($result['values']), 'value'));
+        $this->assertSame(['blue', 'green'], Arr::make($result['values'])->values()->map(static fn (array $row) => $row['value'])->values()->val());
         $this->assertGreaterThanOrEqual(3, $denials);
     }
 
@@ -136,7 +139,7 @@ final class SenseContractTest extends TestCase
         $observe = static function (string $text): int {
             $sense = new Sense();
             $remaining = null;
-            $sense->setPreparation(static fn ($text): array => explode(' ', $text));
+            $sense->setPreparation(static fn ($text): array => Str::make($text)->split(' ')->val());
             $sense->behavior(new Event(Event::SUCCESS), static function () use ($sense, &$remaining): void {
                 $remaining ??= $sense->attentionState()['settings']['attention'];
             });
@@ -151,16 +154,16 @@ final class SenseContractTest extends TestCase
     {
         $sense = new Sense();
         $sense->config('quality', 0.1);
-        $sense->setPreparation(static fn (): array => array_map(static fn ($i): string => 'word-' . $i, range(0, 80)));
+        $sense->setPreparation(static fn (): array => Arr::make(range(0, 80))->map(static fn ($i): string => 'word-' . $i)->val());
         $result = $sense->invoke('ignored by fixture preparation');
-        $this->assertSame(array_map(static fn ($i): string => 'word-' . $i, range(0, 80, 10)),
-            array_column(array_values($result['values']), 'value'));
+        $this->assertSame(Arr::make(range(0, 80, 10))->map(static fn ($i): string => 'word-' . $i)->val(),
+            Arr::make($result['values'])->values()->map(static fn (array $row) => $row['value'])->values()->val());
     }
 
     /** Adaptive novelty/boredom adjustments must remain valid for the next sweep. */
     public function testAdaptiveQualityStaysWithinTheValidatedDomain(): void
     {
-        foreach ([[0.9995, ['blue', 'green', 'yellow']], [0.1, array_fill(0, 1100, 'same')]] as [$quality, $chunks]) {
+        foreach ([[0.9995, ['blue', 'green', 'yellow']], [0.1, (new StructureFactory())->fill(1100, 'same')]] as [$quality, $chunks]) {
             $sense = new Sense();
             $sense->config('quality', $quality);
             $sense->setPreparation(static fn (): array => $chunks);

@@ -96,7 +96,7 @@ $defaultWords = $defaultSense->invoke('blue blue green');
 $completionMatches = $completed === $defaultWords;
 $defaultZero = $defaultSense->invoke('0');
 $defaultAgain = $defaultSense->invoke('blue blue green');
-$words = static fn (array $data): array => array_column(array_values($data['values']), 'value');
+$words = static fn (array $data): array => Arr::make($data['values'])->values()->map(static fn (array $row) => $row['value'])->values()->val();
 $checks = [
     'input_normalization_matches_frozen_samples' => $matchesProjection($batch->samples()),
     'real_sense_preserves_first_sweep_chunks' => Arr::make($sensory['chunks'])->map(static fn (array $row) => $row['text'])->values()->val() === Str::make($training[0][0])->split(' ')->val(),
