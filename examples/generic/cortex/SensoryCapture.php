@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BlueFission\Examples\Cortex;
 
+use BlueFission\Security\Hash;
 use BlueFission\Arr;
 use BlueFission\Str;
 use BlueFission\Automata\Context;
@@ -100,7 +101,7 @@ final class SensoryCapture
             'raw_text' => $raw, ...$observed,
         ]), [
             'trace_id' => $trace,
-            'provenance' => ['source' => $source, 'raw_sha256' => hash('sha256', $raw),
+            'provenance' => ['source' => $source, 'raw_sha256' => Hash::value($raw, 'sha256'),
                 'adapter' => 'cortex.sensory-text', 'adapter_version' => '1'],
         ]);
     }

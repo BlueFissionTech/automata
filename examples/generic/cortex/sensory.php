@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/bootstrap.php';
 require_once __DIR__ . '/SensoryCapture.php';
 
+use BlueFission\Security\Hash;
 use BlueFission\Str;
 use BlueFission\Arr;
 use BlueFission\Automata\Learning\{CallbackTrainingAdapter, Experience, ExperienceRecomposer, InMemoryExperienceStore, Outcome, TrainingExample};
@@ -88,7 +89,7 @@ $checks = [
     'real_sense_preserves_first_sweep_chunks' => Arr::make($sensory['chunks'])->map(static fn (array $row) => $row['text'])->values()->val() === Str::make($training[0][0])->split(' ')->val(),
     'sense_completion_is_observed' => $sensory['sweeps'] > 0 && $sensory['sweeps'] === $sensory['completion_events'],
     'recursion_is_visible_and_bounded_in_fixture' => $sensory['depth'] <= 7 && $sensory['sweeps'] <= 8,
-    'raw_input_and_digest_retained' => $first['provenance']['raw_sha256'] === hash('sha256', $first['context']['data']['raw_text']),
+    'raw_input_and_digest_retained' => $first['provenance']['raw_sha256'] === Hash::value($first['context']['data']['raw_text'], 'sha256'),
     'negation_and_zero_preserved' => $pendingData['utterance'] === 'do not book 0' && $zero['context']['data']['utterance'] === '0',
     'repetition_changes_inspection_hint' => $repeated['context']['data']['sensory']['inspection_hint'] === 'inspect'
         && $sensory['inspection_hint'] === 'standard',
