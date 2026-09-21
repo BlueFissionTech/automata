@@ -23,11 +23,10 @@ final class RecordSnapshot
             throw new InvalidArgumentException('Records accept only finite, serializable scalar and array values.');
         }
         if (Arr::is($value)) {
-            $copy = [];
-            foreach ($value as $key => $item) {
-                $copy[$key] = self::copy($item, $depth + 1);
-            }
-            return $copy;
+            // Mapping retains keys and order while recursively detaching every value.
+            return Arr::make($value)
+                ->map(static fn (mixed $item): mixed => self::copy($item, $depth + 1))
+                ->val();
         }
         if (Val::isNull($value) || Flag::isBool($value) || Num::isInt($value) || Str::is($value)
             || (Num::isFloat($value) && Num::check($value, 'is_finite'))) {
