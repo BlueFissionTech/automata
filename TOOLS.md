@@ -7,6 +7,7 @@ Run commands from the repository root. PHP examples and the default test suite n
 | `vendor/bin/phpunit --do-not-cache-result [test path]` | Default tests or a focused test directory | Runs repository tests; optional external-service tests require their documented opt-in configuration |
 | `php examples/generic/cortex/run.php` | Experience capture, projection and held-out classification proof | Local synthetic computation; JSON evidence on stdout; no provider credentials or operational actions |
 | `php examples/generic/cortex/adapt.php` | Apply admitted outcome feedback and demonstrate changed selection | Local synthetic routing; validates policy guards and process-local replay handling |
+| `php examples/generic/cortex/respond.php` | Demonstrate progressive response, lost-ack recovery, fallback and cancellation | In-memory simulated receiver; no live effects or durable exactly-once guarantee |
 | `php examples/generic/cortex/evaluate.php` | Compare exact candidate versions and reject regressions | Local synthetic computation; recommendations do not install models or authorize actions |
 | `powershell -File scripts/bf-keryx.ps1 -Action capabilities -Json` | Discover reviewed wrapper capabilities | Read-only discovery; availability is not permission |
 | `powershell -File scripts/bf-keryx.ps1 -Action repo-index-status -RepoPath <repo> -HeadSha <default-head> -Json` | Verify retrieval snapshot against the current default-branch head | Read-only; refresh missing or stale snapshots with repo-index |
