@@ -3,6 +3,7 @@
 namespace BlueFission\Tests\Automata\Sensory;
 
 use BlueFission\Arr;
+use BlueFission\Str;
 use BlueFission\Examples\Cortex\SensoryCapture;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -73,6 +74,6 @@ final class CortexSensoryExampleTest extends TestCase
     public static function invalidInputs(): array
     {
         return [ [null], [false], [0], [[]], [new \stdClass()], [''], [" \t\n"],
-            ["hello\0world"], ['café'], [str_repeat('a', 257)], [str_repeat('a ', 33)] ];
+            ["hello\0world"], ['café'], [Str::make('a')->repeat(257)->val()], [Str::make('a ')->repeat(33)->val()] ];
     }
 }
