@@ -2,6 +2,7 @@
 
 require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
+use BlueFission\Security\Hash;
 use BlueFission\Arr;
 use BlueFission\Automata\Intelligence;
 use BlueFission\Automata\LLM\Agent\Capability\AutonomyDecision;
@@ -79,7 +80,7 @@ $checks['unknown_budget_not_treated_as_free'] = !$adapter->eligibility(new Strat
 $intelligence = new Intelligence();
 $intelligence->registerStrategy($strategy, 'script');
 $checks['ordinary_intelligence_uses_script'] = $intelligence->predict(['name' => 'Ada', 'mode' => 'status']) === 'Hello Ada. Status: pending.';
-$checks['trace_links_source_and_result'] = Arr::make($trace->toArray()['spans'])->count() === 6 && $firstRun['source_sha256'] === hash('sha256', $source);
+$checks['trace_links_source_and_result'] = Arr::make($trace->toArray()['spans'])->count() === 6 && $firstRun['source_sha256'] === Hash::value($source, 'sha256');
 $passed = !Arr::has($checks, false, true);
 echo json_encode(['experiment' => 'cortex-script-v1', 'passed' => $passed, 'checks' => $checks,
     'generated' => $generated, 'trace' => $trace->toArray(), 'limits' => [

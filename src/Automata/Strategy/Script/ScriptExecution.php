@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Strategy\Script;
 
+use BlueFission\Security\Hash;
 use BlueFission\Arr;
 use BlueFission\Num;
 use BlueFission\Automata\LLM\Agent\Capability\AutonomyDecision;
@@ -100,7 +101,7 @@ final class ScriptExecution implements IGenerator
             $this->generations[$index]['dispatched'] = true;
             $output = $this->generator->generate($element);
             $this->generations[$index]['status'] = 'completed';
-            $this->generations[$index]['output_sha256'] = hash('sha256', $output);
+            $this->generations[$index]['output_sha256'] = Hash::value($output, 'sha256');
         } catch (Throwable $error) {
             $this->generations[$index]['status'] = $this->generations[$index]['dispatched'] ? 'uncertain' : 'denied';
             if ($this->status === 'running') { $this->fail(get_class($error)); }

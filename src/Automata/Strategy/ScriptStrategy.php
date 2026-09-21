@@ -2,6 +2,7 @@
 
 namespace BlueFission\Automata\Strategy;
 
+use BlueFission\Security\Hash;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTrace;
 use BlueFission\Automata\Strategy\Script\{ScriptExecution, ScriptResult};
 use BlueFission\Automata\Support\RecordSnapshot;
@@ -47,7 +48,7 @@ final class ScriptStrategy implements IStrategy
     public function identity(): array
     {
         return ['strategy_id' => $this->id, 'strategy_version' => $this->version,
-            'source_sha256' => hash('sha256', $this->source), 'subject_id' => $this->subjectId];
+            'source_sha256' => Hash::value($this->source, 'sha256'), 'subject_id' => $this->subjectId];
     }
 
     /** Presence of generation capacity makes this a generative candidate, conservatively. */
