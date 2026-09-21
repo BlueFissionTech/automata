@@ -13,6 +13,7 @@ Run commands from the repository root. PHP examples and the default test suite n
 | `php examples/generic/cortex/promote.php` | Activate an evaluated model, reject regression and roll back | Synthetic explicit host approvals; process-local reference changes only |
 | `php examples/generic/cortex/learn.php` | Exercise experience-triggered training through governed activation and future Agent responses | Process-local training and simulated effects; no provider calls |
 | `php examples/generic/cortex/workflow.php` | Exercise strategy graphs, overlapping Fiber workers and fan-in through the router | Provider-free process-local proof; host owns scheduling, current authority and durable recovery |
+| `php examples/generic/cortex/sensory.php` | Exercise Input/Sense before experience capture and labelled classification | Bounded synthetic ASCII text; direct events, no InputArray queue or model activation |
 | `powershell -File scripts/bf-keryx.ps1 -Action capabilities -Json` | Discover reviewed wrapper capabilities | Read-only discovery; availability is not permission |
 | `powershell -File scripts/bf-keryx.ps1 -Action repo-index-status -RepoPath <repo> -HeadSha <default-head> -Json` | Verify retrieval snapshot against the current default-branch head | Read-only; refresh missing or stale snapshots with repo-index |
 | `powershell -File scripts/bf-keryx.ps1 -Action repo-index-search -RepoPath <repo> -Query <terms> -SourceKind <kind> -Json` | Retrieve narrowly scoped source cards | Read-only; retain repository ownership and secret boundaries |
