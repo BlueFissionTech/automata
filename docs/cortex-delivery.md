@@ -16,8 +16,9 @@ For commands and expected gate counts, start with the
 1. Capture an `Experience` from statements and context, then attach explicitly
    observed `Outcome` records. The host decides which sources and labels to trust.
 2. Use an `ITrainingAdapter` and `ExperienceRecomposer` to obtain a `TrainingBatch`
-   with projection identity and experience/outcome lineage. Train an existing
-   strategy explicitly; recomposition does not train it automatically.
+   with projection identity and experience/outcome lineage. Have `LearningCoordinator`
+   construct and train an independent candidate under explicit training policy and
+   host approval; recomposition does not train it automatically.
 3. Wrap distinct trained strategies as `ModelCandidate` objects and compare them
    using `ClassificationEvaluator` and a separate labelled holdout.
 4. Use `StrategyOutcomeFeedback` to update advisory route scores from admitted
@@ -30,8 +31,33 @@ For commands and expected gate counts, start with the
 
 See [strategy routing](strategy-routing.md), [model activation](model-lifecycle.md)
 and [response composition](response-composition.md) for the individual contracts.
-The six demos exercise these seams separately; a combined persistent adaptive
-runtime is still to be built.
+The learning demo connects experience capture, training, activation and Agent
+responses in one process. Persistent workers and broader strategy/goal integration
+remain open. See [continual learning](continual-learning.md).
+
+## Host adoption checklist
+
+Start with `learn.php` for the integrated loop, then run the individual demos to
+inspect each boundary. Replace fixture callbacks deliberately:
+
+| Boundary | Automata supplies | Host supplies |
+| --- | --- | --- |
+| Evidence | Immutable experience/outcome snapshots and validated projection lineage | Trusted sources, consent, labels, stable identities and retention policy |
+| Training | Pressure assessment, bounded evidence retention and request replay | Normalized signals, explicit training approval, independent model factory and a trainer that verifies completion |
+| Activation | Fresh held-out evaluation, revision checks and rollback receipts | Truthful training provenance, representative holdout data and a separate activation decision |
+| Inference | Access to the active model reference and policy-controlled routing | Explicit selection of that reference for future requests; unrelated registries remain unchanged |
+| Delivery | Prepared batches, stable delivery identity and terminal acknowledgement | Current scope/permission checks, effect execution, receiver deduplication and truthful receipts |
+| Recovery | Process-local receipts and validated response snapshots | Durable storage, authenticated restoration, concurrent-write control and reconciliation |
+
+Keep training approval, activation approval and tool authorization separate.
+An approved model can still produce an action that the host must deny. Narrative
+completion must wait for a successful execution receipt where the envelope declares
+that dependency. Cancellation cannot erase an already prepared delivery.
+
+Record the selected source revision and projection/model versions when evaluating
+these staged APIs. Run the relevant demos and your own representative and hostile
+fixtures before adopting them. A release upgrade requires the approved, merged
+contracts to be included in the selected package version.
 
 ## Evidence-backed change map
 
@@ -41,6 +67,7 @@ runtime is still to be built.
 | `Comprehension/Holoscene.php` | Keep; use existing `push()` seam | Example records and reviews the experience snapshots |
 | `Learning/*` | Add experiences, outcomes, store and projections | `tests/Automata/Learning` and Cortex command |
 | `Learning/ClassificationEvaluator.php` | Add held-out classification comparison | Improving candidate recommended; regression, overlap and unreliable evidence rejected |
+| `Learning/LearningCoordinator.php`, `TrainingPolicy.php` | Coordinate evidence-triggered isolated candidate training | Accumulation, pressure, approval, uncertain failure, retries and changed future Agent responses |
 | `Learning/ModelLifecycle.php` | Own a process-local active reference and revision | Fresh evaluation and explicit approval precede activation; actual inference changes and rollback are demonstrated |
 | `Learning/StrategyOutcomeFeedback.php`, `Intelligence.php`, `Strategy/Routing/*` | Bridge explicitly admitted outcomes into advisory scores | Adaptive route changes while eligibility, exact versions, authorization and invocation limits remain enforced |
 | `Strategy/IStrategy.php` | Keep interface; adapt batches | Example trains existing Naive Bayes pipeline |
@@ -59,7 +86,8 @@ runtime is still to be built.
    changes from learned scores.
 3. Response envelopes and composition: weighted completion, required dependencies,
    progressive output, cancellation, resumable emission state and Agent workers.
-   Governed process-local model activation and rollback add the next review slice.
+   Governed process-local model activation and rollback follow, then evidence-triggered
+   candidate training connects the loop to future Agent responses.
 4. Composite and scripted strategies: use existing graph/parser seams, enforce
    budgets and governance, and prove fallback and early exit.
 5. Goal graph integration: shared criteria, prerequisites, decomposition validation,
@@ -104,6 +132,7 @@ php examples/generic/cortex/adapt.php
 php examples/generic/cortex/respond.php
 php examples/generic/cortex/agent.php
 php examples/generic/cortex/promote.php
+php examples/generic/cortex/learn.php
 ```
 
 The initial run recorded 12 synthetic training episodes and one pending review,
@@ -130,8 +159,10 @@ existing advisor. The selected version changes from the constant prior to Bayes.
 It also probes duplicate feedback, deterministic preference, adapter eligibility,
 denied authorization, unregistered versions and a zero invocation budget.
 
-These experiments do not establish open-world accuracy, generative quality,
-continual learning, safe operational execution, or production reliability.
+The first three experiments establish projection, classification and advisory
+adaptation. The later learning command adds a bounded synchronous training loop.
+Neither establishes open-world accuracy, generative quality, durable continual
+learning, safe live operational execution or production reliability.
 
 The response command adds twelve gates around progressive output, required
 fragments, successful dependency receipts, stable delivery identity after a lost
@@ -151,7 +182,9 @@ through the active model reference before and after transitions. This establishe
 process-local behavior, without model persistence or deployment. See
 [the lifecycle contract](model-lifecycle.md).
 
-All six commands run in CI and currently expose 63 gates. The versioned
+All seven commands run in CI and currently expose 78 gates. The learning command
+adds 15 gates that connect recorded experience, policy-triggered training, separate
+activation approval and receipt-gated Agent responses. The versioned
 [`fixture-v1.json`](../examples/generic/cortex/fixture-v1.json) and
 [`baseline-v1.json`](../examples/generic/cortex/baseline-v1.json) pin the corpus,
 projection lineage and all six expected predictions. Constant and single-wrong
@@ -190,14 +223,15 @@ when changing that policy until the upstream assignment contract is fixed.
 
 ## Release gates still open
 
-Current proofs cover snapshots, attributable training data, bounded classification,
-advisory route adaptation, receipt-gated Agent responses and process-local model
-activation/rollback. Production and broader Cortex integration still require:
+Current proofs cover snapshots, attributable training data, evidence-triggered
+candidate training, bounded classification, advisory route adaptation,
+receipt-gated Agent responses and process-local model activation/rollback.
+Production and broader Cortex integration still require:
 
 - Durable experience, feedback and response stores with authenticated restoration,
   receiver idempotency, concurrent-write rules and interrupted-worker recovery.
-- A learning coordinator and training policies/triggers, model artifact persistence,
-  and a combined governed adaptive runtime with representative evaluation data.
+- Durable/background training workers, model artifact persistence, richer experiential
+  strategy adapters and representative evaluation data for the combined runtime.
 - Composite/scripted strategies over existing graph/parser seams, shared goal
   criteria and dependencies, and explicit experience/session/trace integration.
 - Integrated multimodal execution, resource budgets and reconciliation when hosted

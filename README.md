@@ -5,8 +5,8 @@ strategy routing and simulation. It combines symbolic reasoning and machine
 learning with explicit governance, evidence and trace contracts.
 
 The Cortex example assembles these capabilities into executable experiments:
-record experience, project training data, compare models, adapt routing, compose
-responses and approve model activation or rollback. See the
+record experience, project training data, approve isolated candidate training,
+compare models, adapt routing, compose responses and approve model activation or rollback. See the
 [Cortex guide](docs/cortex-delivery.md) and [runnable examples](examples/generic/cortex/README.md).
 The Cortex additions on this branch are staged for review; these docs do not imply
 that they are available in a published release.
@@ -31,7 +31,7 @@ that they are available in a published release.
 - **Typed Generation Runs**: Describe provider-neutral generation requests, steps, artifacts, diagnostics, partial outcomes, policy, evidence, and adapter-owned execution. See [Typed Generation Runs](docs/typed-generation-runs.md).
 - **Agent Capabilities**: Register deterministic tool contracts, descriptive capability definitions, exact scoped autonomy grants, lifecycle hooks, session memory, Holoscene comprehension, orchestration patterns, DevElation-backed agent state/goal decisions, interpreter-facing integration contracts, and persona orchestration contracts around LLM agent loops. See [Agent Capabilities](docs/agent-capabilities.md), [Capability Registry And Autonomy](docs/agent-capability-registry.md), and [Agent Persona Orchestration Contracts](docs/agent-persona-orchestration-contracts.md).
 - **Adaptive, Deterministic-First Strategy Routing**: Select exact, side-effect-free deterministic, learned, or generative strategy adapters under autonomy, eligibility, budget, trace, and explicit escalation policy. Optional `Intelligence` advice learns contextual quality and efficiency without bypassing those gates. See [Strategy Routing](docs/strategy-routing.md).
-- **Experiential Learning**: Capture immutable experience and outcome snapshots, project attributable training batches, compare exact model versions on held-out evidence, and admit feedback into advisory routing. See [Cortex learning contracts](docs/cortex-delivery.md).
+- **Experiential Learning**: Capture immutable experience and outcome snapshots, project attributable training batches, trigger separately approved candidate training, compare exact model versions on held-out evidence, and admit feedback into advisory routing. See [Continual Learning](docs/continual-learning.md) and [Cortex contracts](docs/cortex-delivery.md).
 - **Governed Model Activation**: Evaluate candidates before explicit host approval, activate a process-local model reference, and retain revision-bound promotion and rollback receipts. See [Model Lifecycle](docs/model-lifecycle.md).
 - **Progressive Responses**: Coordinate weighted fragments, required dependencies, delivery acknowledgements and cancellation, including synchronous Agent workers and TaskTrace integration. See [Response Composition](docs/response-composition.md).
 - **LLM Lane Pressure Management**: Assess semantic, operational, and execution pressure in provider-neutral agent workflows, with deterministic recommendations and a read-only LLM tool wrapper.
@@ -79,14 +79,16 @@ php examples/generic/cortex/adapt.php
 php examples/generic/cortex/respond.php
 php examples/generic/cortex/agent.php
 php examples/generic/cortex/promote.php
+php examples/generic/cortex/learn.php
 ```
 
-Together they report 63 boolean conformance gates as JSON and exit nonzero on
+Together they report 78 boolean conformance gates as JSON and exit nonzero on
 failure. They cover real classifier predictions, routing changes, receipt-gated
 responses and model activation/rollback. The small frozen corpus proves repeatable
 behavior; it does not establish open-world accuracy. Stores, model ownership and
 fixture receiver ledgers remain process-local. Durable recovery, concurrent writers
-and the combined adaptive runtime remain open work.
+and broader strategy/goal integration remain open work. The learning demo connects
+experience capture, training, activation and subsequent Agent responses in one process.
 
 Monte Carlo examples:
 
@@ -100,6 +102,15 @@ Language prediction example:
 ```bash
 php examples/markov_logistics_language.php
 ```
+
+## Documentation
+
+Use the [documentation index](docs/README.md) to find API guides by task. For the
+experience-to-response loop, begin with the
+[host adoption checklist](docs/cortex-delivery.md#host-adoption-checklist), then
+[candidate training](docs/continual-learning.md), [model activation](docs/model-lifecycle.md)
+and [response delivery](docs/response-composition.md). Each guide describes the
+host responsibilities and links to executable evidence.
 
 ## Contributing
 
