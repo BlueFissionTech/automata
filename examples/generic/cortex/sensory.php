@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/bootstrap.php';
 require_once __DIR__ . '/SensoryCapture.php';
 
+use BlueFission\Str;
 use BlueFission\Arr;
 use BlueFission\Automata\Learning\{CallbackTrainingAdapter, Experience, ExperienceRecomposer, InMemoryExperienceStore, Outcome, TrainingExample};
 use BlueFission\Automata\Strategy\NaiveBayesTextClassification;
@@ -18,7 +19,7 @@ $store = new InMemoryExperienceStore();
 $unlabelled = [];
 foreach ($training as $i => [$text, $label]) {
     // Deliberately vary presentation while preserving the frozen corpus content.
-    $raw = "  " . strtoupper(str_replace(' ', "\t", $text)) . "  ";
+    $raw = "  " . Str::make($text)->replace(' ', "\t")->upper()->val() . "  ";
     $experience = $capture->capture('sensory-train-' . $i, $raw, 'synthetic-training', 'sensory-trace-' . $i);
     $unlabelled[] = $experience;
     // Host-selected fixture annotations are separate from sensory measurements.
@@ -35,7 +36,7 @@ $adapter = new CallbackTrainingAdapter('cortex.sensory-intent', '1', static func
     return Arr::make($experience->outcomes())
         ->filter(static fn (Outcome $outcome): bool => $outcome->successful()
             && $outcome->toArray()['source'] === 'fixture-annotation'
-            && in_array($outcome->observations()['intent'] ?? null, ['directions', 'luggage', 'checkin'], true))
+            && Arr::make(['directions', 'luggage', 'checkin'])->has($outcome->observations()['intent'] ?? null, true))
         ->map(static fn (Outcome $outcome): TrainingExample => new TrainingExample(
             $experience->id(), $outcome->id(), $experience->toArray()['context']['data']['utterance'],
             $outcome->observations()['intent']))->values()->val();
@@ -54,7 +55,7 @@ $disjoint = true;
 foreach ($holdout as $i => [$text, $expected]) {
     $observation = $capture->capture('sensory-eval-' . $i, $text, 'synthetic-evaluation', 'eval-trace-' . $i);
     $sample = $observation->toArray()['context']['data']['utterance'];
-    $disjoint = $disjoint && !in_array($sample, $batch->samples(), true);
+    $disjoint = $disjoint && !Arr::make($batch->samples())->has($sample, true);
     $predicted = $candidate->predict($sample);
     $correct += (int)($predicted === $expected);
     $constantCorrect += (int)($expected === 'directions');
@@ -76,7 +77,7 @@ foreach ([null, " \t", str_repeat('x', 257), str_repeat('word ', 33)] as $invali
 }
 $sensory = $first['context']['data']['sensory'];
 $pendingData = $pending->toArray()['context']['data'];
-$expectedSamples = array_column($training, 0);
+$expectedSamples = Arr::make($training)->map(static fn (array $row) => $row[0])->values()->val();
 $matchesProjection = static fn (array $samples): bool => $samples === $expectedSamples;
 $damagedSamples = $batch->samples();
 $damagedSamples[0] = '';
@@ -84,7 +85,7 @@ $restored = new Experience(json_decode(json_encode($unlabelled[0],
     JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION), true, 512, JSON_THROW_ON_ERROR));
 $checks = [
     'input_normalization_matches_frozen_samples' => $matchesProjection($batch->samples()),
-    'real_sense_preserves_first_sweep_chunks' => array_column($sensory['chunks'], 'text') === explode(' ', $training[0][0]),
+    'real_sense_preserves_first_sweep_chunks' => Arr::make($sensory['chunks'])->map(static fn (array $row) => $row['text'])->values()->val() === Str::make($training[0][0])->split(' ')->val(),
     'sense_completion_is_observed' => $sensory['sweeps'] > 0 && $sensory['sweeps'] === $sensory['completion_events'],
     'recursion_is_visible_and_bounded_in_fixture' => $sensory['depth'] <= 7 && $sensory['sweeps'] <= 8,
     'raw_input_and_digest_retained' => $first['provenance']['raw_sha256'] === hash('sha256', $first['context']['data']['raw_text']),
@@ -97,18 +98,18 @@ $checks = [
     'snapshot_round_trip' => $restored->toArray() === $first,
     'unsupported_and_oversized_inputs_rejected' => $rejected === 4,
     'no_training_examples_without_labels' => $beforeLabels->samples() === [] && $pending->outcomes() === [],
-    'only_labelled_observations_projected' => count($batch->samples()) === 12 && !in_array('do not book 0', $batch->samples(), true),
+    'only_labelled_observations_projected' => Arr::make($batch->samples())->count() === 12 && !Arr::make($batch->samples())->has('do not book 0', true),
     'holdout_not_in_training' => $disjoint,
-    'all_held_out_predictions_correct' => $correct === count($holdout),
+    'all_held_out_predictions_correct' => $correct === Arr::make($holdout)->count(),
     'constant_prediction_control_loses' => $correct > $constantCorrect,
     'lost_content_control_rejected' => !$matchesProjection($damagedSamples),
 ];
-$passed = !in_array(false, $checks, true);
+$passed = !Arr::make($checks)->has(false, true);
 echo json_encode([
     'experiment' => 'cortex-sensory-ingestion-v1', 'passed' => $passed, 'checks' => $checks,
     'example_observation' => $first,
     'inspection_example' => $repeated['context']['data'],
-    'training_examples' => count($batch->samples()), 'evaluation_examples' => count($holdout),
+    'training_examples' => Arr::make($batch->samples())->count(), 'evaluation_examples' => Arr::make($holdout)->count(),
     'correct_predictions' => $correct, 'constant_correct_predictions' => $constantCorrect,
     'predictions' => $predictions, 'training_lineage' => $batch->toArray(),
     'limits' => ['Bounded ASCII text and synthetic labels only; no multimodal decoding.',
