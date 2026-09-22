@@ -44,6 +44,8 @@ trying to understand.
 - `examples/generic/agent_memory_hooks.php` – lifecycle memory event capture.
 - `examples/generic/agent_governance_review.php` – human review and governed
   task-call patterns.
+- `examples/generic/agent_module_lifecycle.php` – explicit host authorization,
+  lifecycle limitations, lineage, denial, and unsupported-feature evidence.
 
 ### Memory, Language, And Comprehension
 
