@@ -627,3 +627,29 @@ as `damage`, `people`, `infrastructure`, `blocked_road`, `flooding`.
 This SPEC is intended to be a living document; as Automata evolves, new modules,
 strategies, and integrations should be added here alongside their intended use
 cases and constraints.
+
+## 7. Experiential learning foundation
+
+The `Learning` namespace captures normalized `Statement` and `Context` snapshots,
+observed outcomes, and strategy-specific training projections. It does not grant
+execution authority or automatically train or replace a live strategy.
+
+User stories and acceptance criteria:
+
+- A host records a situated observation without later mutation of its Statement,
+  Context, or array references changing the stored experience.
+- A reviewer can attach a delayed outcome to its exact experience. Repeated
+  identical outcomes are idempotent; conflicting ids or wrong lineage are rejected.
+- A training adapter projects only suitable evidence into samples and labels.
+  Recomposition rejects references to outcomes absent from the source experience.
+- A host can round-trip schema-versioned records and preserve context data, tags,
+  normalizations, provenance, trace id and outcome attribution. Unsupported schema
+  versions and runtime objects fail explicitly.
+- The provider-free Cortex example records episodes in Holoscene, excludes pending
+  reviews from training, and evaluates the existing Naive Bayes strategy against
+  independent synthetic fixtures. Its process exit code reflects conformance.
+
+The reference store is process-local. Durable concurrent storage, access controls,
+learning triggers, candidate promotion, response composition and recovery remain
+explicit follow-up work. See [the delivery plan](docs/cortex-delivery.md) and
+[the runnable example](examples/generic/cortex/README.md).
