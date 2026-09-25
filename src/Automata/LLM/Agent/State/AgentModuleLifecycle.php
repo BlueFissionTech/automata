@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\LLM\Agent\State;
 
 use BlueFission\Arr;
+use BlueFission\Num;
 use Throwable;
 
 final class AgentModuleLifecycle
@@ -102,7 +103,7 @@ final class AgentModuleLifecycle
         $data['execution'] = $this->execution(true, $duration);
 
         $limit = $request->limits()['max_duration_ms'] ?? null;
-        if (is_numeric($limit) && (int)$limit >= 0 && $duration > (int)$limit) {
+        if (Num::is($limit) && (int)$limit >= 0 && $duration > (int)$limit) {
             $data['status'] = AgentModuleLifecycleResult::RESOURCE_LIMITED;
             $data['execution'] = $this->execution(true, $duration, [
                 'reason' => 'duration_limit',
@@ -176,6 +177,10 @@ final class AgentModuleLifecycle
 
     private function duration(float $startedAt, float $endedAt): int
     {
-        return max(0, (int)round(($endedAt - $startedAt) * 1000));
+        return (int)Num::make($endedAt)
+            ->minus($startedAt)
+            ->times(1000)
+            ->round()
+            ->max(0);
     }
 }
