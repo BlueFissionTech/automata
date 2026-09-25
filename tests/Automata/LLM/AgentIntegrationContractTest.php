@@ -8,6 +8,9 @@ use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\Capability\AutonomyPacket;
 use BlueFission\Automata\LLM\Agent\Capability\CapabilityRegistry;
 use BlueFission\Automata\LLM\Agent\Integration\AgentIntegrationContract;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleLifecycle;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleLifecycleResult;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleRunRequest;
 use BlueFission\Automata\LLM\Agent\ToolCatalog;
 use BlueFission\Automata\Strategy\Routing\StrategyRouteRequest;
 use BlueFission\Automata\Strategy\Routing\StrategyRouteAdvice;
@@ -133,7 +136,7 @@ class AgentIntegrationContractTest extends TestCase
     {
         $json = AgentIntegrationContract::standard()->toJson();
 
-        $this->assertStringContainsString('"version":"1.5.0"', $json);
+        $this->assertStringContainsString('"version":"1.6.0"', $json);
         $this->assertStringContainsString('"agent.tool_contracts"', $json);
         $this->assertStringContainsString('"agent.holoscene_comprehension"', $json);
         $this->assertStringContainsString('"agent.lane_pressure"', $json);
@@ -155,6 +158,20 @@ class AgentIntegrationContractTest extends TestCase
         $this->assertContains(Holoscene::class, $feature['classes']);
         $this->assertContains('reader.to_holoscene', $feature['constructs']);
         $this->assertContains('holoscene_snapshot', $feature['outputs']);
+    }
+
+    public function testOrchestrationFeaturePublishesModuleLifecycleConformance(): void
+    {
+        $feature = AgentIntegrationContract::standard()
+            ->feature(AgentIntegrationContract::FEATURE_ORCHESTRATION);
+
+        $this->assertContains(AgentModuleLifecycle::class, $feature['classes']);
+        $this->assertContains(AgentModuleRunRequest::class, $feature['classes']);
+        $this->assertContains(AgentModuleLifecycleResult::class, $feature['classes']);
+        $this->assertContains('module.lifecycle.run', $feature['constructs']);
+        $this->assertContains('module_lifecycle_result', $feature['outputs']);
+        $this->assertSame('synchronous', $feature['lifecycle']['mode']);
+        $this->assertContains('in_flight_cancellation', $feature['lifecycle']['unsupported']);
     }
 
     public function testCapabilityVocabularyDocumentsNeutralRuntimeTerms(): void

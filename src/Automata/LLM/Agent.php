@@ -25,6 +25,9 @@ use BlueFission\Automata\LLM\Agent\Orchestration\Orchestrator;
 use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationConfig;
 use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationResult;
 use BlueFission\Automata\LLM\Agent\State\AgentModuleResult;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleLifecycle;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleLifecycleResult;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleRunRequest;
 use BlueFission\Automata\LLM\Agent\State\AgentState;
 use BlueFission\Automata\LLM\Agent\State\CognitiveController;
 use BlueFission\Automata\LLM\Agent\State\IAgentModule;
@@ -564,6 +567,45 @@ class Agent extends Obj implements IDispatcher
     public function runModule(IAgentModule $module, array $context = []): AgentModuleResult
     {
         $result = $module->process($this->agentState, $context);
+        $this->applyModuleWrites($result);
+
+        return $result;
+    }
+
+    /**
+     * Run a module through the explicit host-owned lifecycle contract.
+     */
+    public function runModuleLifecycle(
+        IAgentModule $module,
+        AgentModuleRunRequest $request
+    ): AgentModuleLifecycleResult {
+        $result = (new AgentModuleLifecycle())->run($module, $this->agentState, $request);
+        if ($result->canApplyWrites()) {
+            $this->applyModuleWrites($result);
+        }
+
+        $trace = $this->taskTrace();
+        $span = $trace->startSpan(TaskTraceSpan::KIND_ORCHESTRATION, 'module.' . $module->name(), [
+            'lineage' => $result->lineage(),
+            'contract' => AgentModuleLifecycle::contract(),
+        ]);
+        $trace->addSpan($span->finish($result->status(), [
+            'outcome_status' => $result->status(),
+            'metadata' => [
+                'lineage' => $result->lineage(),
+                'execution' => $result->execution(),
+                'diagnostics' => $result->diagnostics(),
+            ],
+        ]));
+
+        return $result;
+    }
+
+    /**
+     * Apply well-formed module writes to the shared agent state.
+     */
+    protected function applyModuleWrites(AgentModuleResult $result): void
+    {
         foreach ($result->writes() as $write) {
             if (!Arr::is($write) || !Arr::hasKey($write, 'channel') || !Arr::hasKey($write, 'key')) {
                 continue;
@@ -571,8 +613,6 @@ class Agent extends Obj implements IDispatcher
 
             $this->agentState->write((string)$write['channel'], (string)$write['key'], $write['value'] ?? null);
         }
-
-        return $result;
     }
 
     /**
