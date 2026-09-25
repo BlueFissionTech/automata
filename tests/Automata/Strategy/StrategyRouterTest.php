@@ -145,6 +145,30 @@ class StrategyRouterTest extends TestCase
         $this->assertSame(0, $expensive->executions);
     }
 
+    public function testExplicitUnknownEstimateCannotPassFiniteSpendLimit(): void
+    {
+        $adapter = $this->adapter(
+            'provider.generate',
+            StrategyDefinition::MODE_GENERATIVE,
+            [],
+            [],
+            ['cost' => null, 'invocations' => 1]
+        );
+
+        $result = (new StrategyRouter([$adapter]))->route(
+            $this->request([
+                'candidates' => [['id' => 'provider.generate', 'version' => '1.0']],
+                'allowed_modes' => [StrategyDefinition::MODE_GENERATIVE],
+                'limits' => ['max_cost' => 1.0],
+            ]),
+            $this->authorization()
+        );
+
+        $this->assertSame(StrategyRouter::CODE_ESTIMATED_BUDGET_EXCEEDED, $result->attempts[0]['code']);
+        $this->assertNull($result->attempts[0]['estimate']['cost']);
+        $this->assertSame(0, $adapter->executions);
+    }
+
     public function testExplicitEscalationCanReachGenerativeWithinCumulativeBudget(): void
     {
         $deterministic = $this->adapter('tree.dispatch', StrategyDefinition::MODE_DETERMINISTIC, [
