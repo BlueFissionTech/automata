@@ -1,43 +1,9 @@
-# Cortex delivery and conformance plan
+# Cortex composition and conformance
 
-Cortex is an example assembled from reusable Automata capabilities. It owns its
-fixtures, domain mappings and assembly. Generic cognition contracts belong in the
-library. Existing Agent, Statement, Context, Holoscene, strategy and governance
-APIs remain intact.
-
-## Evidence-backed change map
-
-| Surface | Treatment | Evidence or next proof |
-| --- | --- | --- |
-| `Language/Statement.php`, `Context.php` | Keep; capture snapshots | Input mutation cannot rewrite recorded experience |
-| `Comprehension/Holoscene.php` | Keep; use existing `push()` seam | Example records and reviews the experience snapshots |
-| `Learning/*` | Add experiences, outcomes, store and projections | `tests/Automata/Learning` and Cortex command |
-| `Intelligence.php`, `Strategy/Routing/*` | Keep existing authority/advice split; later bridge attributed feedback | Existing advisor tests cover reranking without bypassing eligibility |
-| `Strategy/IStrategy.php` | Keep interface; adapt batches | Example trains existing Naive Bayes pipeline |
-| `Goal/ManagesGoals.php` | Audit and extend shared criteria/dependencies later | Require multi-goal progress and blocked-prerequisite tests |
-| `Path/Graph.php`, `Path/Node.php` | Evaluate reuse for composite strategies | Require bounded traversal, fallback, early exit and cancellation |
-| `Parsing/*`, DevElation parser | Adapt executable strategies later | Require deterministic output and governed tool calls |
-| `LLM/Agent/Memory/*` | Keep event storage; add explicit durable experience adapter later | Require restoration and conflicting-write tests |
-| Response composition | Add after experience contracts | Require dependency-gated partial emission and no repeated actions |
-
-## Review sequence
-
-1. Experience and training projection foundation, with an executable fixture proof.
-2. Attributed feedback and candidate evaluation: measured incumbent/candidate
-   comparison, worse-candidate rejection, exact strategy versions and no authority
-   changes from learned scores.
-3. Response envelopes and composition: weighted completion, required dependencies,
-   progressive output, cancellation, and resumable emission state.
-4. Composite and scripted strategies: use existing graph/parser seams, enforce
-   budgets and governance, and prove fallback and early exit.
-5. Goal graph integration: shared criteria, prerequisites, decomposition validation,
-   convergence and observed multi-goal progress.
-6. Persistence and full conformance: recovery, idempotency, hostile memory input,
-   cancellation, concurrency, budgets, traceability and compatibility.
-
-Stack a PR only when it imports an earlier unmerged contract. Otherwise target the
-normal base branch independently. Publish exact contract versions and migration
-notes when a stage becomes available. No release tag is implied by a passing demo.
+Cortex is a provider-free example assembled from reusable Automata capabilities.
+Its fixtures and domain mappings illustrate composition; they do not grant an
+application permission to promote models or perform operational actions. Existing
+Agent, Statement, Context, Holoscene, strategy, and governance APIs remain intact.
 
 ## Foundation contract
 
@@ -60,7 +26,7 @@ for the same outcome are rejected. Separate adapters can project the same
 experience into different strategy-specific representations. Neither recomposition
 nor `TrainingBatch` promotes models or mutates live strategies.
 
-## Current experiment
+## Runnable experiment
 
 Run:
 
@@ -69,7 +35,7 @@ vendor/bin/phpunit --do-not-cache-result tests/Automata/Learning
 php examples/generic/cortex/run.php
 ```
 
-The initial run recorded 12 synthetic training episodes and one pending review,
+The example records 12 synthetic training episodes and one pending review,
 projected 12 labelled examples, retained Holoscene episode snapshots, and passed
 its JSON round trip. The existing Naive Bayes strategy classified 6/6 separate
 fixture requests correctly versus 2/6 for a constant prior. The command emits each
@@ -79,34 +45,12 @@ These fixtures intentionally exercise composition with a small, clean vocabulary
 They do not establish open-world accuracy, generative quality, continual learning,
 route adaptation, safe operational execution, or production reliability.
 
-## Release gates still open
+## Limits
 
-The first slice establishes snapshots and attributable training data. A production
-candidate still needs measured route adaptation, safe candidate promotion,
-progressive multimodal responses, goal continuity, interruption recovery,
-idempotency, concurrency semantics, memory validation, budgets and trace linkage
-through governed actions. A version increase is considered only after the relevant
-PRs are approved and merged and conformance evidence is reviewed. Maintain the
-existing prerelease posture until those gates justify a stronger release claim.
-
-## Primitive helper policy
-
-The learning records, projections, reference store and runnable experiment use
-DevElation array, string, numeric, boolean and resource helpers. Prefer fluent
-chains for transformations, including map/filter/value pipelines, string
-normalization and numeric arithmetic. Keep type predicates explicit before
-constructing values so validation does not silently coerce malformed input. The Engine refactor uses
-those same primitives while preserving its historical comments and existing
-classification and attention behavior. The selected typed predicates and keyed
-mapping callbacks are available in the declared DevElation minimum, v1.3.39.
-
-Snapshot validation rejects runtime objects before invoking primitive predicates:
-DevElation intentionally unwraps value objects, whereas persisted experience
-records accept only plain scalar and array data. The existing `Ref::is` helper
-rejects stream resources without taking ownership or closing the caller's handle;
-this behavior has regression coverage and is available in DevElation v1.3.39. Explicit JSON flags preserve
-floating-point types and throw on encoding failures. Native runtime inspection,
-UTC timestamps and clock reads remain where there is no equivalent helper with
-the required semantics. Regression coverage preserves scalar types, detached
-references, rejection of value wrappers and nonfinite numbers, strategy class
-registration, and attention-statistic keys and values.
+Snapshot validation accepts only finite scalar and array data. Runtime objects
+and resources are rejected; a rejected stream remains owned by its caller.
+Persisted records preserve scalar types and detached references, but an evidence
+source is not trusted merely because it can be restored. Hosts remain responsible
+for admission, privacy, authorization, storage durability, concurrent writes,
+provider spend, and any effects that follow a model prediction. Passing this
+small fixture does not qualify those capabilities for production use.
