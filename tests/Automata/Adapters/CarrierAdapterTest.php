@@ -23,4 +23,18 @@ class CarrierAdapterTest extends TestCase
         $this->assertSame('ready', $adapter->field('status'));
         $this->assertSame('high', $adapter->snapshot()['meta']['priority']);
     }
+
+    public function testCarrierAdapterPreservesExplicitNullAssignment(): void
+    {
+        $carrier = new class extends Obj {
+        };
+
+        $adapter = new CarrierAdapter($carrier);
+        $adapter->field('status', 'ready');
+        $adapter->field('status', null);
+
+        $this->assertNull($adapter->field('status'));
+        $this->assertArrayHasKey('status', $adapter->snapshot());
+        $this->assertNull($adapter->snapshot()['status']);
+    }
 }

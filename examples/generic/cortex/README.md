@@ -36,6 +36,7 @@ selection across their modes. No model is automatically promoted or deployed.
 Feedback receipts retain the source and strategy/version/context lineage. This is
 process-local evidence; durable recovery, provider costs and energy are not proved.
 
-Subsequent slices add controlled promotion, durable governed adaptive routes, progressive
-response dependencies, composite/scripted strategies, and shared goal criteria.
+Subsequent slices add controlled promotion, durable governed adaptive routes,
+progressive response dependencies, composite/scripted strategies, and shared goal
+criteria.
 Each slice must report its actual measurements and unresolved release gates.
