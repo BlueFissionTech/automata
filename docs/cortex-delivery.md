@@ -34,6 +34,7 @@ Run:
 vendor/bin/phpunit --do-not-cache-result tests/Automata/Learning
 php examples/generic/cortex/run.php
 php examples/generic/cortex/evaluate.php
+php examples/generic/cortex/adapt.php
 ```
 
 The example records 12 synthetic training episodes and one pending review,
@@ -54,9 +55,44 @@ cancellation or resource-spend enforcement. Callers provide trusted prediction
 implementations and truthful training provenance; undisclosed pretraining and
 semantic duplicate detection are outside this evaluator's guarantees.
 
+The adaptation command admits the evaluation's independently labelled outcomes,
+records exact strategy versions and context, and routes a new request through the
+existing advisor. The selected version changes from the constant prior to Bayes.
+It also probes duplicate feedback, deterministic preference, adapter eligibility,
+denied authorization, unregistered versions and a zero invocation budget.
+
 These experiments do not establish open-world accuracy, generative quality,
-continual learning, route adaptation, safe operational execution, or production
-reliability.
+continual learning, unrestricted route adaptation, safe operational execution, or
+production reliability.
+
+## Attributed feedback contract
+
+`StrategyOutcomeFeedback::apply($experience, $outcomeId)` accepts only an attached
+outcome with explicit `strategy_id`, `strategy_version` and `context_key`
+attribution. The host decides which evidence to admit. Optional observations under
+`feedback` contain finite, nonnegative numbers for `accuracy`,
+`prediction_accuracy`, `score`, `confidence`, `latency_ms`, `cost` or `energy`;
+quality ratios must be at most one. Null metrics are omitted. Outcome success is
+preserved even when false, and numeric zero remains evidence. Unknown fields are
+rejected. Strategy ids and versions cannot contain `@`, the existing advisor's
+identity separator.
+
+Identical repeated evidence returns false after a successful application;
+conflicting source experience fields or outcomes for the same pair are rejected.
+Other outcomes may be appended without changing that pair's source evidence. A learner
+exception leaves an uncertain receipt and prevents blind retry. Receipts expose
+lineage and application status, but both learner state and deduplication are
+process-local. Durable transactional recovery and reconciliation are future work.
+Feedback changes scores only; it cannot register models, grant authority or
+promote a candidate. Existing performance summaries may report zero for unsampled
+resource metrics; those defaults are not measurements.
+
+The route request constructor preserves an explicitly false
+`deterministic_preferred` value while retaining the true default. This narrow
+compatibility measure addresses the demo's reproduced failure with DevElation's
+legacy empty-value assignment behavior. It does not repair generic mutation of
+existing objects; construct a new request
+when changing that policy until the upstream assignment contract is fixed.
 
 ## Limits
 

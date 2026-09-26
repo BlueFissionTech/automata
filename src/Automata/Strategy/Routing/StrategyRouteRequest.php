@@ -57,6 +57,16 @@ class StrategyRouteRequest extends RoutingValue
 
     protected $_lockDataType = true;
 
+    public function __construct(array $data = [])
+    {
+        // Legacy Obj::assign ignores empty values. Seed the typed default so an
+        // explicit false survives construction without relaxing the default policy.
+        if (($data['deterministic_preferred'] ?? null) === false) {
+            $this->_data['deterministic_preferred'] = false;
+        }
+        parent::__construct($data);
+    }
+
     public function allowsMode(string $mode): bool
     {
         return Arr::has($this->allowed_modes, $mode, true);

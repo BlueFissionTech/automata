@@ -668,3 +668,17 @@ must demonstrate both an improving candidate and a rejected regression.
 This stage does not establish statistical significance, detect undisclosed model
 training, cancel synchronous prediction, or implement promotion/rollback. Those
 limits remain explicit while the complete learning loop advances.
+
+## 9. Attributed strategy feedback
+
+Admitted outcomes can update advisory Intelligence performance for an explicitly
+named strategy version and context. The bridge requires attached evidence, rejects
+malformed/ambiguous attribution and invalid metrics, omits unknown measurements,
+and records inspectable receipts. Identical evidence is applied once per recorder
+instance; conflicting evidence and uncertain partial-application retries fail
+explicitly. Outcomes cannot add candidates, change eligibility or grant authority.
+
+The Cortex proof must evaluate a classifier, apply attributed held-out observations,
+show changed future route preference, and retain exact-version, eligibility,
+authorization and resource-limit checks. Replay guarantees are process-local;
+durable, transactional feedback and model promotion remain subsequent work.
