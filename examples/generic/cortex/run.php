@@ -70,7 +70,7 @@ $candidate = new NaiveBayesTextClassification();
 // Train all projected examples through the public pipeline. The strategy's train()
 // method performs its own random split; this experiment uses separate holdouts.
 $candidate->getPipeline()->train($batch->samples(), $batch->labels());
-$evaluationCount = Arr::count($holdout);
+$evaluationCount = Arr::size($holdout);
 $baselineCorrect = 0;
 $candidateCorrect = 0;
 $predictions = [];
@@ -87,9 +87,9 @@ $first = $store->get('concierge-0');
 $restored = new Experience(json_decode(json_encode($first,
     JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION), true, 512, JSON_THROW_ON_ERROR));
 $checks = [
-    'all_observed_examples_projected' => Arr::count($batch->samples()) === Arr::count($training),
+    'all_observed_examples_projected' => Arr::size($batch->samples()) === Arr::size($training),
     'pending_experience_excluded' => !Arr::has($batch->samples(), 'unknown request', true),
-    'episodic_snapshots_recorded' => Arr::count($memory->assessment()) === Arr::count($training),
+    'episodic_snapshots_recorded' => Arr::size($memory->assessment()) === Arr::size($training),
     'snapshot_round_trip' => $restored->toArray() === $first->toArray(),
     'candidate_improves_over_constant_prior' => $candidateCorrect > $baselineCorrect,
     'all_held_out_predictions_correct' => $candidateCorrect === $evaluationCount,
@@ -100,7 +100,7 @@ echo json_encode([
     'fixture_kind' => 'synthetic',
     'passed' => $passed,
     'checks' => $checks,
-    'training_examples' => Arr::count($batch->samples()),
+    'training_examples' => Arr::size($batch->samples()),
     'evaluation_examples' => $evaluationCount,
     'constant_prior_accuracy' => Num::make($baselineCorrect)->divide($evaluationCount)->val(),
     'candidate_accuracy' => Num::make($candidateCorrect)->divide($evaluationCount)->val(),
