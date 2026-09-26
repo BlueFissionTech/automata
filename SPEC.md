@@ -653,3 +653,18 @@ The reference store is process-local. Durable concurrent storage, access control
 learning triggers, candidate promotion, response composition and recovery remain
 explicit follow-up work. See [the delivery plan](docs/cortex-delivery.md) and
 [the runnable example](examples/generic/cortex/README.md).
+
+## 8. Held-out classification evaluation
+
+Compare separately instantiated, already trained models using exact identities and
+the same versioned projection. Reject overlap with either declared training corpus
+and repeated holdout evidence before invoking prediction. Measure strict label
+matches, failures and elapsed milliseconds; retain unknown cost/energy as unknown.
+Recommend only strict improvement meeting sample, accuracy and optional latency
+policy. Ties, regressions and unreliable evidence retain the incumbent. Evaluation
+must not train, save, replace or authorize a strategy. The runnable experiment
+must demonstrate both an improving candidate and a rejected regression.
+
+This stage does not establish statistical significance, detect undisclosed model
+training, cancel synchronous prediction, or implement promotion/rollback. Those
+limits remain explicit while the complete learning loop advances.
