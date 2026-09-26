@@ -70,7 +70,7 @@ final class RecordSnapshot
         $hash = hash_init('sha256');
         $visit = function (mixed $item) use (&$visit, $hash): void {
             if (Arr::is($item)) {
-                hash_update($hash, 'a' . Arr::count($item) . ':');
+                hash_update($hash, 'a' . Arr::size($item) . ':');
                 foreach ($item as $key => $entry) { $visit($key); $visit($entry); }
             } elseif (Str::is($item)) {
                 hash_update($hash, 's' . Str::make($item)->len() . ':' . $item);

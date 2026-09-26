@@ -109,7 +109,7 @@ final class ResponseComposer
                 'confidence' => $this->states[$fragment->id()]['confidence'],
                 'resolution' => $this->states[$fragment->id()]['resolution']])->values()->val();
         if (Arr::isEmpty($fragments)) { return null; }
-        $sequence = Arr::count($this->releases) + 1;
+        $sequence = Arr::size($this->releases) + 1;
         $id = 'response-release-' . RecordSnapshot::fingerprint([$this->envelope->id(), $sequence, $fragments]);
         $release = ['id' => $id, 'response_id' => $this->envelope->id(), 'sequence' => $sequence,
             'prepared_at_ms' => $nowMs, 'fragments' => $fragments, 'trace' => $this->envelope->trace()];
@@ -124,12 +124,12 @@ final class ResponseComposer
         if (!isset($this->releases[$id])) { throw new InvalidArgumentException('Unknown response release.'); }
         $receipts = RecordSnapshot::copy($receipts, 8);
         $fragments = $this->releases[$id]['release']['fragments'];
-        if (Arr::count($receipts) !== Arr::count($fragments)) { throw new InvalidArgumentException('Every fragment requires a receiver receipt.'); }
+        if (Arr::size($receipts) !== Arr::size($fragments)) { throw new InvalidArgumentException('Every fragment requires a receiver receipt.'); }
         $normalized = [];
         foreach ($fragments as $fragment) {
             $receipt = $receipts[$fragment['id']] ?? null;
             if (!Arr::is($receipt) || !Flag::isBool($receipt['successful'] ?? null) || !Arr::is($receipt['evidence'] ?? null)
-                || Arr::count($receipt) !== 2) { throw new InvalidArgumentException('Receipts require a boolean result and evidence map.'); }
+                || Arr::size($receipt) !== 2) { throw new InvalidArgumentException('Receipts require a boolean result and evidence map.'); }
             $normalized[$fragment['id']] = ['successful' => $receipt['successful'], 'evidence' => $receipt['evidence']];
         }
         $normalized = RecordSnapshot::canonical($normalized);
@@ -184,7 +184,7 @@ final class ResponseComposer
         try {
             $record = RecordSnapshot::copy($record);
             if (($record['schema_version'] ?? null) !== 1 || !Arr::is($record['events'] ?? null)
-                || !Arr::check($record['events'], 'array_is_list') || Arr::count($record['events']) > self::MAX_EVENTS + 2) {
+                || !Arr::check($record['events'], 'array_is_list') || Arr::size($record['events']) > self::MAX_EVENTS + 2) {
                 throw new InvalidArgumentException('Unsupported or malformed response checkpoint.');
             }
             $envelope = $record['envelope'] ?? [];
@@ -198,7 +198,7 @@ final class ResponseComposer
                 'prepare' => ['type', 'now_ms'], 'acknowledge' => ['type', 'id', 'receipts']];
             foreach ($record['events'] as $event) {
                 if (!Arr::is($event) || !Str::is($event['type'] ?? null) || !isset($fields[$event['type']])
-                    || Arr::count($event) !== Arr::count($fields[$event['type']])
+                    || Arr::size($event) !== Arr::size($fields[$event['type']])
                     || Arr::make($event)->keys()->diff($fields[$event['type']])->val() !== []) {
                     throw new InvalidArgumentException('Malformed response event.');
                 }
@@ -242,7 +242,7 @@ final class ResponseComposer
     private function capacity(bool $terminal = false): void
     {
         // Reserve a slot each for final acknowledgement and cancellation.
-        if (Arr::count($this->events) >= self::MAX_EVENTS + ($terminal ? 2 : 0)) {
+        if (Arr::size($this->events) >= self::MAX_EVENTS + ($terminal ? 2 : 0)) {
             throw new LogicException('Response event limit reached; reconcile and cancel before starting a new response.');
         }
     }
