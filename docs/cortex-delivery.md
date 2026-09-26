@@ -78,7 +78,8 @@ rejected. Strategy ids and versions cannot contain `@`, the existing advisor's
 identity separator.
 
 Identical repeated evidence returns false after a successful application;
-conflicting evidence for the same experience/outcome pair is rejected. A learner
+conflicting source experience fields or outcomes for the same pair are rejected.
+Other outcomes may be appended without changing that pair's source evidence. A learner
 exception leaves an uncertain receipt and prevents blind retry. Receipts expose
 lineage and application status, but both learner state and deduplication are
 process-local. Durable transactional recovery and reconciliation are future work.
