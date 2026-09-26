@@ -387,3 +387,31 @@ This architecture document should be read together with `SPEC.md`, which
 describes product intent and roadmap. Architectural changes should update both
 files as modules evolve.
 
+
+## 6. Experience and training projection boundary
+
+`Learning/Experience` and `Outcome` are immutable snapshots over existing
+`Language/Statement` and `Context` carriers. Immutable records prevent aliasing
+across persistence and training boundaries; they do not replace DevElation's
+mutable object or behavior model. Record data is restricted to finite scalar and
+array values. `IExperienceStore` supports replacement of the current snapshot by
+id; `InMemoryExperienceStore` is the process-local reference implementation.
+
+`ITrainingAdapter` defines a named/versioned projection. `CallbackTrainingAdapter`
+uses DevElation `Func`; `ExperienceRecomposer` validates lineage after the
+`automata.learning.examples` filter, deduplicates repeated evidence, and returns a
+`TrainingBatch`. The batch exposes samples and labels for existing `IStrategy`
+implementations. Projection does not invoke training or confer governance rights.
+Hosts choose which observed outcomes qualify, including whether failed outcomes
+provide useful negative examples.
+
+Actions expose `automata.experience.normalized`,
+`automata.experience.outcome.recorded`, `automata.experience.stored`, and
+`automata.learning.recomposed`. These are observational extension points; schema
+and lineage validation remain mandatory.
+
+The Cortex example uses the existing `Holoscene::push()` snapshot seam. It trains
+the Naive Bayes public pipeline with the entire projected batch and evaluates a
+separate fixture set, avoiding the strategy's internal random split. This proves
+composition and bounded classification, not production recovery or general
+conversational competence. See [the delivery plan](docs/cortex-delivery.md).
