@@ -142,6 +142,7 @@ php examples/generic/cortex/learn.php
 php examples/generic/cortex/workflow.php
 php examples/generic/cortex/sensory.php
 php examples/generic/cortex/script.php
+php examples/generic/cortex/behavior.php
 ```
 
 The example records 12 synthetic training episodes and one pending review,
@@ -191,13 +192,15 @@ through the active model reference before and after transitions. This establishe
 process-local behavior, without model persistence or deployment. See
 [the lifecycle contract](model-lifecycle.md).
 
-All ten commands run in CI and currently expose 128 gates. The sensory command
+All eleven commands run in CI and currently expose 135 gates. The sensory command
 adds 22 gates for bounded ingress, descriptive sweeps, and evidence projection;
 see [sensory ingestion](sensory-ingestion.md). The workflow command
 adds twelve gates for graph execution and overlapping workers; see
 [strategy workflows](strategy-workflows.md). The script command adds 16 gates
 for reviewed parser integration and governed routing; see
-[script strategies](script-strategy.md). The learning command
+[script strategies](script-strategy.md). The behavior command adds seven gates
+for local state transitions, host denial, and an unconfirmed request without a
+receiver receipt. The learning command
 adds 15 gates that connect recorded experience, policy-triggered training, separate
 activation approval and receipt-gated Agent responses. The versioned
 [`fixture-v1.json`](../examples/generic/cortex/fixture-v1.json) and

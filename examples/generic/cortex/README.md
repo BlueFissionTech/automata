@@ -6,7 +6,7 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
-These contracts are staged development work. Use a checkout containing all ten
+These contracts are staged development work. Use a checkout containing all eleven
 scripts and install its Composer dependencies before running from the repository
 root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
 toolchain. No provider credentials, network calls or external services are needed
@@ -24,9 +24,10 @@ to execute the demos after installation.
 | `workflow.php` | 12 | Graph execution, overlapping workers, fan-in and ordinary Intelligence selection |
 | `sensory.php` | 22 | Input normalization, default/custom Sense observations, experience projection and labelled classification |
 | `script.php` | 16 | Real parser rendering, governed generation slots, early exit, routing and trace evidence |
+| `behavior.php` | 7 | DevElation state/behavior gates, host denial and unconfirmed request evidence |
 
 Each command emits JSON evidence and exits nonzero if a required gate fails. All
-128 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
+135 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
 loop in one process; `workflow.php` adds cooperative Fiber overlap. Durable worker
 recovery and asynchronous response producers remain open. The
 [delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.
@@ -114,3 +115,10 @@ only from externally labelled observations. Custom preparation preserves domain
 words; extra gates exercise default preparation and retained results. This does not exercise InputArray
 or qualify general multimodal ingestion. See [sensory ingestion](../../../docs/sensory-ingestion.md)
 for placement, measured behavior, extension points and remaining work.
+
+Run `php examples/generic/cortex/behavior.php` to see DevElation `StateMachine`
+and `State`/`Action` behaviors through Automata's `AgentState`. A route proposal
+is allowed while reviewing, dispatch is denied, and a state transition permits
+the local dispatch behavior. A separate host decision can still deny it. Even
+after host approval, the fixture retains a requested, unconfirmed status because
+no receiver receipt exists. This example performs no external action.
