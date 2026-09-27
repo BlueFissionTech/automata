@@ -60,6 +60,8 @@ trying to understand.
 
 ### Decisioning, Planning, And Policy
 
+- `examples/generic/strategy_usage_unknown_cost.php` – distinguish unknown
+  strategy cost from measured zero and reject unknown estimates under finite caps.
 - `examples/decision_tree_dispatch_policy.php` – decision trees with shared
   method state and injected assessors.
 - `examples/expert_logistics_rules.php` – symbolic expert rules for logistics.
