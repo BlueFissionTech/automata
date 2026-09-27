@@ -69,7 +69,8 @@ php vendor/bin/phpunit --do-not-cache-result tests/Automata/Sensory
 php examples/generic/cortex/sensory.php
 ```
 
-All three legacy sensory classes retain their implementation. The example proves
-a bounded integration through existing extension points, not general sensory
-maturity. Future work should repair default preparation, define sweep/reset and
-queue contracts, and qualify modality-specific adapters before expanding scope.
+The existing Input, InputArray and Sense contracts remain in place; this slice
+only changes Sense's attention arithmetic to use DevElation's Num helper. The
+example proves bounded integration through existing extension points, not general
+sensory maturity. Future work should repair default preparation, define
+sweep/reset and queue contracts, and qualify modality-specific adapters.
