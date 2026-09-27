@@ -2,6 +2,7 @@
 
 namespace BlueFission\Tests\Automata\LLM;
 
+use BlueFission\DevElation;
 use BlueFission\Automata\LLM\Agent;
 use BlueFission\Automata\LLM\Agent\Governance\GovernanceDecision;
 use BlueFission\Automata\LLM\Agent\State\AgentModuleLifecycle;
@@ -11,6 +12,8 @@ use BlueFission\Automata\LLM\Agent\State\AgentState;
 use BlueFission\Automata\LLM\Agent\State\CallableAgentModule;
 use BlueFission\Automata\LLM\Clients\IClient;
 use BlueFission\Automata\LLM\Reply;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 
 final class AgentModuleLifecycleClientStub implements IClient
@@ -52,6 +55,55 @@ final class AgentModuleLifecycleTest extends TestCase
         $this->assertContains('progressive_output', $contract['unsupported']);
         $this->assertSame('host', $contract['effect_authorization_owner']);
         $this->assertSame('host', $contract['idempotency_owner']);
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testDescriptiveFilterCannotChangeLifecycleSafetyGates(): void
+    {
+        DevElation::filter('automata.agent.module.lifecycle.metadata', static fn (array $metadata): array =>
+            $metadata + [
+                'description' => 'Host-reviewed module lifecycle',
+                'supported' => ['hard_preemption'],
+                'unsupported' => [],
+                'effect_authorization_owner' => 'module',
+                'idempotency_owner' => 'module',
+            ]);
+        DevElation::up();
+        try {
+            $contract = AgentModuleLifecycle::contract();
+            $this->assertSame('Host-reviewed module lifecycle', $contract['metadata']['description']);
+            $this->assertContains('hard_preemption', $contract['unsupported']);
+            $this->assertNotContains('hard_preemption', $contract['supported']);
+            $this->assertSame('host', $contract['effect_authorization_owner']);
+            $this->assertSame('host', $contract['idempotency_owner']);
+            $this->assertArrayNotHasKey('supported', $contract['metadata']);
+            $this->assertArrayNotHasKey('unsupported', $contract['metadata']);
+            $this->assertArrayNotHasKey('effect_authorization_owner', $contract['metadata']);
+            $this->assertArrayNotHasKey('idempotency_owner', $contract['metadata']);
+
+            $calls = 0;
+            $module = new CallableAgentModule('blocked', static function () use (&$calls): array {
+                $calls++;
+                return [];
+            });
+            $request = new AgentModuleRunRequest(GovernanceDecision::approved(), [
+                'run_id' => 'filtered-contract',
+                'requested_features' => ['hard_preemption'],
+            ]);
+            $result = (new AgentModuleLifecycle())->run($module, new AgentState(), $request);
+            $this->assertSame(AgentModuleLifecycleResult::UNSUPPORTED, $result->status());
+            $this->assertSame(0, $calls);
+
+            DevElation::filter('automata.agent.module.lifecycle.metadata', static fn (): string => 'invalid', 20);
+            $this->assertSame([], AgentModuleLifecycle::contract()['metadata']);
+            DevElation::filter('automata.agent.module.lifecycle.metadata', static function (): never {
+                throw new \RuntimeException('Untrusted descriptive filter failed.');
+            }, 30);
+            $this->assertSame([], AgentModuleLifecycle::contract()['metadata']);
+        } finally {
+            DevElation::down();
+        }
     }
 
     public function testApprovedModuleAppliesWritesAndPreservesLineage(): void

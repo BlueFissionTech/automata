@@ -3,7 +3,9 @@
 namespace BlueFission\Automata\LLM\Agent\State;
 
 use BlueFission\Arr;
+use BlueFission\DevElation;
 use BlueFission\Num;
+use BlueFission\Automata\Support\RecordSnapshot;
 use Throwable;
 
 final class AgentModuleLifecycle
@@ -18,6 +20,26 @@ final class AgentModuleLifecycle
     }
 
     public static function contract(): array
+    {
+        $contract = self::coreContract();
+        try {
+            $metadata = DevElation::apply('automata.agent.module.lifecycle.metadata', []);
+            if (!Arr::is($metadata)) {
+                return $contract + ['metadata' => []];
+            }
+
+            $metadata = RecordSnapshot::copy($metadata);
+            foreach ($contract as $key => $_) {
+                unset($metadata[$key]);
+            }
+        } catch (Throwable) {
+            $metadata = [];
+        }
+
+        return $contract + ['metadata' => $metadata];
+    }
+
+    private static function coreContract(): array
     {
         return [
             'name' => 'automata.agent.module.lifecycle',
@@ -163,7 +185,7 @@ final class AgentModuleLifecycle
 
     private function unsupportedFeatures(array $requested): array
     {
-        $unsupported = self::contract()['unsupported'];
+        $unsupported = self::coreContract()['unsupported'];
 
         return Arr::make($requested)
             ->filter(static fn (string $feature): bool => Arr::has($unsupported, $feature, true))

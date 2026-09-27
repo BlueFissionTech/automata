@@ -365,6 +365,28 @@ class StrategyRouterTest extends TestCase
         $this->assertSame('fixture-policy', $result->attempts[0]['evidence'][0]['source']);
     }
 
+    public function testAmbiguousStorageKeyCannotExecuteADifferentExactIdentity(): void
+    {
+        $intended = $this->adapter('tree@variant', StrategyDefinition::MODE_DETERMINISTIC);
+        $collision = $this->adapter('tree', StrategyDefinition::MODE_DETERMINISTIC, definition: ['version' => 'variant@1.0']);
+        $result = (new StrategyRouter([$intended, $collision]))->route(
+            $this->request(['candidates' => [['id' => 'tree@variant', 'version' => '1.0']]]), $this->authorization());
+        $this->assertFalse($result->completed());
+        $this->assertSame('strategy_identity_mismatch', $result->attempts[0]['code']);
+        $this->assertSame(0, $collision->executions);
+    }
+
+    public function testChangedAdapterVersionCannotExecuteUnderItsOldRegistration(): void
+    {
+        $adapter = $this->adapter('tree.dispatch', StrategyDefinition::MODE_DETERMINISTIC);
+        $router = new StrategyRouter([$adapter]);
+        $adapter->advertisedVersion = '2.0';
+        $result = $router->route($this->request(), $this->authorization());
+        $this->assertFalse($result->completed());
+        $this->assertSame('strategy_identity_mismatch', $result->attempts[0]['code']);
+        $this->assertSame(0, $adapter->executions);
+    }
+
     private function adapter(
         string $id,
         string $mode,
@@ -452,6 +474,7 @@ class StrategyRouterTestAdapter implements IStrategyRouteAdapter
 {
     public int $executions = 0;
     public bool $throwOnExecute = false;
+    public ?string $advertisedVersion = null;
 
     public function __construct(
         private array $definitionData,
@@ -463,7 +486,8 @@ class StrategyRouterTestAdapter implements IStrategyRouteAdapter
 
     public function definition(): StrategyDefinition
     {
-        return new StrategyDefinition($this->definitionData);
+        return new StrategyDefinition($this->advertisedVersion === null ? $this->definitionData
+            : [...$this->definitionData, 'version' => $this->advertisedVersion]);
     }
 
     public function eligibility(StrategyRouteRequest $request): StrategyEligibility

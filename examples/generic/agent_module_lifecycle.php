@@ -7,6 +7,7 @@ use BlueFission\Automata\LLM\Agent\State\AgentModuleLifecycle;
 use BlueFission\Automata\LLM\Agent\State\AgentModuleRunRequest;
 use BlueFission\Automata\LLM\Agent\State\AgentState;
 use BlueFission\Automata\LLM\Agent\State\CallableAgentModule;
+use BlueFission\DevElation;
 
 $state = new AgentState();
 $calls = 0;
@@ -46,6 +47,18 @@ $unsupported = $lifecycle->run($module, $state, new AgentModuleRunRequest(
     ]
 ));
 
+DevElation::filter('automata.agent.module.lifecycle.metadata', static fn (array $metadata): array =>
+    $metadata + [
+        'description' => 'Host-reviewed module lifecycle fixture',
+        'supported' => ['hard_preemption'],
+    ]);
+DevElation::up();
+try {
+    $filteredContract = AgentModuleLifecycle::contract();
+} finally {
+    DevElation::down();
+}
+
 $checks = [
     'normal_result_preserves_lineage' => $completed->status() === 'completed'
         && $completed->lineage()['trace_id'] === 'trace-normal',
@@ -55,13 +68,18 @@ $checks = [
         && $unsupported->diagnostics()[0]['features'] === ['progressive_output'],
     'effects_remain_host_owned' => $completed->execution()['effects']['authorization_owner'] === 'host'
         && $completed->execution()['effects']['idempotency_owner'] === 'host',
+    'filter_enriches_metadata_without_changing_gates' => $filteredContract['metadata']['description']
+            === 'Host-reviewed module lifecycle fixture'
+        && !isset($filteredContract['metadata']['supported'])
+        && !in_array('hard_preemption', $filteredContract['supported'], true)
+        && in_array('hard_preemption', $filteredContract['unsupported'], true),
 ];
 
 echo json_encode([
     'experiment' => 'agent-module-lifecycle-v1',
     'passed' => !in_array(false, $checks, true),
     'checks' => $checks,
-    'contract' => AgentModuleLifecycle::contract(),
+    'contract' => $filteredContract,
     'normal' => $completed->toArray(),
     'denied' => $denied->toArray(),
     'unsupported' => $unsupported->toArray(),

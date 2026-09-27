@@ -24,6 +24,15 @@ features, cancellation state, and observed limits.
 and records an orchestration span. The older `Agent::runModule()` remains the
 trusted synchronous compatibility path and retains its existing behavior.
 
+Hosts may register a DevElation filter named
+`automata.agent.module.lifecycle.metadata` and activate DevElation to add
+descriptive entries under the contract's `metadata` field. The filter receives
+an empty array. Its result must be a finite, serializable array; invalid or
+throwing filters leave metadata empty. Contract keys such as `supported`,
+`unsupported`, `mode`, and the host ownership fields are stripped from metadata
+and remain fixed at the top level. Runtime feature gates use the unfiltered
+contract, so descriptive filters cannot authorize unsupported controls.
+
 ## Supported semantics
 
 - explicit host authorization before invocation;
