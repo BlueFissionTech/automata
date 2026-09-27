@@ -95,6 +95,8 @@ abstract class AbstractPattern implements IOrchestrationPattern
         $scores = [];
         foreach ($workerResults as $result) {
             if (Arr::hasKey($result, 'confidence')) {
+                // An explicit unknown contributor cannot support a measured aggregate.
+                if ($result['confidence'] === null) { return null; }
                 $scores[] = (float)$result['confidence'];
             }
         }

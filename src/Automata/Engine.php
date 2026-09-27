@@ -1,7 +1,8 @@
 <?php
 namespace BlueFission\Automata;
 
-use BlueFission\Func;
+use BlueFission\Arr;
+use BlueFission\Str;
 use BlueFission\Num;
 use BlueFission\Automata\Intelligence;
 use BlueFission\Behavioral\Behaviors\Action;
@@ -144,7 +145,7 @@ class Engine extends Intelligence implements ISphere {
 			}
 
 			Dev::do('automata.engine.classify.action1', [
-				'strategy' => is_string($name) ? $name : get_class($strategy),
+				'strategy' => Str::is($name) ? $name : get_class($strategy),
 				'input' => $input,
 				'output' => $result,
 				'executionTime' => $this->time(),
@@ -164,7 +165,10 @@ class Engine extends Intelligence implements ISphere {
 	// }
 
 	public function getTransactionSize() {
-		$this->_transaction_size = Num::pow(self::TRANSACTION_BASE_SIZE * $this->_level, self::TRANSACTION_MULTIPLIER);
+		$this->_transaction_size = Num::make(self::TRANSACTION_BASE_SIZE)
+			->multiply($this->_level)
+			->pow(self::TRANSACTION_MULTIPLIER)
+			->val();
 		return $this->_transaction_size;
 	}
 
@@ -185,7 +189,7 @@ class Engine extends Intelligence implements ISphere {
 		if ( !Num::isValid($this->_avgtime) || $this->_avgtime <= 0 ) {
 			$this->_avgtime = $this->_totaltime;
 		} else {
-			$this->_avgtime = Num::divide(Num::add($this->_avgtime, $this->_totaltime), 2);
+			$this->_avgtime = Num::make($this->_avgtime)->add($this->_totaltime)->divide(2)->val();
 		}
 	}
 
@@ -238,13 +242,11 @@ class Engine extends Intelligence implements ISphere {
 	protected function buildAttentionProfile(Sense $sense, $data, float $score): array
 	{
 		$stats = [];
-		if (is_array($data)) {
-			$stats = array_intersect_key($data, array_flip([
-				'count',
-				'mean1',
-				'variance1',
-				'std1',
-			]));
+		if (!is_object($data) && Arr::is($data)) {
+			$statisticNames = ['count', 'mean1', 'variance1', 'std1'];
+			$stats = Arr::make($data)
+				->filter(static fn ($value, $key) => Arr::has($statisticNames, $key, true))
+				->val();
 		}
 
 		return [
@@ -270,13 +272,13 @@ class Engine extends Intelligence implements ISphere {
 			return $this;
 		}
 
-		if ( is_string($strategy) && !class_exists($strategy) ) {
+		if ( !is_object($strategy) && Str::is($strategy) && !class_exists($strategy) ) {
 			return $this;
 		}
 
 		$strategyName = $name.'_strategy';
 		$instance = $strategy;
-		if ( is_string($strategy) ) {
+		if ( !is_object($strategy) && Str::is($strategy) ) {
 			$instance = new $strategy();
 		}
 		if ( !is_object($instance) ) {

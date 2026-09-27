@@ -165,4 +165,16 @@ class EngineClassifyTest extends TestCase
         $this->assertEqualsWithDelta(0.5, $engine->time(), 0.000001);
         $this->assertEqualsWithDelta(0.375, $engine->stats()['avgtime'], 0.000001);
     }
+
+    public function testProcessorClassNamesAndInvalidInputsPreserveClassification(): void
+    {
+        $engine = new Engine();
+        $engine->addProcessor('missing', 'MissingEngineStrategy');
+        $engine->addProcessor('invalid', 42);
+        $this->assertSame('input', $engine->classify('input'));
+        $engine->addProcessor('guess', EngineGuessStubStrategy::class);
+        $this->assertSame('guessed', $engine->classify('input'));
+        $this->assertGreaterThanOrEqual(0, $engine->time());
+        $this->assertEquals(1, $engine->getTransactionSize());
+    }
 }

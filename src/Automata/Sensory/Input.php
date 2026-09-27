@@ -8,11 +8,17 @@ use BlueFission\Behavioral\Dispatches;
 use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Collections\Collection;
 use BlueFission\Str;
+use BlueFission\Func;
 use BlueFission\DevElation as Dev;
+use InvalidArgumentException;
 
 /**
- * Input class handles the processing of input data through a series of processors.
- * It extends Dispatcher to utilize event-driven behavior.
+ * Synchronous, ordered input transformations with event-based output delivery.
+ *
+ * Each processor receives the preceding processor's result. The final value is
+ * delivered as Event::COMPLETE context; scan() does not return that value.
+ * Dispatches supplies the dispatcher implementation without a base class.
+ * This stage does not infer meaning, create an Experience, or authorize input.
  */
 class Input implements IDispatcher
 {
@@ -40,52 +46,71 @@ class Input implements IDispatcher
     {
         $this->__dispatchesConstruct();
 
-        if (!$processor) {
+        if ($processor === null) {
             $processor = function($data) {
                 return $data;
             };
         }
 
         $this->_processors = new Collection();
-        $this->_processors[] = Dev::apply('sensory.input.processor', $processor);
+        $this->setProcessor(Dev::apply('sensory.input.processor', $processor));
         Dev::do('sensory.input.construct', ['processor' => $processor, 'instance' => $this]);
     }
 
     /**
      * Sets or gets the name of the input source.
      *
+     * Null/empty string reads the existing name. A nonempty string, including
+     * "0", sets it and returns this instance for fluent registration.
+     *
      * @param string $name Optional name to set.
-     * @return string|null The name of the input source if no name is provided to set.
+     * @return string|null|$this The existing name in getter mode, otherwise this instance.
      */
     public function name($name = '')
     {
-        if (!$name) {
+        if ($name === '' || $name === null) {
             return $this->_name;
         }
+        if (!Str::is($name)) {
+            throw new InvalidArgumentException('Input name must be a string.');
+        }
         $this->_name = $name;
+        return $this;
     }
 
     /**
      * Adds a processor function to the list of processors.
      *
+     * Despite the setter name, this appends; it does not replace prior stages.
+     * Callability is checked before registration. Returns this instance.
+     *
      * @param callable $processorFunction The processor function to add.
      */
     public function setProcessor($processorFunction)
     {
+        if (!Func::isCallable($processorFunction)) {
+            throw new InvalidArgumentException('Input processor must be callable.');
+        }
         $this->_processors[] = $processorFunction;
+        return $this;
     }
 
     /**
      * Processes the input data through all registered processors and dispatches a complete event.
+     *
+     * The optional processor remains registered for subsequent scans. Failures
+     * propagate to the caller; a failed processor prevents the completion event.
+     * Consumers must subscribe before scanning to receive this synchronous event.
+     * Returns this instance, while processed output remains in the event context.
      *
      * @param mixed $data The input data to process.
      * @param callable|null $processor Optional additional processor function.
      */
     public function scan($data, $processor = null)
     {
-        // Add the additional processor function if provided
-        if ($processor) {
-            $this->_processors[] = Dev::apply('sensory.input.extra_processor', $processor);
+        // Registration is persistent, including processors supplied for this scan.
+        if ($processor !== null) {
+            $this->setProcessor(Dev::apply('sensory.input.extra_processor', $processor));
         }
 
         // Process the data through all processors
@@ -98,6 +123,7 @@ class Input implements IDispatcher
         $data = Dev::apply('sensory.input.scan_result', $data);
         $this->dispatch(Event::COMPLETE, $data);
         Dev::do('sensory.input.scan', ['data' => $data]);
+        return $this;
     }
 
     /**
@@ -120,7 +146,7 @@ class Input implements IDispatcher
             $args = null;
         }
 
-        // Call the parent dispatch method
+        // Use the aliased trait method to avoid recursively calling this override.
         return $this->__dispatchFromTrait($behavior, $args);
     }
 
