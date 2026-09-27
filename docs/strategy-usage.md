@@ -18,3 +18,9 @@ provide a hosted transport, reserve money, reconcile a dispatched attempt,
 validate provider receipts, or authorize retries. In particular, a completed
 or failed adapter response with unknown actual billing still needs a separate
 reservation and reconciliation contract before hosted execution is safe.
+
+Run the provider-free usage fixture from the repository root:
+
+```sh
+php examples/generic/strategy_usage_unknown_cost.php
+```

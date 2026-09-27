@@ -1,0 +1,110 @@
+<?php
+
+require_once dirname(__DIR__, 2) . '/bootstrap.php';
+
+use BlueFission\Arr;
+use BlueFission\Num;
+use BlueFission\Str;
+use BlueFission\Automata\Comprehension\Holoscene;
+use BlueFission\Automata\Context;
+use BlueFission\Automata\Language\Statement;
+use BlueFission\Automata\Learning\CallbackTrainingAdapter;
+use BlueFission\Automata\Learning\Experience;
+use BlueFission\Automata\Learning\ExperienceRecomposer;
+use BlueFission\Automata\Learning\InMemoryExperienceStore;
+use BlueFission\Automata\Learning\Outcome;
+use BlueFission\Automata\Learning\TrainingExample;
+use BlueFission\Automata\Strategy\NaiveBayesTextClassification;
+
+// Synthetic, independently labelled fixtures. No model is asked to grade itself.
+['training' => $training, 'holdout' => $holdout] = require __DIR__ . '/fixtures.php';
+$store = new InMemoryExperienceStore();
+$memory = new Holoscene('concierge-training-fixtures');
+foreach ($training as $index => [$text, $intent]) {
+    $id = 'concierge-' . $index;
+    $statement = new Statement();
+    $statement->assign(['subject' => 'guest', 'behavior' => 'requests', 'object' => $text]);
+    $experience = Experience::fromStatements($id, [$statement], new Context(['utterance' => $text]), [
+        'timestamp' => '2026-09-19T12:00:00Z',
+        'trace_id' => 'trace-' . $id,
+        'provenance' => ['dataset' => 'synthetic-concierge-v1', 'split' => 'training'],
+    ])->withOutcome(new Outcome('label-' . $index, $id, 'fixture-annotation', true, ['intent' => $intent]));
+    $store->save($experience);
+    $memory->push($id, $experience);
+}
+$store->save(Experience::fromStatements('pending-review', [], new Context(['utterance' => 'unknown request'])));
+$memory->review();
+$adapter = new CallbackTrainingAdapter('concierge.intent', '1', static function (Experience $experience): iterable {
+    return Arr::make($experience->outcomes())
+        ->filter(static fn (Outcome $outcome): bool => $outcome->successful()
+            && Str::is($outcome->observations()['intent'] ?? null))
+        ->map(static fn (Outcome $outcome): TrainingExample => new TrainingExample(
+            $experience->id(), $outcome->id(),
+            $experience->toArray()['context']['data']['utterance'], $outcome->observations()['intent']))
+        ->values()
+        ->val();
+});
+$batch = (new ExperienceRecomposer())->compose($store->experiences(), $adapter);
+$candidate = new NaiveBayesTextClassification();
+// Train all projected examples through the public pipeline. The strategy's train()
+// method performs its own random split; this experiment uses separate holdouts.
+$candidate->getPipeline()->train($batch->samples(), $batch->labels());
+$evaluationCount = Arr::size($holdout);
+$baselineCorrect = 0;
+$candidateCorrect = 0;
+$predictions = [];
+foreach ($holdout as [$text, $expected]) {
+    if (Arr::has($batch->samples(), $text, true)) {
+        throw new RuntimeException('Evaluation input leaked into the training corpus.');
+    }
+    $predicted = $candidate->predict($text);
+    $baselineCorrect += (int) ($expected === 'directions');
+    $candidateCorrect += (int) ($expected === $predicted);
+    $predictions[] = ['input' => $text, 'expected' => $expected, 'predicted' => $predicted];
+}
+$first = $store->get('concierge-0');
+$restored = new Experience(json_decode(json_encode($first,
+    JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION), true, 512, JSON_THROW_ON_ERROR));
+$baseline = json_decode(file_get_contents(__DIR__ . '/baseline-v1.json'), true, 512, JSON_THROW_ON_ERROR);
+$matchesBaseline = static fn (array $observed): bool => $observed === $baseline['predictions'];
+$constantPredictions = Arr::make($predictions)
+    ->map(static fn (array $row): array => [...$row, 'predicted' => 'directions'])->values()->val();
+$singleWrongPrediction = $predictions;
+$singleWrongPrediction[0]['predicted'] = '__incorrect__';
+$expectedTraining = Arr::make($training)->map(static fn (array $row, int $index): array => [
+    'experience_id' => $baseline['training_experience_ids'][$index],
+    'outcome_id' => $baseline['training_outcome_ids'][$index], 'sample' => $row[0], 'label' => $row[1],
+])->values()->val();
+$checks = [
+    'all_observed_examples_projected' => Arr::size($batch->samples()) === Arr::size($training),
+    'pending_experience_excluded' => !Arr::has($batch->samples(), 'unknown request', true),
+    'episodic_snapshots_recorded' => Arr::size($memory->assessment()) === Arr::size($training),
+    'snapshot_round_trip' => $restored->toArray() === $first->toArray(),
+    'candidate_improves_over_constant_prior' => $candidateCorrect > $baselineCorrect,
+    'all_held_out_predictions_correct' => $candidateCorrect === $evaluationCount,
+    'baseline_version_and_projection_match' => $baseline['baseline_version'] === 1
+        && $batch->toArray()['projection_id'] === $baseline['projection_id']
+        && $batch->toArray()['projection_version'] === $baseline['projection_version'],
+    'projected_training_matches_frozen_baseline' => $batch->toArray()['examples'] === $expectedTraining,
+    'every_prediction_matches_frozen_baseline' => $matchesBaseline($predictions),
+    'constant_negative_control_rejected' => !$matchesBaseline($constantPredictions),
+    'single_wrong_negative_control_rejected' => !$matchesBaseline($singleWrongPrediction),
+];
+$passed = !Arr::has($checks, false, true);
+echo json_encode([
+    'experiment' => 'cortex-experiential-foundation-v1',
+    'fixture_kind' => 'synthetic',
+    'fixture_id' => $baseline['fixture_id'],
+    'fixture_sha256' => $baseline['fixture_sha256'],
+    'passed' => $passed,
+    'checks' => $checks,
+    'training_examples' => Arr::size($batch->samples()),
+    'evaluation_examples' => $evaluationCount,
+    'constant_prior_accuracy' => Num::make($baselineCorrect)->divide($evaluationCount)->val(),
+    'candidate_accuracy' => Num::make($candidateCorrect)->divide($evaluationCount)->val(),
+    'predictions' => $predictions,
+    'training_lineage' => $batch->toArray(),
+    'limits' => ['No live provider or physical actions.',
+        'See the companion evaluation, feedback, response and promotion demos; durable recovery remains separate.'],
+], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_PRESERVE_ZERO_FRACTION) . PHP_EOL;
+exit($passed ? 0 : 1);

@@ -1,7 +1,8 @@
 <?php
 namespace BlueFission\Automata;
 
-use BlueFission\Func;
+use BlueFission\Arr;
+use BlueFission\Str;
 use BlueFission\Num;
 use BlueFission\Automata\Intelligence;
 use BlueFission\Behavioral\Behaviors\Action;
@@ -109,6 +110,7 @@ class Engine extends Intelligence implements ISphere {
 	public function classify( $input ) {
 		$input = Dev::apply('automata.engine.classify.1', $input);
 		$result = $input;
+		$hasResult = false;
 
 		if ( $this->_scene && method_exists($this->_scene, 'has') ) {
 			if ( !$this->_scene->has($input) && method_exists($this->_scene, 'add') ) {
@@ -139,16 +141,17 @@ class Engine extends Intelligence implements ISphere {
 
 			if ( $guess !== null ) {
 				$result = $guess;
+				$hasResult = true;
 			}
 
 			Dev::do('automata.engine.classify.action1', [
-				'strategy' => is_string($name) ? $name : get_class($strategy),
+				'strategy' => Str::is($name) ? $name : get_class($strategy),
 				'input' => $input,
 				'output' => $result,
 				'executionTime' => $this->time(),
 			]);
 
-			if ( $result ) {
+			if ( $hasResult ) {
 				break;
 			}
 		}
@@ -162,34 +165,35 @@ class Engine extends Intelligence implements ISphere {
 	// }
 
 	public function getTransactionSize() {
-		$this->_transaction_size = Num::pow(self::TRANSACTION_BASE_SIZE * $this->_level, self::TRANSACTION_MULTIPLIER);
+		$this->_transaction_size = Num::make(self::TRANSACTION_BASE_SIZE)
+			->multiply($this->_level)
+			->pow(self::TRANSACTION_MULTIPLIER)
+			->val();
 		return $this->_transaction_size;
 	}
 
+	/** Monotonic wall-clock time in seconds, overrideable for deterministic tests. */
+	protected function clockSeconds(): float {
+		return (float) Num::make(hrtime(true))->divide(1_000_000_000)->val();
+	}
+
 	protected function startclock() {
-		$this->_starttime = function_exists('getrusage') ? getrusage() : microtime(true);
+		$this->_starttime = $this->clockSeconds();
 	}
 
 	protected function stopclock() {
-		if ( function_exists('getrusage') && is_array($this->_starttime) ) {
-			$this->_stoptime = getrusage();
-			$ru = $this->_starttime;
-			$rus = $this->_stoptime;
-			$this->_totaltime = ($rus["ru_utime.tv_sec"]*1000 + intval($rus["ru_utime.tv_usec"]/1000))
-				- ($ru["ru_utime.tv_sec"]*1000 + intval($ru["ru_utime.tv_usec"]/1000));
-		} else {
-			$this->_stoptime = microtime(true);
-			$start = Num::isValid($this->_starttime) ? $this->_starttime : $this->_stoptime;
-			$this->_totaltime = ($this->_stoptime - $start);
-		}
+		$this->_stoptime = $this->clockSeconds();
+		$elapsed = Num::make($this->_stoptime)->subtract($this->_starttime)->val();
+		$this->_totaltime = $elapsed < 0 ? 0.0 : (float) $elapsed;
 
 		if ( !Num::isValid($this->_avgtime) || $this->_avgtime <= 0 ) {
 			$this->_avgtime = $this->_totaltime;
 		} else {
-			$this->_avgtime = Num::divide(Num::add($this->_avgtime, $this->_totaltime), 2);
+			$this->_avgtime = Num::make($this->_avgtime)->add($this->_totaltime)->divide(2)->val();
 		}
 	}
 
+	/** Elapsed wall seconds for the most recent strategy attempt, or zero before one. */
 	public function time() {
 		return $this->_totaltime ?? 0;
 	}
@@ -238,13 +242,11 @@ class Engine extends Intelligence implements ISphere {
 	protected function buildAttentionProfile(Sense $sense, $data, float $score): array
 	{
 		$stats = [];
-		if (is_array($data)) {
-			$stats = array_intersect_key($data, array_flip([
-				'count',
-				'mean1',
-				'variance1',
-				'std1',
-			]));
+		if (!is_object($data) && Arr::is($data)) {
+			$statisticNames = ['count', 'mean1', 'variance1', 'std1'];
+			$stats = Arr::make($data)
+				->filter(static fn ($value, $key) => Arr::has($statisticNames, $key, true))
+				->val();
 		}
 
 		return [
@@ -270,13 +272,13 @@ class Engine extends Intelligence implements ISphere {
 			return $this;
 		}
 
-		if ( is_string($strategy) && !class_exists($strategy) ) {
+		if ( !is_object($strategy) && Str::is($strategy) && !class_exists($strategy) ) {
 			return $this;
 		}
 
 		$strategyName = $name.'_strategy';
 		$instance = $strategy;
-		if ( is_string($strategy) ) {
+		if ( !is_object($strategy) && Str::is($strategy) ) {
 			$instance = new $strategy();
 		}
 		if ( !is_object($instance) ) {

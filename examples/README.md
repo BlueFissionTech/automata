@@ -44,6 +44,8 @@ trying to understand.
 - `examples/generic/agent_memory_hooks.php` – lifecycle memory event capture.
 - `examples/generic/agent_governance_review.php` – human review and governed
   task-call patterns.
+- `examples/generic/agent_module_lifecycle.php` – explicit host authorization,
+  lifecycle limitations, lineage, denial, and unsupported-feature evidence.
 
 ### Memory, Language, And Comprehension
 
@@ -58,6 +60,8 @@ trying to understand.
 
 ### Decisioning, Planning, And Policy
 
+- `examples/generic/strategy_usage_unknown_cost.php` – distinguish unknown
+  strategy cost from measured zero and reject unknown estimates under finite caps.
 - `examples/decision_tree_dispatch_policy.php` – decision trees with shared
   method state and injected assessors.
 - `examples/expert_logistics_rules.php` – symbolic expert rules for logistics.

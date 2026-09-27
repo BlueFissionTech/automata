@@ -5,6 +5,9 @@ use BlueFission\Arr;
 use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\AgentSession;
+use BlueFission\Automata\LLM\Agent\Response\AgentResponse;
+use BlueFission\Automata\Response\ResponseEnvelope;
+use BlueFission\Automata\Response\ResponsePolicy;
 use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Automata\LLM\Tools\ITool;
 use BlueFission\Automata\LLM\Agent\ToolCatalog;
@@ -25,6 +28,9 @@ use BlueFission\Automata\LLM\Agent\Orchestration\Orchestrator;
 use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationConfig;
 use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationResult;
 use BlueFission\Automata\LLM\Agent\State\AgentModuleResult;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleLifecycle;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleLifecycleResult;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleRunRequest;
 use BlueFission\Automata\LLM\Agent\State\AgentState;
 use BlueFission\Automata\LLM\Agent\State\CognitiveController;
 use BlueFission\Automata\LLM\Agent\State\IAgentModule;
@@ -319,6 +325,18 @@ class Agent extends Obj implements IDispatcher
         return $result;
     }
 
+    /** Create a response bound to the current session and task, without invoking a model. */
+    public function startResponse(ResponseEnvelope $envelope, ?ResponsePolicy $policy = null): AgentResponse
+    {
+        return new AgentResponse($this, $envelope, $policy);
+    }
+
+    /** Restore host-trusted response state into the same session and task. */
+    public function restoreResponse(array $checkpoint): AgentResponse
+    {
+        return AgentResponse::restore($this, $checkpoint);
+    }
+
     public function startTask(?string $taskId = null, array $metadata = []): TaskTrace
     {
         $this->taskTrace = new TaskTrace($taskId, $metadata);
@@ -564,6 +582,45 @@ class Agent extends Obj implements IDispatcher
     public function runModule(IAgentModule $module, array $context = []): AgentModuleResult
     {
         $result = $module->process($this->agentState, $context);
+        $this->applyModuleWrites($result);
+
+        return $result;
+    }
+
+    /**
+     * Run a module through the explicit host-owned lifecycle contract.
+     */
+    public function runModuleLifecycle(
+        IAgentModule $module,
+        AgentModuleRunRequest $request
+    ): AgentModuleLifecycleResult {
+        $result = (new AgentModuleLifecycle())->run($module, $this->agentState, $request);
+        if ($result->canApplyWrites()) {
+            $this->applyModuleWrites($result);
+        }
+
+        $trace = $this->taskTrace();
+        $span = $trace->startSpan(TaskTraceSpan::KIND_ORCHESTRATION, 'module.' . $module->name(), [
+            'lineage' => $result->lineage(),
+            'contract' => AgentModuleLifecycle::contract(),
+        ]);
+        $trace->addSpan($span->finish($result->status(), [
+            'outcome_status' => $result->status(),
+            'metadata' => [
+                'lineage' => $result->lineage(),
+                'execution' => $result->execution(),
+                'diagnostics' => $result->diagnostics(),
+            ],
+        ]));
+
+        return $result;
+    }
+
+    /**
+     * Apply well-formed module writes to the shared agent state.
+     */
+    protected function applyModuleWrites(AgentModuleResult $result): void
+    {
         foreach ($result->writes() as $write) {
             if (!Arr::is($write) || !Arr::hasKey($write, 'channel') || !Arr::hasKey($write, 'key')) {
                 continue;
@@ -571,8 +628,6 @@ class Agent extends Obj implements IDispatcher
 
             $this->agentState->write((string)$write['channel'], (string)$write['key'], $write['value'] ?? null);
         }
-
-        return $result;
     }
 
     /**

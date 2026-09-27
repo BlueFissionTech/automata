@@ -17,6 +17,7 @@ class StrategyRouter
     public const CODE_AUTHORIZATION_DENIED = 'authorization_denied';
     public const CODE_AUTHORIZATION_MISMATCH = 'authorization_mismatch';
     public const CODE_UNKNOWN_STRATEGY = 'unknown_strategy';
+    public const CODE_STRATEGY_IDENTITY_MISMATCH = 'strategy_identity_mismatch';
     public const CODE_CAPABILITY_MISMATCH = 'capability_mismatch';
     public const CODE_STRATEGY_UNAVAILABLE = 'strategy_unavailable';
     public const CODE_MODE_NOT_ALLOWED = 'mode_not_allowed';
@@ -150,6 +151,14 @@ class StrategyRouter
         $escalations = [];
         $usage = new StrategyUsage();
         $limits = $this->effectiveLimits($request->limits, $authorization->limits);
+        // Eligibility may need to reject unknown metrics before any execution.
+        // Expose the same ceilings used by accounting, including grant limits,
+        // without rewriting the caller's request or its original audit identity.
+        // Obj contains value wrappers, so a shallow clone would share mutable
+        // limits with the original request. Rebuild from detached field values.
+        $effectiveData = $request->toArray();
+        $effectiveData['limits'] = $limits;
+        $effectiveRequest = new StrategyRouteRequest($effectiveData);
         [$candidates, $advice] = $this->orderedCandidates($request);
 
         foreach ($candidates as $index => $candidate) {
@@ -164,6 +173,10 @@ class StrategyRouter
             }
 
             $definition = $adapter->definition();
+            if ($definition->id !== $id || $definition->version !== $version) {
+                $attempts[] = $this->attempt($id, $version, $definition->mode, self::CODE_STRATEGY_IDENTITY_MISMATCH);
+                continue;
+            }
             if (
                 $definition->capability_id !== $request->capability_id
                 || $definition->capability_version !== $request->capability_version
@@ -188,7 +201,7 @@ class StrategyRouter
             }
 
             try {
-                $eligibility = $adapter->eligibility($request);
+                $eligibility = $adapter->eligibility($effectiveRequest);
             } catch (Throwable $exception) {
                 $attempts[] = $this->attempt($id, $version, $definition->mode, self::CODE_ELIGIBILITY_EXCEPTION, [
                     'diagnostics' => [['code' => self::CODE_ELIGIBILITY_EXCEPTION, 'message' => $exception->getMessage()]],
@@ -206,7 +219,7 @@ class StrategyRouter
             }
 
             try {
-                $estimate = $adapter->estimate($request)->withMinimumInvocations();
+                $estimate = $adapter->estimate($effectiveRequest)->withMinimumInvocations();
             } catch (Throwable $exception) {
                 $attempts[] = $this->attempt($id, $version, $definition->mode, self::CODE_ESTIMATE_EXCEPTION, [
                     'eligible' => true,
@@ -224,7 +237,7 @@ class StrategyRouter
             }
 
             try {
-                $adapterResult = $adapter->execute($request);
+                $adapterResult = $adapter->execute($effectiveRequest);
             } catch (Throwable $exception) {
                 $attempts[] = $this->attempt($id, $version, $definition->mode, self::CODE_EXECUTION_EXCEPTION, [
                     'status' => 'failed',
