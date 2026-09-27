@@ -8,6 +8,7 @@ use BlueFission\Behavioral\Dispatches;
 use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Collections\Collection;
 use BlueFission\Str;
+use BlueFission\Func;
 use BlueFission\DevElation as Dev;
 use InvalidArgumentException;
 
@@ -70,7 +71,7 @@ class Input implements IDispatcher
         if ($name === '' || $name === null) {
             return $this->_name;
         }
-        if (!is_string($name)) {
+        if (!Str::is($name)) {
             throw new InvalidArgumentException('Input name must be a string.');
         }
         $this->_name = $name;
@@ -87,7 +88,7 @@ class Input implements IDispatcher
      */
     public function setProcessor($processorFunction)
     {
-        if (!is_callable($processorFunction)) {
+        if (!Func::isCallable($processorFunction)) {
             throw new InvalidArgumentException('Input processor must be callable.');
         }
         $this->_processors[] = $processorFunction;

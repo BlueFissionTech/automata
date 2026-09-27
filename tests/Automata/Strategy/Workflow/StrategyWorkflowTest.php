@@ -218,6 +218,10 @@ final class StrategyWorkflowTest extends TestCase
             fn () => new StrategyWorkflow('x', '1', $this->graph(['a' => ['authority' => true]]), ['a']),
             fn () => new StrategyWorkflow('x', '1', $this->graph(['a' => [], 'b' => []], [['a', 'b', ['on' => 'denied']]]), ['b']),
             fn () => new StrategyWorkflow('x', '1', $this->graph(['a' => [], 'b' => []], [['a', 'b', ['when' => ['path' => []]]]]), ['b']),
+            // DevElation predicates must retain native-type and list-shape gates.
+            fn () => new StrategyWorkflow('x', '1', $this->graph(['a' => [], 'b' => []], [['a', 'b', ['when' => ['path' => [true], 'equals' => 1]]]]), ['b']),
+            fn () => new StrategyWorkflow('x', '1', $this->graph(['a' => [], 'b' => []], [['a', 'b', ['when' => ['path' => [1.0], 'equals' => 1]]]]), ['b']),
+            fn () => new StrategyWorkflow('x', '1', $this->graph(['a' => [], 'b' => []], [['a', 'b', ['when' => ['path' => ['field' => 'value'], 'equals' => 1]]]]), ['b']),
         ];
         foreach ($cases as $index => $case) {
             try { $case(); self::fail('Malformed plan accepted: ' . $index); }

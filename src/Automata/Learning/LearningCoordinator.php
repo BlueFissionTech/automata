@@ -12,7 +12,10 @@ use InvalidArgumentException;
 use LogicException;
 use Throwable;
 
-/** Synchronous candidate training. Hosts own resource limits, isolation and durable recovery. */
+/**
+ * Coordinates synchronous candidate training without activating the result.
+ * Hosts own resource limits, model isolation, and durable recovery.
+ */
 final class LearningCoordinator
 {
     private array $requests = [];
@@ -29,7 +32,9 @@ final class LearningCoordinator
         private readonly int $maximumRequests = 1000,
         private readonly int $maximumEvidence = 10000
     ) {
-        if ($maximumRequests < 1 || $maximumEvidence < 1 || Arr::count($initial->training()->samples()) > $maximumEvidence) {
+        if ($maximumRequests < 1
+            || $maximumEvidence < 1
+            || Arr::size($initial->training()->samples()) > $maximumEvidence) {
             throw new InvalidArgumentException('Training retention bounds must be positive and hold the initial evidence.');
         }
         $this->learned = $initial->training();
@@ -37,14 +42,24 @@ final class LearningCoordinator
         $this->strategies = [$initial->strategy()];
     }
 
-    public function eventErrors(): array { return $this->eventErrors; }
+    public function eventErrors(): array
+    {
+        return $this->eventErrors;
+    }
 
     public function results(): array
     {
-        return Arr::make($this->requests)->map(static fn (array $request): TrainingResult => $request['result'])->values()->val();
+        return Arr::make($this->requests)
+            ->map(static fn (array $request): TrainingResult => $request['result'])
+            ->values()
+            ->val();
     }
 
-    /** The factory creates independent state; the trainer returns normally only on completed training. */
+    /**
+     * Request one candidate training attempt.
+     * The host supplies authorization, an independent strategy factory, and a trainer
+     * that returns void only after completed training. This method never activates it.
+     */
     public function train(
         string $requestId,
         string $candidateVersion,
@@ -54,32 +69,67 @@ final class LearningCoordinator
         callable $trainer,
         callable $authorize
     ): TrainingResult {
-        if ($this->busy) { throw new LogicException('Reentrant training is not allowed.'); }
+        if ($this->busy) {
+            throw new LogicException('Reentrant training is not allowed.');
+        }
+
         RecordSnapshot::identifier($requestId, 'training request id');
         RecordSnapshot::identifier($candidateVersion, 'candidate version');
-        $binding = RecordSnapshot::fingerprint(['version' => $candidateVersion, 'batch' => $batch->toArray(), 'trigger' => $trigger->toArray()]);
+        $binding = RecordSnapshot::fingerprint([
+            'version' => $candidateVersion,
+            'batch' => $batch->toArray(),
+            'trigger' => $trigger->toArray(),
+        ]);
         if (isset($this->requests[$requestId])) {
-            if ($this->requests[$requestId]['binding'] !== $binding) { throw new LogicException('Conflicting training request identity.'); }
+            if ($this->requests[$requestId]['binding'] !== $binding) {
+                throw new LogicException('Conflicting training request identity.');
+            }
             return $this->requests[$requestId]['result'];
         }
-        if ($this->uncertain) { throw new LogicException('Uncertain training requires host reconciliation before more work.'); }
-        if (Arr::count($this->requests) >= $this->maximumRequests) { throw new LogicException('Training result retention is exhausted.'); }
-        if (isset($this->versions[$candidateVersion])) { throw new LogicException('Candidate version is already reserved.'); }
+        if ($this->uncertain) {
+            throw new LogicException('Uncertain training requires host reconciliation before more work.');
+        }
+        if (Arr::size($this->requests) >= $this->maximumRequests) {
+            throw new LogicException('Training result retention is exhausted.');
+        }
+        if (isset($this->versions[$candidateVersion])) {
+            throw new LogicException('Candidate version is already reserved.');
+        }
+
         $this->busy = true;
         try {
             $assessment = $this->policy->assess($batch, $this->learned, $trigger);
-            $identity = ['id' => $this->initial->identity()['id'], 'version' => $candidateVersion];
-            $record = ['schema_version' => 1, 'request_id' => $requestId, 'candidate' => $identity,
-                'training_fingerprint' => RecordSnapshot::fingerprint($batch->toArray()), 'assessment' => $assessment,
-                'decision' => null, 'status' => 'deferred', 'failure' => null, 'elapsed_ms' => null, 'cost' => null, 'energy' => null];
+            $identity = [
+                'id' => $this->initial->identity()['id'],
+                'version' => $candidateVersion,
+            ];
+            $record = [
+                'schema_version' => 1,
+                'request_id' => $requestId,
+                'candidate' => $identity,
+                'training_fingerprint' => RecordSnapshot::fingerprint($batch->toArray()),
+                'assessment' => $assessment,
+                'decision' => null,
+                'status' => 'deferred',
+                'failure' => null,
+                'elapsed_ms' => null,
+                'cost' => null,
+                'energy' => null,
+            ];
             $candidate = null;
             if ($assessment['eligible']) {
                 $nextEvidence = $this->accumulate($batch);
                 $record['status'] = 'requested';
                 $this->observe('requested', $record);
                 $decision = $authorize(RecordSnapshot::copy($record));
-                if (!$decision instanceof GovernanceDecision) { throw new InvalidArgumentException('Training requires an explicit GovernanceDecision.'); }
-                $record['decision'] = RecordSnapshot::copy(['status' => $decision->status(), 'message' => $decision->message(), 'payload' => $decision->payload()]);
+                if (!$decision instanceof GovernanceDecision) {
+                    throw new InvalidArgumentException('Training requires an explicit GovernanceDecision.');
+                }
+                $record['decision'] = RecordSnapshot::copy([
+                    'status' => $decision->status(),
+                    'message' => $decision->message(),
+                    'payload' => $decision->payload(),
+                ]);
                 $record['status'] = 'denied';
                 if ($record['decision']['status'] === GovernanceDecision::STATUS_APPROVED) {
                     $this->versions[$candidateVersion] = true;
@@ -108,7 +158,11 @@ final class LearningCoordinator
             }
             $result = new TrainingResult($record, $candidate);
             $this->requests[$requestId] = ['binding' => $binding, 'result' => $result];
-            $event = match ($result->status()) { 'trained' => 'completed', 'uncertain' => 'failed', default => $result->status() };
+            $event = match ($result->status()) {
+                'trained' => 'completed',
+                'uncertain' => 'failed',
+                default => $result->status(),
+            };
             $this->observe($event, $record);
             return $result;
         } finally {
@@ -118,9 +172,16 @@ final class LearningCoordinator
 
     private function observe(string $event, array $record): void
     {
-        try { Dev::do('automata.learning.training.' . $event, [RecordSnapshot::copy([...$record, 'event' => $event])]); }
-        catch (Throwable $error) {
-            $this->eventErrors[] = ['request_id' => $record['request_id'], 'event' => $event, 'error_type' => $error::class];
+        try {
+            Dev::do('automata.learning.training.' . $event, [
+                RecordSnapshot::copy([...$record, 'event' => $event]),
+            ]);
+        } catch (Throwable $error) {
+            $this->eventErrors[] = [
+                'request_id' => $record['request_id'],
+                'event' => $event,
+                'error_type' => $error::class,
+            ];
         }
     }
 
@@ -130,12 +191,21 @@ final class LearningCoordinator
         $rows = [];
         foreach ([$this->learned, $batch] as $source) {
             foreach ($source->toArray()['examples'] as $row) {
-                $key = RecordSnapshot::fingerprint(['experience_id' => $row['experience_id'], 'outcome_id' => $row['outcome_id']]);
+                $key = RecordSnapshot::fingerprint([
+                    'experience_id' => $row['experience_id'],
+                    'outcome_id' => $row['outcome_id'],
+                ]);
                 $rows[$key] = new TrainingExample($row['experience_id'], $row['outcome_id'], $row['sample'], $row['label']);
             }
         }
-        if (Arr::count($rows) > $this->maximumEvidence) { throw new LogicException('Learned evidence retention is exhausted.'); }
+        if (Arr::size($rows) > $this->maximumEvidence) {
+            throw new LogicException('Learned evidence retention is exhausted.');
+        }
         $projection = $batch->toArray();
-        return new TrainingBatch($projection['projection_id'], $projection['projection_version'], Arr::make($rows)->values()->val());
+        return new TrainingBatch(
+            $projection['projection_id'],
+            $projection['projection_version'],
+            Arr::make($rows)->values()->val()
+        );
     }
 }

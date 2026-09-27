@@ -6,6 +6,7 @@ use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Obj;
 use BlueFission\Arr;
 use BlueFission\Num;
+use BlueFission\Func;
 use BlueFission\Behavioral\Programmable;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\Action;
@@ -97,7 +98,7 @@ class Sense extends Obj {
 		$this->_preparation = function ( $input ) {
 			// Custom callbacks can normalize other types; the default requires text.
 			// Literal "0" is content, not the absence of an observation.
-			if (!is_string($input)) {
+			if (!Str::is($input)) {
 				throw new InvalidArgumentException('Default Sense preparation requires text.');
 			}
 	        if ($input !== '') {
@@ -223,7 +224,7 @@ class Sense extends Obj {
      */
 	public function setPreparation( $function ) {
 		$this->assertIdle();
-		if (!is_callable($function)) {
+		if (!Func::isCallable($function)) {
 			throw new InvalidArgumentException('Sense preparation must be callable.');
 		}
 		$this->_preparation = $function;
@@ -517,11 +518,11 @@ class Sense extends Obj {
 	/** Validate extension output before matrix construction; never coerce chunks. */
 	private function validatedChunks($chunks): array
 	{
-		if (!is_array($chunks)) {
+		if (!Arr::is($chunks)) {
 			throw new InvalidArgumentException('Sense preparation must return an array of strings.');
 		}
 		foreach ($chunks as $chunk) {
-			if (!is_string($chunk)) {
+			if (!Str::is($chunk)) {
 				throw new InvalidArgumentException('Sense chunks must be strings.');
 			}
 		}
@@ -532,28 +533,28 @@ class Sense extends Obj {
 	private function validateSettings(): void
 	{
 		$quality = $this->_settings['quality'];
-		if ((!is_int($quality) && !is_float($quality)) || !is_finite((float)$quality)
+		if ((!Num::isInt($quality) && !Num::isFloat($quality)) || !is_finite((float)$quality)
 			|| $quality <= 0 || $quality > 1) {
 			throw new InvalidArgumentException('Sense quality must be a finite number in (0, 1].');
 		}
 		foreach (['attention' => self::MAX_ATTENTION, 'sensitivity' => self::MAX_SENSITIVITY,
 			'chunksize' => self::MAX_ATTENTION] as $key => $maximum) {
 			$value = $this->_settings[$key];
-			if (!is_int($value) || $value < ($key === 'chunksize' ? 1 : 0) || $value > $maximum) {
+			if (!Num::isInt($value) || $value < ($key === 'chunksize' ? 1 : 0) || $value > $maximum) {
 				throw new InvalidArgumentException('Invalid Sense setting: ' . $key);
 			}
 		}
 		$dimensions = $this->_settings['dimensions'];
-		if (!is_array($dimensions) || !array_is_list($dimensions) || Arr::make($dimensions)->count() < 2) {
+		if (!Arr::is($dimensions) || !array_is_list($dimensions) || Arr::make($dimensions)->count() < 2) {
 			throw new InvalidArgumentException('Sense dimensions require at least two positive integer sizes.');
 		}
 		foreach ($dimensions as $dimension) {
-			if (!is_int($dimension) || $dimension < 1 || $dimension > self::MAX_ATTENTION) {
+			if (!Num::isInt($dimension) || $dimension < 1 || $dimension > self::MAX_ATTENTION) {
 				throw new InvalidArgumentException('Invalid Sense dimension.');
 			}
 		}
 		$flags = $this->_settings['flags'];
-		if (!is_array($flags) || !array_is_list($flags) || $flags === []) {
+		if (!Arr::is($flags) || !array_is_list($flags) || $flags === []) {
 			throw new InvalidArgumentException('Sense flags must be a nonempty list.');
 		}
 	}
@@ -646,7 +647,7 @@ class Sense extends Obj {
 		foreach ( $order as $attr=>$limits ) {
 			// Dimensions are an array, not a scalar tuning parameter. Scalar
 			// adjustments must remain within bounds for the following sweep.
-			if (!is_int($this->_settings[$attr]) && !is_float($this->_settings[$attr])) {
+			if (!Num::isInt($this->_settings[$attr]) && !Num::isFloat($this->_settings[$attr])) {
 				continue;
 			}
 			if (($limits[0] === 'down' && $this->_settings[$attr] <= $limits[1])

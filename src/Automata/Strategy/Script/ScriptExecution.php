@@ -5,6 +5,7 @@ namespace BlueFission\Automata\Strategy\Script;
 use BlueFission\Security\Hash;
 use BlueFission\Arr;
 use BlueFission\Num;
+use BlueFission\Str;
 use BlueFission\Automata\LLM\Agent\Capability\AutonomyDecision;
 use BlueFission\Automata\Support\RecordSnapshot;
 use BlueFission\Parsing\Contracts\IGenerator;
@@ -53,7 +54,7 @@ final class ScriptExecution implements IGenerator
             $this->assertRunning();
             $output = $render($this);
             if ($this->status === 'running') {
-                if (!is_string($output)) { throw new RuntimeException('Script renderer must return a string.'); }
+                if (!Str::is($output)) { throw new RuntimeException('Script renderer must return a string.'); }
                 $this->output = $output;
                 $this->status = 'completed';
             }
@@ -157,8 +158,8 @@ final class ScriptExecution implements IGenerator
             if ($allowed) {
                 foreach ($decision->limits as $key => $limit) {
                     $reservation = $operation === 'execute' ? 1 + ($this->generator ? $this->maximumGenerations : 0) : 1;
-                    if ($key !== 'max_invocations' || (!is_int($limit) && !is_float($limit))
-                        || !is_finite((float) $limit) || $limit < $reservation) { $allowed = false; }
+                    if ($key !== 'max_invocations' || (!Num::isInt($limit) && !Num::isFloat($limit))
+                        || !Num::check($limit, 'is_finite') || $limit < $reservation) { $allowed = false; }
                 }
             }
             $this->authorizations[] = ['operation' => $operation, 'allowed' => $allowed,

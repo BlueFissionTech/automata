@@ -7,7 +7,10 @@ use BlueFission\Automata\Support\RecordSnapshot;
 use InvalidArgumentException;
 use JsonSerializable;
 
-/** Detached training evidence plus an optional caller-owned model; never activation authority. */
+/**
+ * Detached training evidence plus an optional caller-owned model.
+ * A trained candidate is not activation authority.
+ */
 final class TrainingResult implements JsonSerializable
 {
     private readonly array $record;
@@ -23,8 +26,23 @@ final class TrainingResult implements JsonSerializable
         $this->record = $record;
     }
 
-    public function status(): string { return $this->record['status']; }
-    public function candidate(): ?ModelCandidate { return $this->candidate; }
-    public function toArray(): array { return $this->record; }
-    public function jsonSerialize(): array { return $this->toArray(); }
+    public function status(): string
+    {
+        return $this->record['status'];
+    }
+
+    public function candidate(): ?ModelCandidate
+    {
+        return $this->candidate;
+    }
+
+    public function toArray(): array
+    {
+        return $this->record;
+    }
+
+    public function jsonSerialize(): array
+    {
+        return $this->toArray();
+    }
 }

@@ -4,6 +4,7 @@ require_once dirname(__DIR__, 2) . '/bootstrap.php';
 
 use BlueFission\Security\Hash;
 use BlueFission\Arr;
+use BlueFission\Str;
 use BlueFission\Automata\Intelligence;
 use BlueFission\Automata\LLM\Agent\Capability\AutonomyDecision;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTrace;
@@ -35,7 +36,7 @@ $generator = new class implements IGenerator {
 $captured = null;
 $prepare = static function (string $source, mixed $input, ScriptExecution $run) use (&$captured): Parser {
     $captured = $run;
-    if (!is_array($input) || !isset($input['name'], $input['mode']) || !is_string($input['name'])) {
+    if (!Arr::is($input) || !isset($input['name'], $input['mode']) || !Str::is($input['name'])) {
         throw new InvalidArgumentException('Fixture requires a name and declared mode.');
     }
     if ($input['mode'] === 'exit') { $run->finish('Request closed.'); }
