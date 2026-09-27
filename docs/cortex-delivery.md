@@ -1,9 +1,74 @@
 # Cortex composition and conformance
 
-Cortex is a provider-free example assembled from reusable Automata capabilities.
-Its fixtures and domain mappings illustrate composition; they do not grant an
-application permission to promote models or perform operational actions. Existing
-Agent, Statement, Context, Holoscene, strategy, and governance APIs remain intact.
+Cortex is an example assembled from reusable Automata capabilities. It owns its
+fixtures, domain mappings and assembly. Generic cognition contracts belong in the
+library. Existing Agent, Statement, Context, Holoscene, strategy and governance
+APIs remain intact.
+
+The contracts below describe repository capabilities, not a published release or
+production certification. Select a revision containing them before integration.
+For commands and expected gate counts, start with the
+[example guide](../examples/generic/cortex/README.md).
+
+## Integration flow
+
+1. Capture an `Experience` from statements and context, then attach explicitly
+   observed `Outcome` records. The host decides which sources and labels to trust.
+2. Use an `ITrainingAdapter` and `ExperienceRecomposer` to obtain a `TrainingBatch`
+   with projection identity and experience/outcome lineage. Train an existing
+   strategy explicitly; recomposition does not train it automatically.
+3. Wrap distinct trained strategies as `ModelCandidate` objects and compare them
+   using `ClassificationEvaluator` and a separate labelled holdout.
+4. Use `StrategyOutcomeFeedback` to update advisory route scores from admitted
+   outcomes, or `ModelLifecycle` to evaluate and request approval for activation.
+   These are separate operations: a score update cannot promote a model, and
+   reference activation does not update an unrelated router.
+5. Declare a response envelope, produce fragments directly or through an
+   `AgentResponse` handle, and deliver prepared releases through a host-owned
+   executor. Only successful terminal receipts satisfy fragment dependencies.
+
+See [strategy routing](strategy-routing.md), [model activation](model-lifecycle.md)
+and [response composition](response-composition.md) for the individual contracts.
+The six demos exercise these seams separately; a combined persistent adaptive
+runtime is still to be built.
+
+## Evidence-backed change map
+
+| Surface | Treatment | Evidence or next proof |
+| --- | --- | --- |
+| `Language/Statement.php`, `Context.php` | Keep; capture snapshots | Input mutation cannot rewrite recorded experience |
+| `Comprehension/Holoscene.php` | Keep; use existing `push()` seam | Example records and reviews the experience snapshots |
+| `Learning/*` | Add experiences, outcomes, store and projections | `tests/Automata/Learning` and Cortex command |
+| `Learning/ClassificationEvaluator.php` | Add held-out classification comparison | Improving candidate recommended; regression, overlap and unreliable evidence rejected |
+| `Learning/ModelLifecycle.php` | Own a process-local active reference and revision | Fresh evaluation and explicit approval precede activation; actual inference changes and rollback are demonstrated |
+| `Learning/StrategyOutcomeFeedback.php`, `Intelligence.php`, `Strategy/Routing/*` | Bridge explicitly admitted outcomes into advisory scores | Adaptive route changes while eligibility, exact versions, authorization and invocation limits remain enforced |
+| `Strategy/IStrategy.php` | Keep interface; adapt batches | Example trains existing Naive Bayes pipeline |
+| `Goal/ManagesGoals.php` | Audit and extend shared criteria/dependencies later | Require multi-goal progress and blocked-prerequisite tests |
+| `Path/Graph.php`, `Path/Node.php` | Evaluate reuse for composite strategies | Require bounded traversal, fallback, early exit and cancellation |
+| `Parsing/*`, DevElation parser | Adapt executable strategies later | Require deterministic output and governed tool calls |
+| `LLM/Agent/Memory/*` | Keep event storage; add explicit durable experience adapter later | Require restoration and conflicting-write tests |
+| `Response/*` | Add weighted composition and terminal delivery receipts | Progressive output, lost-ack restart, cancellation and fallback are demonstrated with a deduplicating fixture sink |
+| `LLM/Agent/Response/*`, `LLM/Agent.php` | Bind synchronous response workers to task/session identity | Governed fixture tools, terminal receipts and correlated TaskTrace events; no interrupted-worker recovery claim |
+
+## Review sequence
+
+1. Experience and training projection foundation, with an executable fixture proof.
+2. Attributed feedback and candidate evaluation: measured incumbent/candidate
+   comparison, worse-candidate rejection, exact strategy versions and no authority
+   changes from learned scores.
+3. Response envelopes and composition: weighted completion, required dependencies,
+   progressive output, cancellation, resumable emission state and Agent workers.
+   Governed process-local model activation and rollback add the next review slice.
+4. Composite and scripted strategies: use existing graph/parser seams, enforce
+   budgets and governance, and prove fallback and early exit.
+5. Goal graph integration: shared criteria, prerequisites, decomposition validation,
+   convergence and observed multi-goal progress.
+6. Persistence and full conformance: recovery, idempotency, hostile memory input,
+   cancellation, concurrency, budgets, traceability and compatibility.
+
+Stack a PR only when it imports an earlier unmerged contract. Otherwise target the
+normal base branch independently. Publish exact contract versions and migration
+notes when a stage becomes available. No release tag is implied by a passing demo.
 
 ## Foundation contract
 
@@ -37,6 +102,7 @@ php examples/generic/cortex/evaluate.php
 php examples/generic/cortex/adapt.php
 php examples/generic/cortex/respond.php
 php examples/generic/cortex/agent.php
+php examples/generic/cortex/promote.php
 ```
 
 The example records 12 synthetic training episodes and one pending review,
@@ -79,6 +145,20 @@ cancellation and uncertain effects. This proves the integrated execution path;
 authenticated durable receipt adapters and interrupted worker recovery remain open.
 See [the response contract](response-composition.md).
 
+The promotion command adds eight gates for host-approved activation and rollback,
+rejection, historical request replay and stale revisions. It observes predictions
+through the active model reference before and after transitions. This establishes
+process-local behavior, without model persistence or deployment. See
+[the lifecycle contract](model-lifecycle.md).
+
+All six commands run in CI and currently expose 63 gates. The versioned
+[`fixture-v1.json`](../examples/generic/cortex/fixture-v1.json) and
+[`baseline-v1.json`](../examples/generic/cortex/baseline-v1.json) pin the corpus,
+projection lineage and all six expected predictions. Constant and single-wrong
+negative controls verify that the regression comparison catches bad output.
+Fixture or baseline changes require review and a new version; accepting newly
+produced output alone is not validation.
+
 ## Attributed feedback contract
 
 `StrategyOutcomeFeedback::apply($experience, $outcomeId)` accepts only an attached
@@ -104,9 +184,51 @@ resource metrics; those defaults are not measurements.
 The route request constructor preserves an explicitly false
 `deterministic_preferred` value while retaining the true default. This narrow
 compatibility measure addresses the demo's reproduced failure with DevElation's
-legacy empty-value assignment behavior. It does not repair generic mutation of
-existing objects; construct a new request
+legacy empty-value assignment behavior, tracked in
+[DevElation #258](https://github.com/BlueFissionTech/develation/issues/258).
+It does not repair generic mutation of existing objects; construct a new request
 when changing that policy until the upstream assignment contract is fixed.
+
+## Release gates still open
+
+Current proofs cover snapshots, attributable training data, bounded classification,
+advisory route adaptation, receipt-gated Agent responses and process-local model
+activation/rollback. Production and broader Cortex integration still require:
+
+- Durable experience, feedback and response stores with authenticated restoration,
+  receiver idempotency, concurrent-write rules and interrupted-worker recovery.
+- A learning coordinator and training policies/triggers, model artifact persistence,
+  and a combined governed adaptive runtime with representative evaluation data.
+- Composite/scripted strategies over existing graph/parser seams, shared goal
+  criteria and dependencies, and explicit experience/session/trace integration.
+- Integrated multimodal execution, resource budgets and reconciliation when hosted
+  execution has uncertain billing or effects.
+
+A version increase is considered only after the relevant PRs are approved and
+merged and conformance evidence is reviewed. Maintain the existing prerelease
+posture until those gates justify a stronger release claim.
+
+## Primitive helper policy
+
+The learning records, projections, reference store and runnable experiment use
+DevElation array, string, numeric, boolean and resource helpers. Prefer fluent
+chains for transformations, including map/filter/value pipelines, string
+normalization and numeric arithmetic. Keep type predicates explicit before
+constructing values so validation does not silently coerce malformed input. The Engine refactor uses
+those same primitives while preserving its historical comments and existing
+classification and attention behavior. The selected typed predicates and keyed
+mapping callbacks are available in the declared DevElation minimum, v1.3.39.
+
+Snapshot validation rejects runtime objects before invoking primitive predicates:
+DevElation intentionally unwraps value objects, whereas persisted experience
+records accept only plain scalar and array data. The existing `Ref::is` helper
+rejects stream resources without taking ownership or closing the caller's handle;
+this behavior has regression coverage and is available in DevElation v1.3.39. Explicit JSON flags preserve
+floating-point types and throw on encoding failures. Native runtime inspection,
+UTC timestamps and clock reads remain where there is no equivalent helper with
+the required semantics. Regression coverage preserves scalar types, detached
+references, rejection of value wrappers and nonfinite numbers, strategy class
+registration, and attention-statistic keys and values.
 
 ## Limits
 

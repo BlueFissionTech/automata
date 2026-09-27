@@ -51,3 +51,4 @@ jobs:
           php examples/generic/cortex/adapt.php
           php examples/generic/cortex/respond.php
           php examples/generic/cortex/agent.php
+          php examples/generic/cortex/promote.php
