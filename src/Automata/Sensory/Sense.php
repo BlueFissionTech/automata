@@ -22,6 +22,15 @@ use BlueFission\DevElation as Dev;
  * concrete Programmable base; now that Programmable is a trait, we compose it
  * instead so that Sense remains dispatchable and configurable without
  * depending on vendor internals being a class.
+ *
+ * The current algorithm groups text chunks by CRC32 and collection statistics.
+ * These identifiers are neither semantic classifications nor collision-free
+ * identities. Attention is a local heuristic, not a measured confidence score
+ * or a hard resource budget. Media decoding and Experience creation are separate
+ * responsibilities; a Sense instance does not implement those integrations.
+ *
+ * invoke() mutates sweep state and may recursively enhance the same input.
+ * Call reset() between independent observations when reusing an instance.
  */
 class Sense extends Obj {
 	use Programmable {
@@ -80,11 +89,13 @@ class Sense extends Obj {
 
 		// Default preparation function for input processing
 		$this->_preparation = function ( $input ) {
-			// Do something
+			// Legacy truthiness excludes empty input and the string "0".
 	        if ($input) {
 	        	if ($this->_depth == 0) {
 	        		$preparer = new Preparer();
-	        		$array = $preparer->tokenize($input);
+					$array = $preparer->tokenize($input);
+					// Known gap: this branch falls through to [] instead of returning
+					// the tokens. Deeper sweeps currently use the substring path below.
 				} else {
 					// die(var_dump($input));
 	        		// return str_split ( (string)$input, $this->_settings['chunksize'] );
@@ -109,6 +120,9 @@ class Sense extends Obj {
 
 	/**
      * Resets the Sense object to its initial configuration.
+     *
+     * Only settings, collection contents and depth are reset. The matrix and
+     * captured input remain allocated; this is not a full data-erasure operation.
      */
 	public function reset()
 	{
@@ -120,6 +134,9 @@ class Sense extends Obj {
 
 	/**
      * Builds the internal matrix for storing input data.
+     *
+     * Chunks fill rows of dimensions[0] columns. The existing matrix is reused
+     * rather than cleared, so this method does not promise a fresh snapshot.
      *
      * @param array $input The input data to build the matrix from.
      */
@@ -173,6 +190,10 @@ class Sense extends Obj {
 	/**
      * Sets a custom preparation function for processing input data.
      *
+     * The callback runs for every sweep, including recursive enhancements, and
+     * must return an array of chunks. It is not validated here. This legacy
+     * setter returns null rather than supporting fluent chaining.
+     *
      * @param callable $function The custom preparation function.
      */
 	public function setPreparation( $function ) {
@@ -181,6 +202,9 @@ class Sense extends Obj {
 
 	/**
      * Buffers the processed data and translates it for further processing.
+     *
+     * The buffer records this sweep's chunks. _bufferSize is currently not
+     * enforced; callers must not treat it as an input or memory quota.
      *
      * @param mixed $data The data to buffer.
      * @return mixed The translated data.
@@ -195,6 +219,12 @@ class Sense extends Obj {
 
 	/**
      * Invokes the sense processing on the given input.
+     *
+     * Each call increments depth, clears the sweep buffer/map, and builds chunk
+     * statistics. SUCCESS describes a sweep before focus() may enhance it again;
+     * COMPLETE can therefore occur more than once during a single outer call.
+     * The return value is the deepest available focus result. Exceptions from
+     * preparation, hooks, collection operations or listeners propagate.
      *
      * @param mixed $input The input data to process.
      */
@@ -324,6 +354,9 @@ class Sense extends Obj {
 	/**
      * Sets the parent object for the Sense instance.
      *
+     * invoke() expects the parent to expose can() and behavior(). Assignment
+     * does not validate that contract and currently does not return this instance.
+     *
      * @param object $obj The parent object.
      */
 	public function setParent( $obj ) {
@@ -333,6 +366,8 @@ class Sense extends Obj {
 	/**
      * Callback function for handling behaviors.
      *
+     * Reserved extension point: the base implementation performs no action.
+     *
      * @param object $obj The behavior object.
      */
 	public function callback( $obj ) {
@@ -341,6 +376,9 @@ class Sense extends Obj {
 
 	/**
      * Focuses on the processed data and tweaks settings if necessary.
+     *
+     * Low variance triggers DoEnhance and another sweep until MAX_DEPTH. This
+     * recursive heuristic does not establish semantic relevance or a time bound.
      *
      * @param array $data The processed data.
      */
@@ -382,6 +420,11 @@ class Sense extends Obj {
 		// die();
 	}
 
+	/**
+	 * Fraction of initial attention consumed, clamped to [0, 1].
+	 * Novelty can increase remaining attention, yielding zero despite processing.
+	 * This is a heuristic state summary, not probability or measured compute cost.
+	 */
 	public function attentionScore(): float
 	{
 		$initial = $this->_config['attention'] ?? 1;
@@ -395,6 +438,7 @@ class Sense extends Obj {
 		return max(0.0, min(1.0, $used / $initial));
 	}
 
+	/** Expose current configuration, mutable sweep settings and recursion depth. */
 	public function attentionState(): array
 	{
 		return [
@@ -405,10 +449,13 @@ class Sense extends Obj {
 	}
 
 	/**
-     * Translates a chunk of data into a unique identifier.
+     * Translates a chunk into a CRC32 identifier, optionally replaced by a hook.
+     *
+     * CRC32 collisions are possible. Do not use the result as a security digest,
+     * semantic label, or evidence of equivalent meaning between chunks.
      *
      * @param string $chunk The data chunk.
-     * @return int The unique identifier for the chunk.
+     * @return mixed CRC32 integer unless the translation hook replaces it.
      */
 	private function translate( $chunk ) {
 		// If can't classify, classify input as itself.
@@ -473,6 +520,9 @@ class Sense extends Obj {
 
 	/**
      * Tweaks the configuration settings based on certain rules.
+     *
+     * Applies only the first matching adjustment in order. These legacy rules
+     * are heuristics, not learned parameters or validated budget enforcement.
      */
 	private function tweak( ) {
 		$order = [
