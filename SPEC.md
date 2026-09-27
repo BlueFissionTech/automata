@@ -650,8 +650,8 @@ User stories and acceptance criteria:
   independent synthetic fixtures. Its process exit code reflects conformance.
 
 The reference store is process-local. Durable concurrent storage, access controls,
-learning triggers, candidate promotion, response composition and recovery remain
-explicit follow-up work. See [the delivery plan](docs/cortex-delivery.md) and
+and recovery remain open. The following sections specify the staged learning,
+activation and response capabilities. See [the delivery plan](docs/cortex-delivery.md) and
 [the runnable example](examples/generic/cortex/README.md).
 
 ## 8. Held-out classification evaluation
@@ -681,7 +681,8 @@ explicitly. Outcomes cannot add candidates, change eligibility or grant authorit
 The Cortex proof must evaluate a classifier, apply attributed held-out observations,
 show changed future route preference, and retain exact-version, eligibility,
 authorization and resource-limit checks. Replay guarantees are process-local;
-durable, transactional feedback and model promotion remain subsequent work.
+durable, transactional feedback remains subsequent work. Model activation is a
+separate operation specified below.
 
 ## 10. Progressive response composition
 
@@ -733,3 +734,25 @@ and single-wrong predictions, demonstrate activation changing actual predictions
 reject a regression, then restore the previous model. This is not durable model
 deployment, concurrent coordination, permission to execute tools or production
 quality certification.
+
+## 13. Evidence-triggered candidate training
+
+A learning coordinator evaluates bounded projected evidence against retained
+lineage from every successfully trained batch. New evidence is counted by exact experience/outcome
+lineage; duplicate rows and conflicting historical reuse are rejected. Explicit
+correction references must identify new rows in the current batch. Host-normalized
+pressure and operator requests can request training but cannot bypass the minimum
+sample floor, maximum batch size or explicit host approval.
+
+Training constructs an isolated strategy and invokes a trusted trainer bridge.
+It never trains the incumbent or activates a candidate. Results retain exact
+identity, policy assessment, evidence digest and approval. Identical request replay
+returns the original result without callbacks; a partial factory/trainer failure
+is uncertain and reserves its version against blind retry. Request retention is
+bounded and process-local. Callbacks own real resource enforcement and model-state
+isolation; synchronous elapsed time is measurement, not cancellation.
+
+The integrated proof must record experience, defer insufficient evidence, deny
+unapproved training, train a classifier, evaluate and separately approve activation,
+then change a later Agent plan while tool approval and terminal delivery receipts
+remain independently required. Rollback must change subsequent plans back.

@@ -485,3 +485,23 @@ artifacts, side-effect-free prediction/approval callbacks, evidence trust, durab
 storage, deployment and synchronization across lifecycle instances. Version binding
 detects object reuse within this instance; it cannot detect mutation inside a
 caller-owned strategy or authenticate a model artifact.
+
+## 12. Evidence-triggered training
+
+`LearningCoordinator` consumes the versioned `TrainingBatch` already produced by
+`ExperienceRecomposer`. `TrainingPolicy` compares exact lineage against retained
+learned evidence and combines sample/correction pressure with host-normalized
+`TrainingTrigger` signals. Hard sample and retention limits precede invocation;
+explicit host governance precedes factory/trainer callbacks. A separate instance
+becomes a `ModelCandidate` only after a void-success trainer return. `TrainingResult`
+retains the assessment, review, fingerprint and terminal state for idempotent replay.
+
+The coordinator never activates models. `ModelLifecycle` still requires fresh
+held-out evaluation and separate approval. `learn.php` composes this path with
+recorded experiences and real Agent response workers and governed fixture tools.
+Training approval, activation approval and effect authorization stay independent.
+A partial training failure retains an uncertain result and stops new training on
+that owner pending external reconciliation; there is no automatic retry or durable
+worker restore. DevElation pressure filters remain subject to hard policy gates;
+training action-hook failures cannot erase committed results. See
+[continual learning](docs/continual-learning.md) for the callback and retention contracts.

@@ -6,7 +6,7 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
-These contracts are staged development work. Use a checkout containing all six
+These contracts are staged development work. Use a checkout containing all seven
 scripts and install its Composer dependencies before running from the repository
 root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
 toolchain. No provider credentials, network calls or external services are needed
@@ -20,10 +20,11 @@ to execute the demos after installation.
 | `respond.php` | 12 | Progressive release, terminal receipts, replay, cancellation and fallback |
 | `agent.php` | 17 | Agent workers, governed fixture tools, scope checks and TaskTrace |
 | `promote.php` | 8 | Approved activation changes inference; rollback restores it |
+| `learn.php` | 15 | Recorded experience triggers approved training, activation and changed Agent plans |
 
 Each command emits JSON evidence and exits nonzero if a required gate fails. All
-63 gates run in CI alongside PHPUnit. Treat these as separate contract experiments;
-they do not yet form one persistent adaptive application. The
+78 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
+loop in one process; durable and asynchronous execution remain open. The
 [delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.
 
 Run `php examples/generic/cortex/run.php` from the repository root. The command
@@ -84,6 +85,12 @@ The shared corpus is frozen in `fixture-v1.json`; `baseline-v1.json` pins its di
 projection lineage and all six expected predictions. The foundation demo also checks
 constant and single-wrong negative controls. Baseline changes require explicit review
 and a new version, rather than accepting new output merely because it was produced.
+
+Run `php examples/generic/cortex/learn.php` for the integrated training loop. It
+records observations, defers insufficient evidence, separately approves training
+and activation, and changes a future Agent plan while preserving tool approval
+and delivery receipts. See [continual learning](../../../docs/continual-learning.md)
+for pressure signals, callback contracts, retention and uncertain-failure handling.
 
 Subsequent slices add durable governed adaptive routes,
 concurrent response persistence, composite/scripted strategies and shared goal criteria.
