@@ -12,6 +12,11 @@ For commands and expected gate counts, start with the
 
 ## Integration flow
 
+Before experience capture, applications can use `Input` for normalization and
+`Sense` for descriptive chunk measurements. The separate [sensory example](sensory-ingestion.md)
+demonstrates this bounded ingress assembly and its compatibility limitations.
+It does not infer labels or grant evidence admission from attention measurements.
+
 1. Capture an `Experience` from statements and context, then attach explicitly
    observed `Outcome` records. The host decides which sources and labels to trust.
 2. Use an `ITrainingAdapter` and `ExperienceRecomposer` to obtain a `TrainingBatch`
@@ -184,7 +189,9 @@ through the active model reference before and after transitions. This establishe
 process-local behavior, without model persistence or deployment. See
 [the lifecycle contract](model-lifecycle.md).
 
-All eight commands run in CI and currently expose 90 gates. The workflow command
+All nine commands run in CI and currently expose 108 gates. The sensory command
+adds 18 gates for bounded ingress, descriptive sweeps, and evidence projection;
+see [sensory ingestion](sensory-ingestion.md). The workflow command
 adds twelve gates for graph execution and overlapping workers; see
 [strategy workflows](strategy-workflows.md). The learning command
 adds 15 gates that connect recorded experience, policy-triggered training, separate

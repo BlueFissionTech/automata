@@ -82,11 +82,13 @@ php examples/generic/cortex/agent.php
 php examples/generic/cortex/promote.php
 php examples/generic/cortex/learn.php
 php examples/generic/cortex/workflow.php
+php examples/generic/cortex/sensory.php
 ```
 
-Together they report 90 boolean conformance gates as JSON and exit nonzero on
+Together they report 108 boolean conformance gates as JSON and exit nonzero on
 failure. They cover real classifier predictions, routing changes, receipt-gated
-responses and model activation/rollback. The small frozen corpus proves repeatable
+responses, model activation/rollback and [sensory ingestion](docs/sensory-ingestion.md).
+The small frozen corpus proves repeatable
 behavior; it does not establish open-world accuracy. Stores, model ownership and
 fixture receiver ledgers remain process-local. Durable recovery, concurrent writers
 and learned route/goal integration remain open work. The workflow demo adds graph

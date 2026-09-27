@@ -5,6 +5,7 @@ namespace BlueFission\Automata\Sensory;
 use BlueFission\Automata\Collections\OrganizedCollection;
 use BlueFission\Obj;
 use BlueFission\Arr;
+use BlueFission\Num;
 use BlueFission\Behavioral\Programmable;
 use BlueFission\Behavioral\Behaviors\Event;
 use BlueFission\Behavioral\Behaviors\Action;
@@ -434,8 +435,8 @@ class Sense extends Obj {
 			return 0.0;
 		}
 
-		$used = max(0, $initial - $remaining);
-		return max(0.0, min(1.0, $used / $initial));
+		$consumedFraction = Num::make($initial)->sub($remaining)->divide($initial)->val();
+		return max(0.0, min(1.0, $consumedFraction));
 	}
 
 	/** Expose current configuration, mutable sweep settings and recursion depth. */

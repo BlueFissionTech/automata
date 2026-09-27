@@ -6,7 +6,7 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
-These contracts are staged development work. Use a checkout containing all eight
+These contracts are staged development work. Use a checkout containing all nine
 scripts and install its Composer dependencies before running from the repository
 root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
 toolchain. No provider credentials, network calls or external services are needed
@@ -22,9 +22,10 @@ to execute the demos after installation.
 | `promote.php` | 8 | Approved activation changes inference; rollback restores it |
 | `learn.php` | 15 | Recorded experience triggers approved training, activation and changed Agent plans |
 | `workflow.php` | 12 | Graph execution, overlapping workers, fan-in and ordinary Intelligence selection |
+| `sensory.php` | 18 | Input normalization, Sense measurements, experience projection and labelled classification |
 
 Each command emits JSON evidence and exits nonzero if a required gate fails. All
-90 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
+108 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
 loop in one process; `workflow.php` adds cooperative Fiber overlap. Durable worker
 recovery and asynchronous response producers remain open. The
 [delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.
@@ -104,3 +105,11 @@ fallback, bounded retries, race/threshold completion and host responsibilities.
 Subsequent slices add learned and durable adaptive routes,
 concurrent response persistence, scripted strategies and shared goal criteria.
 Each slice must report its actual measurements and unresolved release gates.
+
+Run `php examples/generic/cortex/sensory.php` for a separate ingress experiment.
+It passes bounded text through real Input processors and Sense sweeps, preserves
+raw/normalized evidence, creates Experiences and trains an isolated classifier
+only from externally labelled observations. Custom preparation and first-sweep
+capture explicitly accommodate legacy defects. This does not exercise InputArray
+or qualify general multimodal ingestion. See [sensory ingestion](../../../docs/sensory-ingestion.md)
+for placement, measured behavior, extension points and remaining work.
