@@ -756,3 +756,16 @@ The integrated proof must record experience, defer insufficient evidence, deny
 unapproved training, train a classifier, evaluate and separately approve activation,
 then change a later Agent plan while tool approval and terminal delivery receipts
 remain independently required. Rollback must change subsequent plans back.
+
+## 14. Composed strategy workflows
+
+Versioned workflow proposals reuse Path graph nodes and edges. CompositeStrategy
+implements IStrategy and is selected through existing Intelligence prediction.
+Runs must enforce exact strategy/capability identity and current node authorization
+through StrategyRouter, supporting conditional dependencies, all/any joins,
+explicit known-failure fallback, bounded retries and output completion thresholds.
+Independent workers can overlap under a host scheduler; cancellation and early
+completion stop new dispatch while preserving in-flight observations. Unknown
+execution stops automatic fallback/retry. Plans and results are plain records,
+not authority or authenticated resumable workers. Durable scheduling, global
+resource reservations, nested budget accounting and route training remain open.

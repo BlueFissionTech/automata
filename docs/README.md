@@ -12,6 +12,7 @@ release before depending on them. Review and demo success do not publish a relea
 | Decide when to train an isolated candidate | [Continual learning](continual-learning.md) | [Training through future Agent responses](../examples/generic/cortex/learn.php) |
 | Compare candidates, activate and roll back | [Model lifecycle](model-lifecycle.md) | [Evaluation](../examples/generic/cortex/evaluate.php), [activation](../examples/generic/cortex/promote.php) |
 | Select strategies under policy and admitted feedback | [Strategy routing](strategy-routing.md) | [Adaptive routing](../examples/generic/cortex/adapt.php) |
+| Compose conditional strategies and overlapping workers | [Strategy workflows](strategy-workflows.md) | [Graph execution](../examples/generic/cortex/workflow.php) |
 | Release responses and acknowledge execution | [Response composition](response-composition.md) | [Composition](../examples/generic/cortex/respond.php), [Agent workers](../examples/generic/cortex/agent.php) |
 
 The [Cortex example guide](../examples/generic/cortex/README.md) lists commands,

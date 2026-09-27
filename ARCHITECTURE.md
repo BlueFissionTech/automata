@@ -505,3 +505,20 @@ that owner pending external reconciliation; there is no automatic retry or durab
 worker restore. DevElation pressure filters remain subject to hard policy gates;
 training action-hook failures cannot erase committed results. See
 [continual learning](docs/continual-learning.md) for the callback and retention contracts.
+
+## 13. Strategy workflow execution
+
+`StrategyWorkflow` captures and validates an immutable DAG from the existing Path
+graph implementation. Nodes declare exact adapter/capability versions; edges admit
+terminal parent results by status and optional strict value conditions.
+`StrategyWorkflowRun` owns bounded attempts, conditional joins, output thresholds
+and in-flight state. `CompositeStrategy` supplies ordinary IStrategy prediction;
+its convenience scheduler is serial, while host-scheduled Fibers may overlap
+independent `execute()` calls. Every node still runs through StrategyRouter with
+fresh host authorization. Trace request identities preserve run/node/attempt links.
+
+Plans serialize as proposals only. Run results retain late observations after
+completion or cancellation; uncertainty stops further work without erasing prior
+outputs. There is no authenticated run restore, global nested budget or scheduler
+implementation. Hosts own model bindings, scheduling, current authorization and
+resource enforcement. See [strategy workflows](docs/strategy-workflows.md).

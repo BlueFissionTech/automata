@@ -39,6 +39,13 @@ class StrategyAdapterResult extends RoutingValue
 
     protected $_lockDataType = true;
 
+    public function __construct(array $data = [])
+    {
+        // Legacy Obj::assign ignores empty values; false and zero are valid results.
+        if (Arr::make($data)->hasKey('output')) { $this->_data['output'] = $data['output']; }
+        parent::__construct($data);
+    }
+
     public function succeeded(): bool
     {
         return $this->status === self::STATUS_COMPLETED;
