@@ -1,7 +1,6 @@
 <?php
 namespace BlueFission\Automata;
 
-use BlueFission\Func;
 use BlueFission\Arr;
 use BlueFission\Str;
 use BlueFission\Num;
@@ -111,6 +110,7 @@ class Engine extends Intelligence implements ISphere {
 	public function classify( $input ) {
 		$input = Dev::apply('automata.engine.classify.1', $input);
 		$result = $input;
+		$hasResult = false;
 
 		if ( $this->_scene && method_exists($this->_scene, 'has') ) {
 			if ( !$this->_scene->has($input) && method_exists($this->_scene, 'add') ) {
@@ -141,6 +141,7 @@ class Engine extends Intelligence implements ISphere {
 
 			if ( $guess !== null ) {
 				$result = $guess;
+				$hasResult = true;
 			}
 
 			Dev::do('automata.engine.classify.action1', [
@@ -150,7 +151,7 @@ class Engine extends Intelligence implements ISphere {
 				'executionTime' => $this->time(),
 			]);
 
-			if ( $result ) {
+			if ( $hasResult ) {
 				break;
 			}
 		}
@@ -171,31 +172,19 @@ class Engine extends Intelligence implements ISphere {
 		return $this->_transaction_size;
 	}
 
+	/** Monotonic wall-clock time in seconds, overrideable for deterministic tests. */
+	protected function clockSeconds(): float {
+		return (float) Num::make(hrtime(true))->divide(1_000_000_000)->val();
+	}
+
 	protected function startclock() {
-		$this->_starttime = Func::isCallable('getrusage') ? getrusage() : microtime(true);
+		$this->_starttime = $this->clockSeconds();
 	}
 
 	protected function stopclock() {
-		if ( Func::isCallable('getrusage') && Arr::is($this->_starttime) ) {
-			$this->_stoptime = getrusage();
-			$ru = $this->_starttime;
-			$rus = $this->_stoptime;
-			$startFraction = Num::make($ru["ru_utime.tv_usec"])->divide(1000)->int();
-			$stopFraction = Num::make($rus["ru_utime.tv_usec"])->divide(1000)->int();
-			$startMilliseconds = Num::make($ru["ru_utime.tv_sec"])
-				->multiply(1000)
-				->add($startFraction)
-				->val();
-			$this->_totaltime = Num::make($rus["ru_utime.tv_sec"])
-				->multiply(1000)
-				->add($stopFraction)
-				->subtract($startMilliseconds)
-				->val();
-		} else {
-			$this->_stoptime = microtime(true);
-			$start = Num::isValid($this->_starttime) ? $this->_starttime : $this->_stoptime;
-			$this->_totaltime = Num::make($this->_stoptime)->subtract($start)->val();
-		}
+		$this->_stoptime = $this->clockSeconds();
+		$elapsed = Num::make($this->_stoptime)->subtract($this->_starttime)->val();
+		$this->_totaltime = $elapsed < 0 ? 0.0 : (float) $elapsed;
 
 		if ( !Num::isValid($this->_avgtime) || $this->_avgtime <= 0 ) {
 			$this->_avgtime = $this->_totaltime;
@@ -204,6 +193,7 @@ class Engine extends Intelligence implements ISphere {
 		}
 	}
 
+	/** Elapsed wall seconds for the most recent strategy attempt, or zero before one. */
 	public function time() {
 		return $this->_totaltime ?? 0;
 	}
