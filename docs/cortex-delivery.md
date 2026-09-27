@@ -189,8 +189,8 @@ through the active model reference before and after transitions. This establishe
 process-local behavior, without model persistence or deployment. See
 [the lifecycle contract](model-lifecycle.md).
 
-All nine commands run in CI and currently expose 108 gates. The sensory command
-adds 18 gates for bounded ingress, descriptive sweeps, and evidence projection;
+All nine commands run in CI and currently expose 112 gates. The sensory command
+adds 22 gates for bounded ingress, descriptive sweeps, and evidence projection;
 see [sensory ingestion](sensory-ingestion.md). The workflow command
 adds twelve gates for graph execution and overlapping workers; see
 [strategy workflows](strategy-workflows.md). The learning command
