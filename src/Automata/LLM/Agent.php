@@ -5,6 +5,9 @@ use BlueFission\Arr;
 use BlueFission\Automata\Comprehension\Holoscene;
 use BlueFission\Automata\LLM\Agent\AgentHook;
 use BlueFission\Automata\LLM\Agent\AgentSession;
+use BlueFission\Automata\LLM\Agent\Response\AgentResponse;
+use BlueFission\Automata\Response\ResponseEnvelope;
+use BlueFission\Automata\Response\ResponsePolicy;
 use BlueFission\Behavioral\IDispatcher;
 use BlueFission\Automata\LLM\Tools\ITool;
 use BlueFission\Automata\LLM\Agent\ToolCatalog;
@@ -317,6 +320,18 @@ class Agent extends Obj implements IDispatcher
         $this->agentState->leave(AgentState::STATE_ACTING);
 
         return $result;
+    }
+
+    /** Create a response bound to the current session and task, without invoking a model. */
+    public function startResponse(ResponseEnvelope $envelope, ?ResponsePolicy $policy = null): AgentResponse
+    {
+        return new AgentResponse($this, $envelope, $policy);
+    }
+
+    /** Restore host-trusted response state into the same session and task. */
+    public function restoreResponse(array $checkpoint): AgentResponse
+    {
+        return AgentResponse::restore($this, $checkpoint);
     }
 
     public function startTask(?string $taskId = null, array $metadata = []): TaskTrace

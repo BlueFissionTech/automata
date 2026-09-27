@@ -387,3 +387,138 @@ This architecture document should be read together with `SPEC.md`, which
 describes product intent and roadmap. Architectural changes should update both
 files as modules evolve.
 
+
+## 6. Experience and training projection boundary
+
+`Learning/Experience` and `Outcome` are immutable snapshots over existing
+`Language/Statement` and `Context` carriers. Immutable records prevent aliasing
+across persistence and training boundaries; they do not replace DevElation's
+mutable object or behavior model. Record data is restricted to finite scalar and
+array values. `IExperienceStore` supports replacement of the current snapshot by
+id; `InMemoryExperienceStore` is the process-local reference implementation.
+
+`ITrainingAdapter` defines a named/versioned projection. `CallbackTrainingAdapter`
+uses DevElation `Func`; `ExperienceRecomposer` validates lineage after the
+`automata.learning.examples` filter, deduplicates repeated evidence, and returns a
+`TrainingBatch`. The batch exposes samples and labels for existing `IStrategy`
+implementations. Projection does not invoke training or confer governance rights.
+Hosts choose which observed outcomes qualify, including whether failed outcomes
+provide useful negative examples.
+
+Actions expose `automata.experience.normalized`,
+`automata.experience.outcome.recorded`, `automata.experience.stored`, and
+`automata.learning.recomposed`. These are observational extension points; schema
+and lineage validation remain mandatory.
+
+The Cortex example uses the existing `Holoscene::push()` snapshot seam. It trains
+the Naive Bayes public pipeline with the entire projected batch and evaluates a
+separate fixture set, avoiding the strategy's internal random split. This proves
+composition and bounded classification, not production recovery or general
+conversational competence. See [the delivery plan](docs/cortex-delivery.md).
+
+## 7. Candidate evaluation boundary
+
+`Learning/ModelCandidate` binds a caller-owned `IStrategy` to an exact id/version
+and its declared `TrainingBatch`. `ClassificationEvaluator` compares two distinct
+instances on a separately attributed batch. It validates projection compatibility,
+lineage separation and exact sample separation before any prediction, then emits
+a data-only report with policy, identities, lineage, measurements and rejection
+reasons. It never calls train/save/load/accuracy or registers a strategy. Reported
+quality comes only from held-out predictions. The caller supplies trusted,
+side-effect-free prediction implementations and owns model isolation, evidence
+admission and any later promotion. Existing routing governance remains separate.
+
+## 8. Strategy feedback boundary
+
+`Learning/StrategyOutcomeFeedback` projects a selected attached Outcome into the
+existing `Intelligence::recordStrategyFeedback()` seam. Attribution declares
+`strategy_id`, `strategy_version` and `context_key`; observations optionally carry
+an explicit `feedback` metric map. The Outcome supplies observed success. Hosts
+admit trustworthy evidence before invoking the bridge. The bridge does not infer
+causality, authenticate sources, register candidates, promote models or authorize
+execution. Intelligence retains its existing contextual and global aggregation.
+
+Receipts bind experience/outcome evidence to exact targets and distinguish applied
+from uncertain learner writes. In-memory replay checks precede learner mutation;
+uncertain writes require reconciliation rather than blind retries. Receipt state
+must live as long as the associated learner; durable restart/transaction semantics
+are not claimed. The integrated example composes classification evaluation,
+experience outcomes, advisory learning and the existing governed StrategyRouter.
+
+## 9. Progressive response state
+
+Response definitions are immutable and validated before work. The composer owns
+serialized production transitions, weighted readiness, pending releases and
+terminal receiver receipts. It shares the internal plain-data snapshot validator
+with learning records. Prepared release ids bind the response, sequence and
+canonical fragment content; successful primary receipts gate dependent output.
+
+A versioned checkpoint replays transition history and retains pending identities.
+Receiver idempotency, atomic storage and external effect authorization remain
+outside the composer. Cancellation stops production and new releases while keeping
+in-flight receipt reconciliation possible. Fallback content is explicitly marked
+and never substitutes for original operational success. See
+`docs/response-composition.md` for the protocol and executable evidence.
+
+## 10. Agent response handle
+
+`LLM/Agent/Response/AgentResponse` owns a ResponseComposer and binds it to the
+existing Agent session and TaskTrace. Its worker wrappers fit the existing
+orchestrator callable contract. Workers produce data; receipt authentication and
+tool delivery stay with the governed host. The handle records correlated lifecycle
+events without copying response payloads into telemetry. Snapshot/restore operates
+between synchronous producer calls; it cannot resume an interrupted producer.
+
+## 11. Model lifecycle boundary
+
+`Learning/ModelLifecycle` composes ClassificationEvaluator, ModelCandidate and
+the existing GovernanceDecision contract. It holds an active model stack, revision
+and bounded process-local request receipts. It evaluates internally rather than
+accepting caller-supplied recommendation reports. Host approval receives the exact
+transition and measured report as detached data. Only an approved decision changes
+the active reference; rollback removes the last activation and increments revision.
+Reentrant mutation is rejected while prediction or approval code runs.
+
+Receipts are historical observations, not instructions or restored authority. No
+serialization of strategies or restore API is provided. Hosts own immutable model
+artifacts, side-effect-free prediction/approval callbacks, evidence trust, durable
+storage, deployment and synchronization across lifecycle instances. Version binding
+detects object reuse within this instance; it cannot detect mutation inside a
+caller-owned strategy or authenticate a model artifact.
+
+## 12. Evidence-triggered training
+
+`LearningCoordinator` consumes the versioned `TrainingBatch` already produced by
+`ExperienceRecomposer`. `TrainingPolicy` compares exact lineage against retained
+learned evidence and combines sample/correction pressure with host-normalized
+`TrainingTrigger` signals. Hard sample and retention limits precede invocation;
+explicit host governance precedes factory/trainer callbacks. A separate instance
+becomes a `ModelCandidate` only after a void-success trainer return. `TrainingResult`
+retains the assessment, review, fingerprint and terminal state for idempotent replay.
+
+The coordinator never activates models. `ModelLifecycle` still requires fresh
+held-out evaluation and separate approval. `learn.php` composes this path with
+recorded experiences and real Agent response workers and governed fixture tools.
+Training approval, activation approval and effect authorization stay independent.
+A partial training failure retains an uncertain result and stops new training on
+that owner pending external reconciliation; there is no automatic retry or durable
+worker restore. DevElation pressure filters remain subject to hard policy gates;
+training action-hook failures cannot erase committed results. See
+[continual learning](docs/continual-learning.md) for the callback and retention contracts.
+
+## 13. Strategy workflow execution
+
+`StrategyWorkflow` captures and validates an immutable DAG from the existing Path
+graph implementation. Nodes declare exact adapter/capability versions; edges admit
+terminal parent results by status and optional strict value conditions.
+`StrategyWorkflowRun` owns bounded attempts, conditional joins, output thresholds
+and in-flight state. `CompositeStrategy` supplies ordinary IStrategy prediction;
+its convenience scheduler is serial, while host-scheduled Fibers may overlap
+independent `execute()` calls. Every node still runs through StrategyRouter with
+fresh host authorization. Trace request identities preserve run/node/attempt links.
+
+Plans serialize as proposals only. Run results retain late observations after
+completion or cancellation; uncertainty stops further work without erasing prior
+outputs. There is no authenticated run restore, global nested budget or scheduler
+implementation. Hosts own model bindings, scheduling, current authorization and
+resource enforcement. See [strategy workflows](docs/strategy-workflows.md).

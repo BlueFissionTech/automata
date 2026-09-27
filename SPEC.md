@@ -627,3 +627,145 @@ as `damage`, `people`, `infrastructure`, `blocked_road`, `flooding`.
 This SPEC is intended to be a living document; as Automata evolves, new modules,
 strategies, and integrations should be added here alongside their intended use
 cases and constraints.
+
+## 7. Experiential learning foundation
+
+The `Learning` namespace captures normalized `Statement` and `Context` snapshots,
+observed outcomes, and strategy-specific training projections. It does not grant
+execution authority or automatically train or replace a live strategy.
+
+User stories and acceptance criteria:
+
+- A host records a situated observation without later mutation of its Statement,
+  Context, or array references changing the stored experience.
+- A reviewer can attach a delayed outcome to its exact experience. Repeated
+  identical outcomes are idempotent; conflicting ids or wrong lineage are rejected.
+- A training adapter projects only suitable evidence into samples and labels.
+  Recomposition rejects references to outcomes absent from the source experience.
+- A host can round-trip schema-versioned records and preserve context data, tags,
+  normalizations, provenance, trace id and outcome attribution. Unsupported schema
+  versions and runtime objects fail explicitly.
+- The provider-free Cortex example records episodes in Holoscene, excludes pending
+  reviews from training, and evaluates the existing Naive Bayes strategy against
+  independent synthetic fixtures. Its process exit code reflects conformance.
+
+The reference store is process-local. Durable concurrent storage, access controls,
+and recovery remain open. The following sections specify the staged learning,
+activation and response capabilities. See [the delivery plan](docs/cortex-delivery.md) and
+[the runnable example](examples/generic/cortex/README.md).
+
+## 8. Held-out classification evaluation
+
+Compare separately instantiated, already trained models using exact identities and
+the same versioned projection. Reject overlap with either declared training corpus
+and repeated holdout evidence before invoking prediction. Measure strict label
+matches, failures and elapsed milliseconds; retain unknown cost/energy as unknown.
+Recommend only strict improvement meeting sample, accuracy and optional latency
+policy. Ties, regressions and unreliable evidence retain the incumbent. Evaluation
+must not train, save, replace or authorize a strategy. The runnable experiment
+must demonstrate both an improving candidate and a rejected regression.
+
+This stage does not establish statistical significance, detect undisclosed model
+training, cancel synchronous prediction, or implement promotion/rollback. Those
+limits remain explicit while the complete learning loop advances.
+
+## 9. Attributed strategy feedback
+
+Admitted outcomes can update advisory Intelligence performance for an explicitly
+named strategy version and context. The bridge requires attached evidence, rejects
+malformed/ambiguous attribution and invalid metrics, omits unknown measurements,
+and records inspectable receipts. Identical evidence is applied once per recorder
+instance; conflicting evidence and uncertain partial-application retries fail
+explicitly. Outcomes cannot add candidates, change eligibility or grant authority.
+
+The Cortex proof must evaluate a classifier, apply attributed held-out observations,
+show changed future route preference, and retain exact-version, eligibility,
+authorization and resource-limit checks. Replay guarantees are process-local;
+durable, transactional feedback remains subsequent work. Model activation is a
+separate operation specified below.
+
+## 10. Progressive response composition
+
+Response envelopes declare fixed fragment identities, channels, weights, blocking
+requirements and dependencies before work. Independently produced fragments may
+report progress and resolve through fluent APIs. A configured threshold cannot
+fall below its policy floor, and no threshold bypasses a failed or incomplete
+blocking requirement. Confirmation fragments wait for successful receiver receipts
+for their dependencies; a prepared command alone is not evidence of success.
+
+Releases have stable identities and explicit per-fragment completion receipts.
+Data-only checkpoints preserve pending and acknowledged delivery state. Hosts own
+trusted checkpoint storage, receiver idempotency and actual effect authorization.
+Cancellation stops new output and late producers while retaining in-flight evidence
+for reconciliation. Predeclared nonblocking fallback content cannot prove the
+original operation succeeded. The demo must show progressive output, a lost-ack
+restart, a single simulated effect, failure/fallback and cancellation.
+
+Agent integration is specified below. Concurrent transactional persistence remains
+subsequent work; the generic composer does not execute effects.
+
+## 11. Agent response integration
+
+An Agent can start or restore a response handle bound to its session and task.
+The handle adapts explicit completed/failed worker results into fragments and can
+wrap workers for the existing orchestrator. Unknown confidence stays unknown.
+Cancelled, duplicate, invalid or differently scoped work cannot invoke a producer.
+TaskTrace records production, release, acknowledgement and cancellation separately;
+observational telemetry failure cannot repeat work or erase committed response state.
+Checkpoints restore between producer calls and reject a different session or task.
+Host authorization, tenant/actor identity, receiver evidence and durable storage
+remain separate requirements. A runnable proof must use real governed Agent tools,
+show denied execution and revoked permission, and delay confirmation until receipts.
+
+## 12. Controlled model activation
+
+A process-local lifecycle owns the active candidate reference and a monotonic
+revision. Promotion evaluates the exact candidate against the current incumbent
+before asking a trusted host for an explicit approved GovernanceDecision. Pending,
+denied or steered decisions cannot activate a model. Rollback separately authorizes
+return to the previous instance. Requests bind an id, expected revision and exact
+model/evidence; identical retries return historical receipts without new effects.
+Conflicting retries, stale revisions, reused versions, reentrant mutations and full
+retention bounds fail before invoking models or host callbacks. The host must keep
+model instances immutable throughout their registered lifetime.
+
+The synthetic proof must freeze its corpus and expected labels, detect constant
+and single-wrong predictions, demonstrate activation changing actual predictions,
+reject a regression, then restore the previous model. This is not durable model
+deployment, concurrent coordination, permission to execute tools or production
+quality certification.
+
+## 13. Evidence-triggered candidate training
+
+A learning coordinator evaluates bounded projected evidence against retained
+lineage from every successfully trained batch. New evidence is counted by exact experience/outcome
+lineage; duplicate rows and conflicting historical reuse are rejected. Explicit
+correction references must identify new rows in the current batch. Host-normalized
+pressure and operator requests can request training but cannot bypass the minimum
+sample floor, maximum batch size or explicit host approval.
+
+Training constructs an isolated strategy and invokes a trusted trainer bridge.
+It never trains the incumbent or activates a candidate. Results retain exact
+identity, policy assessment, evidence digest and approval. Identical request replay
+returns the original result without callbacks; a partial factory/trainer failure
+is uncertain and reserves its version against blind retry. Request retention is
+bounded and process-local. Callbacks own real resource enforcement and model-state
+isolation; synchronous elapsed time is measurement, not cancellation.
+
+The integrated proof must record experience, defer insufficient evidence, deny
+unapproved training, train a classifier, evaluate and separately approve activation,
+then change a later Agent plan while tool approval and terminal delivery receipts
+remain independently required. Rollback must change subsequent plans back.
+
+## 14. Composed strategy workflows
+
+Versioned workflow proposals reuse Path graph nodes and edges. CompositeStrategy
+implements IStrategy and is selected through existing Intelligence prediction.
+Runs must enforce exact strategy/capability identity and current node authorization
+through StrategyRouter, supporting conditional dependencies, all/any joins,
+explicit known-failure fallback, bounded retries and output completion thresholds.
+Independent workers can overlap under a host scheduler; cancellation and early
+completion stop new dispatch while preserving in-flight observations. Unknown
+execution stops automatic fallback/retry. Plans and results are plain records,
+not authority or authenticated resumable workers. Durable scheduling, global
+resource reservations, nested budget accounting and route training remain open.

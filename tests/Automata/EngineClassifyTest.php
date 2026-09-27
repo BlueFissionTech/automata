@@ -73,4 +73,16 @@ class EngineClassifyTest extends TestCase
 
         $this->assertSame('guessed', $engine->classify('input'));
     }
+
+    public function testProcessorClassNamesAndInvalidInputsPreserveClassification(): void
+    {
+        $engine = new Engine();
+        $engine->addProcessor('missing', 'MissingEngineStrategy');
+        $engine->addProcessor('invalid', 42);
+        $this->assertSame('input', $engine->classify('input'));
+        $engine->addProcessor('guess', EngineGuessStubStrategy::class);
+        $this->assertSame('guessed', $engine->classify('input'));
+        $this->assertGreaterThanOrEqual(0, $engine->time());
+        $this->assertEquals(1, $engine->getTransactionSize());
+    }
 }
