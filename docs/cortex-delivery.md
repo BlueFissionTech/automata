@@ -35,6 +35,7 @@ vendor/bin/phpunit --do-not-cache-result tests/Automata/Learning
 php examples/generic/cortex/run.php
 php examples/generic/cortex/evaluate.php
 php examples/generic/cortex/adapt.php
+php examples/generic/cortex/respond.php
 ```
 
 The example records 12 synthetic training episodes and one pending review,
@@ -64,6 +65,14 @@ denied authorization, unregistered versions and a zero invocation budget.
 These experiments do not establish open-world accuracy, generative quality,
 continual learning, unrestricted route adaptation, safe operational execution, or
 production reliability.
+
+The response command adds twelve gates around progressive output, required
+fragments, successful dependency receipts, stable delivery identity after a lost
+acknowledgement, cancellation and deadline fallback. Its single simulated action
+is deduplicated by a receiver whose state survives the caller's simulated restart.
+This is evidence for the composition protocol; durable storage, concurrent writers,
+Agent/worker/TaskTrace integration and production delivery remain open.
+See [the response contract](response-composition.md).
 
 ## Attributed feedback contract
 
