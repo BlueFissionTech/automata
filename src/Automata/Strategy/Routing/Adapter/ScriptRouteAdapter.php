@@ -29,7 +29,7 @@ final class ScriptRouteAdapter implements IStrategyRouteAdapter
         $limits = $request->limits ?? [];
         $eligible = $request->subject_id === $this->strategy->identity()['subject_id'];
         // Do not let primitive construction coerce a malformed host request.
-        if (!is_array($limits)) { throw new \TypeError('Script limits must be an array.'); }
+        if (!Arr::is($limits)) { throw new \TypeError('Script limits must be an array.'); }
         $limitValues = Arr::make($limits);
         foreach (['max_cost', 'max_energy', 'max_latency_ms'] as $key) {
             if ($limitValues->hasKey($key)) { $eligible = false; }

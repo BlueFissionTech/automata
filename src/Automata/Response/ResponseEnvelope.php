@@ -17,7 +17,7 @@ final class ResponseEnvelope
     public function __construct(string $id, array $fragments, array $trace = [])
     {
         $this->id = RecordSnapshot::identifier($id, 'response id');
-        if (!Arr::check($fragments, 'array_is_list') || Arr::count($fragments) < 1 || Arr::count($fragments) > 128) {
+        if (!Arr::check($fragments, 'array_is_list') || Arr::size($fragments) < 1 || Arr::size($fragments) > 128) {
             throw new InvalidArgumentException('An envelope requires a list of 1 to 128 fragments.');
         }
         $records = [];
