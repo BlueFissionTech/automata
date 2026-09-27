@@ -64,7 +64,7 @@ final class SensoryCapture
                 ++$completions;
             });
             $sense->invoke($text);
-            if (!is_array($firstSweep) || $completions === 0) {
+            if (!Arr::is($firstSweep) || $completions === 0) {
                 throw new RuntimeException('Sense did not produce an observable sweep and completion.');
             }
 
@@ -89,7 +89,7 @@ final class SensoryCapture
             ]];
         });
         $input->scan($raw);
-        if (!is_array($observed)) {
+        if (!Arr::is($observed)) {
             throw new RuntimeException('Input did not deliver its normalized observation.');
         }
 
@@ -115,7 +115,7 @@ final class SensoryCapture
      */
     private static function normalize(mixed $raw): string
     {
-        if (!is_string($raw) || Str::make($raw)->len() > self::MAX_BYTES
+        if (!Str::is($raw) || Str::make($raw)->len() > self::MAX_BYTES
             || !preg_match('/\A[\x20-\x7E\t\r\n]+\z/', $raw)) {
             throw new InvalidArgumentException('Expected at most 256 bytes of ASCII text.');
         }

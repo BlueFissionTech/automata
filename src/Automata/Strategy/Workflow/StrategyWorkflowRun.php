@@ -61,7 +61,7 @@ final class StrategyWorkflowRun
                 $parents[$edge['from']] = ['status' => $parent['status'], 'code' => $parent['code'], 'output' => $parent['output']];
             }
         }
-        $attempt = Arr::make($this->nodes[$nodeId]['attempts'])->count() + 1;
+        $attempt = Arr::size($this->nodes[$nodeId]['attempts']) + 1;
         $request = new StrategyRouteRequest([
             'id' => $this->id . ':' . $nodeId . ':' . $attempt, 'subject_id' => $this->subjectId,
             'capability_id' => $config['capability_id'], 'capability_version' => $config['capability_version'],
@@ -134,7 +134,7 @@ final class StrategyWorkflowRun
             ->map(fn (int $index, string $id): array => $this->nodes[$id])
             ->filter(static fn (array $node): bool => $node['status'] === 'completed')
             ->map(static fn (array $node): mixed => $node['output']);
-        if ($outputs->count() >= $this->plan['minimum_outputs']) {
+        if ($outputs->size() >= $this->plan['minimum_outputs']) {
             $this->outputs = $outputs->val();
             $this->close('completed');
             return;
@@ -170,7 +170,7 @@ final class StrategyWorkflowRun
     {
         $node = $this->nodes[$id];
         return $node['status'] === 'pending' || ($node['status'] === 'failed'
-            && Arr::make($node['attempts'])->count() < $this->configs[$id]['maximum_attempts']
+            && Arr::size($node['attempts']) < $this->configs[$id]['maximum_attempts']
             && Arr::make($this->configs[$id]['retry_codes'])->has($node['code'], true));
     }
 
@@ -199,7 +199,7 @@ final class StrategyWorkflowRun
             elseif ($this->configs[$id]['join'] === 'all') { return false; }
         }
         if ($this->configs[$id]['join'] === 'any' && $matches > 0) { return true; }
-        return $waiting ? null : $matches === Arr::make($edges)->count();
+        return $waiting ? null : $matches === Arr::size($edges);
     }
 
     private function matches(array $edge): bool
@@ -209,7 +209,9 @@ final class StrategyWorkflowRun
         if (!isset($edge['when'])) { return true; }
         $value = $node['output'];
         foreach ($edge['when']['path'] as $key) {
-            if (!is_array($value) || !Arr::make($value)->hasKey($key)) { return false; }
+            if (!Arr::is($value) || !Arr::make($value)->hasKey($key)) {
+                return false;
+            }
             $value = $value[$key];
         }
         return $value === $edge['when']['equals'];

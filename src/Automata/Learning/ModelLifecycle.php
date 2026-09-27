@@ -29,7 +29,7 @@ final class ModelLifecycle
         $this->activeStack = [$initial];
     }
 
-    public function active(): ModelCandidate { return $this->activeStack[Arr::count($this->activeStack) - 1]; }
+    public function active(): ModelCandidate { return $this->activeStack[Arr::size($this->activeStack) - 1]; }
     public function revision(): int { return $this->revision; }
     public function receipts(): array
     {
@@ -68,7 +68,7 @@ final class ModelLifecycle
         if (($receipt = $this->begin($requestId, $binding)) !== null) { return $receipt; }
         $this->busy = true;
         try {
-            $count = Arr::count($this->activeStack);
+            $count = Arr::size($this->activeStack);
             $previous = $count > 1 ? $this->activeStack[$count - 2] : null;
             $request = $this->request($requestId, 'rollback', $previous, null);
             $decision = $previous !== null ? $this->authorize($authorize, $request) : null;
@@ -92,7 +92,7 @@ final class ModelLifecycle
             return $this->requests[$id]['receipt'];
         }
         if ($binding['expected_revision'] !== $this->revision) { throw new LogicException('Stale lifecycle revision.'); }
-        if (Arr::count($this->requests) >= $this->maximumRequests || $this->revision === PHP_INT_MAX) {
+        if (Arr::size($this->requests) >= $this->maximumRequests || $this->revision === PHP_INT_MAX) {
             throw new LogicException('Lifecycle retention or revision capacity is exhausted.');
         }
         return null;

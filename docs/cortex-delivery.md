@@ -1,13 +1,12 @@
-# Cortex delivery and conformance plan
+# Cortex composition and conformance
 
 Cortex is an example assembled from reusable Automata capabilities. It owns its
 fixtures, domain mappings and assembly. Generic cognition contracts belong in the
 library. Existing Agent, Statement, Context, Holoscene, strategy and governance
 APIs remain intact.
 
-The capabilities below describe the current development branch and remain staged
-for review. Select a revision containing the contracts before integrating them;
-passing examples do not imply a published release or production certification.
+The contracts below describe repository capabilities, not a published release or
+production certification. Select a revision containing them before integration.
 For commands and expected gate counts, start with the
 [example guide](../examples/generic/cortex/README.md).
 
@@ -127,7 +126,7 @@ for the same outcome are rejected. Separate adapters can project the same
 experience into different strategy-specific representations. Neither recomposition
 nor `TrainingBatch` promotes models or mutates live strategies.
 
-## Current experiment
+## Runnable experiment
 
 Run:
 
@@ -143,7 +142,7 @@ php examples/generic/cortex/learn.php
 php examples/generic/cortex/workflow.php
 ```
 
-The initial run recorded 12 synthetic training episodes and one pending review,
+The example records 12 synthetic training episodes and one pending review,
 projected 12 labelled examples, retained Holoscene episode snapshots, and passed
 its JSON round trip. The existing Naive Bayes strategy classified 6/6 separate
 fixture requests correctly versus 2/6 for a constant prior. The command emits each
@@ -190,7 +189,9 @@ through the active model reference before and after transitions. This establishe
 process-local behavior, without model persistence or deployment. See
 [the lifecycle contract](model-lifecycle.md).
 
-All eight commands run in CI and currently expose 90 gates. The workflow command
+All nine commands run in CI and currently expose 108 gates. The sensory command
+adds 18 gates for bounded ingress, descriptive sweeps, and evidence projection;
+see [sensory ingestion](sensory-ingestion.md). The workflow command
 adds twelve gates for graph execution and overlapping workers; see
 [strategy workflows](strategy-workflows.md). The learning command
 adds 15 gates that connect recorded experience, policy-triggered training, separate
@@ -215,7 +216,8 @@ rejected. Strategy ids and versions cannot contain `@`, the existing advisor's
 identity separator.
 
 Identical repeated evidence returns false after a successful application;
-conflicting evidence for the same experience/outcome pair is rejected. A learner
+conflicting source experience fields or outcomes for the same pair are rejected.
+Other outcomes may be appended without changing that pair's source evidence. A learner
 exception leaves an uncertain receipt and prevents blind retry. Receipts expose
 lineage and application status, but both learner state and deduplication are
 process-local. Durable transactional recovery and reconciliation are future work.
@@ -273,3 +275,13 @@ UTC timestamps and clock reads remain where there is no equivalent helper with
 the required semantics. Regression coverage preserves scalar types, detached
 references, rejection of value wrappers and nonfinite numbers, strategy class
 registration, and attention-statistic keys and values.
+
+## Limits
+
+Snapshot validation accepts only finite scalar and array data. Runtime objects
+and resources are rejected; a rejected stream remains owned by its caller.
+Persisted records preserve scalar types and detached references, but an evidence
+source is not trusted merely because it can be restored. Hosts remain responsible
+for admission, privacy, authorization, storage durability, concurrent writes,
+provider spend, and any effects that follow a model prediction. Passing this
+small fixture does not qualify those capabilities for production use.

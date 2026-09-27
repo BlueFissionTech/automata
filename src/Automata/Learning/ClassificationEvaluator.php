@@ -44,7 +44,7 @@ final class ClassificationEvaluator
         }
         $evaluation = $holdout->toArray();
         $rows = $evaluation['examples'];
-        $count = Arr::count($rows);
+        $count = Arr::size($rows);
         if ($count > $this->maximumSamples) {
             throw new InvalidArgumentException('Evaluation exceeds the configured sample limit.');
         }
@@ -145,7 +145,7 @@ final class ClassificationEvaluator
             $predictions[] = [...$row, 'predicted' => $prediction, 'correct' => $matched,
                 'latency_ms' => $duration, 'error' => $error];
         }
-        $count = Arr::count($rows);
+        $count = Arr::size($rows);
         return [...$model->identity(),
             'training_lineage' => Arr::make($model->training()->toArray()['examples'])
                 ->map(static fn (array $row): array => [
