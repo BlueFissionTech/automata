@@ -78,7 +78,7 @@ $checks = [
     'prior_selected_before_feedback' => $before->selected_strategy['version'] === 'constant-1',
     'candidate_selected_after_feedback' => $after->selected_strategy['version'] === 'bayes-1',
     'new_request_correctly_classified' => $after->output === 'checkin',
-    'feedback_replay_ignored' => $replayIgnored === 12 && Arr::count($bridge->receipts()) === 12
+    'feedback_replay_ignored' => $replayIgnored === 12 && Arr::size($bridge->receipts()) === 12
         && $learner->strategyPerformance('concierge.intent', 'bayes-1', 'concierge')['feedback_samples'] === 6,
     'deterministic_preference_preserved' => $deterministic->selected_strategy['version'] === 'constant-1',
     'eligibility_preserved' => $ineligible->selected_strategy['version'] === 'constant-1',

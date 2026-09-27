@@ -73,6 +73,24 @@ class StrategyOutcomeFeedbackTest extends TestCase
         }
     }
 
+    public function testChangedExperienceProvenanceCannotReplayTheSameOutcome(): void
+    {
+        $learner = new Intelligence();
+        $bridge = new StrategyOutcomeFeedback($learner);
+        $episode = $this->episode(['score' => 0.4]);
+        $this->assertTrue($bridge->apply($episode, 'review'));
+
+        $changed = $episode->toArray();
+        $changed['trace_id'] = 'different-trace';
+        try {
+            $bridge->apply(new Experience($changed), 'review');
+            $this->fail('Expected conflicting experience provenance to be rejected.');
+        } catch (InvalidArgumentException $error) {
+            $this->assertSame(1, $learner->strategyPerformance('intent', '2')['feedback_samples']);
+            $this->assertSame('trace-1', $bridge->receipts()[0]['trace_id']);
+        }
+    }
+
     public function testOutcomeMustExistInItsExperience(): void
     {
         $bridge = new StrategyOutcomeFeedback(new Intelligence());

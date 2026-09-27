@@ -58,18 +58,24 @@ final class StrategyOutcomeFeedback
         }
         $feedback = ['successful' => $outcome['successful'],
             ...Arr::make($metrics)->filter(static fn ($value): bool => $value !== null)->val()];
+        // Other outcomes may be appended later, but the source experience itself
+        // must not change under an already-applied evidence identity.
+        $source = $experience->toArray();
+        unset($source['outcomes']);
+        $sourceFingerprint = Hash::value(serialize($source), 'sha256');
         // Snapshot-only values; the tuple cannot alias concatenated component ids.
         $key = Hash::value(serialize([$experience->id(), $outcomeId]), 'sha256');
         if (isset($this->entries[$key])) {
-            if ($this->entries[$key]['outcome'] !== $outcome) {
-                throw new InvalidArgumentException('Feedback identity already has different outcome evidence.');
+            if ($this->entries[$key]['outcome'] !== $outcome
+                || $this->entries[$key]['source_fingerprint'] !== $sourceFingerprint) {
+                throw new InvalidArgumentException('Feedback identity already has different source or outcome evidence.');
             }
             if ($this->entries[$key]['receipt']['status'] !== 'applied') {
                 throw new LogicException('Prior feedback application is uncertain; reconcile before retrying.');
             }
             return false;
         }
-        $this->entries[$key] = ['outcome' => $outcome, 'receipt' => [
+        $this->entries[$key] = ['outcome' => $outcome, 'source_fingerprint' => $sourceFingerprint, 'receipt' => [
             'schema_version' => 1, 'experience_id' => $experience->id(), 'outcome_id' => $outcomeId,
             'source' => $outcome['source'], 'trace_id' => $experience->toArray()['trace_id'] ?? null,
             'strategy_id' => $strategyId, 'strategy_version' => $strategyVersion, 'context_key' => $context,
