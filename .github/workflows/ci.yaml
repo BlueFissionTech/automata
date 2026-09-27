@@ -55,3 +55,4 @@ jobs:
           php examples/generic/cortex/learn.php
           php examples/generic/cortex/workflow.php
           php examples/generic/cortex/sensory.php
+          php examples/generic/cortex/script.php

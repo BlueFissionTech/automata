@@ -6,7 +6,7 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
-These contracts are staged development work. Use a checkout containing all nine
+These contracts are staged development work. Use a checkout containing all ten
 scripts and install its Composer dependencies before running from the repository
 root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
 toolchain. No provider credentials, network calls or external services are needed
@@ -23,9 +23,10 @@ to execute the demos after installation.
 | `learn.php` | 15 | Recorded experience triggers approved training, activation and changed Agent plans |
 | `workflow.php` | 12 | Graph execution, overlapping workers, fan-in and ordinary Intelligence selection |
 | `sensory.php` | 22 | Input normalization, default/custom Sense observations, experience projection and labelled classification |
+| `script.php` | 16 | Real parser rendering, governed generation slots, early exit, routing and trace evidence |
 
 Each command emits JSON evidence and exits nonzero if a required gate fails. All
-112 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
+128 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
 loop in one process; `workflow.php` adds cooperative Fiber overlap. Durable worker
 recovery and asynchronous response producers remain open. The
 [delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.

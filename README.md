@@ -32,6 +32,7 @@ that they are available in a published release.
 - **Agent Capabilities**: Register deterministic tool contracts, descriptive capability definitions, exact scoped autonomy grants, lifecycle hooks, session memory, Holoscene comprehension, orchestration patterns, DevElation-backed agent state/goal decisions, interpreter-facing integration contracts, and persona orchestration contracts around LLM agent loops. See [Agent Capabilities](docs/agent-capabilities.md), [Capability Registry And Autonomy](docs/agent-capability-registry.md), and [Agent Persona Orchestration Contracts](docs/agent-persona-orchestration-contracts.md).
 - **Adaptive, Deterministic-First Strategy Routing**: Select exact, side-effect-free deterministic, learned, or generative strategy adapters under autonomy, eligibility, budget, trace, and explicit escalation policy. Optional `Intelligence` advice learns contextual quality and efficiency without bypassing those gates. See [Strategy Routing](docs/strategy-routing.md).
 - **Composed Strategy Workflows**: Run versioned graph proposals through the router with conditional dependencies, fan-in, bounded retries, fallback, output thresholds and host-scheduled overlapping workers. `CompositeStrategy` works through the existing strategy interface. See [Strategy Workflows](docs/strategy-workflows.md).
+- **Executable Script Strategies**: Adapt reviewed parser-backed scripts to ordinary intelligence and routing, with explicit early exit, per-slot authorization and retained execution receipts. See [Script Strategies](docs/script-strategy.md).
 - **Experiential Learning**: Capture immutable experience and outcome snapshots, project attributable training batches, trigger separately approved candidate training, compare exact model versions on held-out evidence, and admit feedback into advisory routing. See [Continual Learning](docs/continual-learning.md) and [Cortex contracts](docs/cortex-delivery.md).
 - **Governed Model Activation**: Evaluate candidates before explicit host approval, activate a process-local model reference, and retain revision-bound promotion and rollback receipts. See [Model Lifecycle](docs/model-lifecycle.md).
 - **Progressive Responses**: Coordinate weighted fragments, required dependencies, delivery acknowledgements and cancellation, including synchronous Agent workers and TaskTrace integration. See [Response Composition](docs/response-composition.md).
@@ -83,9 +84,10 @@ php examples/generic/cortex/promote.php
 php examples/generic/cortex/learn.php
 php examples/generic/cortex/workflow.php
 php examples/generic/cortex/sensory.php
+php examples/generic/cortex/script.php
 ```
 
-Together they report 112 boolean conformance gates as JSON and exit nonzero on
+Together they report 128 boolean conformance gates as JSON and exit nonzero on
 failure. They cover real classifier predictions, routing changes, receipt-gated
 responses, model activation/rollback and [sensory ingestion](docs/sensory-ingestion.md).
 The small frozen corpus proves repeatable
