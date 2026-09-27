@@ -250,6 +250,21 @@ Responsibilities:
   catalogs can be trained synchronously without turning setup into hidden
   inference work.
 
+**Agent module lifecycle boundary**
+
+`LLM\Agent\State\AgentModuleLifecycle` is the provider-neutral boundary between
+a host and a module callback. `AgentModuleRunRequest` supplies an explicit
+governance decision, pre-invocation cancellation evidence, limits, requested
+features, and lineage. `AgentModuleLifecycleResult` reports status, normalized
+diagnostics, trace data, and nullable termination/effect evidence.
+
+The host remains responsible for authorizing effects, enforcing idempotency,
+and supplying authoritative cancellation or in-flight evidence. The current
+synchronous lifecycle can reject work before invocation and can report a
+duration overrun after return; it cannot hard-preempt an executing callback.
+Unsupported capabilities fail explicitly rather than being silently emulated.
+`LLM\Agent` applies returned state writes only after a completed lifecycle run.
+
 ## 3. Representative Data Flows
 
 ### 3.1 Intent Classification and Routing

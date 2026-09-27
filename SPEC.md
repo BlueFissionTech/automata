@@ -342,6 +342,26 @@ Intent:
   observability, isolated workspaces, repair loops, rollback plans, local
   governance, and tool failures.
 
+#### Host module lifecycle conformance
+
+Agent hosts invoke reusable modules through an explicit lifecycle request and
+result contract. A request carries host authorization, cancellation state,
+resource limits, requested features, and trace/correlation/causation lineage.
+The lifecycle must:
+
+- prevent invocation when authorization is denied, cancellation is already
+  confirmed, or a requested feature is unsupported;
+- distinguish cancellation requested from confirmed stopped;
+- normalize module exceptions without disclosing provider exception messages;
+- preserve unknown termination, in-flight, and effect-attribution evidence as
+  `null` rather than inferring success from missing data; and
+- leave effect authorization and idempotency enforcement with the host.
+
+The synchronous contract can observe elapsed-time limits after invocation, but
+does not claim hard preemption, in-flight cancellation, resume, progressive
+output, or exactly-once effects. Provider-free fixtures cover completion,
+exception, denial, observed resource limits, and unsupported requests.
+
 ### 3.14 Intelligence Hub (Multi-Strategy Insights)
 
 The Intelligence Hub extends the core `Intelligence` orchestrator to:

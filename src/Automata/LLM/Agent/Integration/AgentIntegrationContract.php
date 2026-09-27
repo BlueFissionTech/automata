@@ -35,6 +35,9 @@ use BlueFission\Automata\LLM\Agent\Lanes\LanePressureProfile;
 use BlueFission\Automata\LLM\Agent\Orchestration\Orchestrator;
 use BlueFission\Automata\LLM\Agent\Security\RuntimeLogicValidator;
 use BlueFission\Automata\LLM\Agent\State\AgentState;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleLifecycle;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleLifecycleResult;
+use BlueFission\Automata\LLM\Agent\State\AgentModuleRunRequest;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTrace;
 use BlueFission\Automata\Memory\IWorkingMemory;
 use BlueFission\Automata\Qualification\FollowUpPlan;
@@ -61,7 +64,7 @@ use BlueFission\Obj;
 
 class AgentIntegrationContract extends Obj
 {
-    public const VERSION = '1.5.0';
+    public const VERSION = '1.6.0';
 
     public const FEATURE_AGENT = 'agent.runtime';
     public const FEATURE_TOOLS = 'agent.tool_contracts';
@@ -282,11 +285,12 @@ class AgentIntegrationContract extends Obj
                     'outputs' => ['mcp_result', 'trace_span', 'governance_decision'],
                 ],
                 self::FEATURE_ORCHESTRATION => [
-                    'summary' => 'Sequential, fan-out, hierarchical, reflexive, and PIANO orchestration patterns.',
-                    'classes' => [Orchestrator::class],
-                    'constructs' => ['orchestrate', 'orchestrate.sequential', 'orchestrate.hierarchical', 'orchestrate.piano'],
-                    'inputs' => ['pattern', 'workers', 'context', 'session'],
-                    'outputs' => ['orchestration_result', 'worker_results', 'trace'],
+                    'summary' => 'Synchronous module lifecycle conformance plus sequential, fan-out, hierarchical, reflexive, and PIANO orchestration patterns.',
+                    'classes' => [Orchestrator::class, AgentModuleLifecycle::class, AgentModuleRunRequest::class, AgentModuleLifecycleResult::class],
+                    'constructs' => ['orchestrate', 'orchestrate.sequential', 'orchestrate.hierarchical', 'orchestrate.piano', 'module.lifecycle.run'],
+                    'inputs' => ['pattern', 'workers', 'context', 'session', 'host_authorization', 'lineage', 'limits', 'requested_lifecycle_features'],
+                    'outputs' => ['orchestration_result', 'worker_results', 'module_lifecycle_result', 'trace'],
+                    'lifecycle' => AgentModuleLifecycle::contract(),
                 ],
                 self::FEATURE_STATE_GOALS => [
                     'summary' => 'Behavioral state channels, cognitive controller seams, goals, criteria, and expectations.',
@@ -440,7 +444,7 @@ class AgentIntegrationContract extends Obj
                 self::TEMPLATE_HOLOSCENE => ['feature' => self::FEATURE_HOLOSCENE, 'constructs' => ['holoscene', 'scene', 'episode']],
                 self::TEMPLATE_GOVERNANCE => ['feature' => self::FEATURE_GOVERNANCE, 'constructs' => ['review.request', 'review.decision', 'task.call']],
                 self::TEMPLATE_MCP => ['feature' => self::FEATURE_MCP, 'constructs' => ['mcp.server', 'mcp.resource', 'mcp.tool']],
-                self::TEMPLATE_ORCHESTRATION => ['feature' => self::FEATURE_ORCHESTRATION, 'constructs' => ['orchestrate', 'orchestrate.hierarchical', 'orchestrate.piano']],
+                self::TEMPLATE_ORCHESTRATION => ['feature' => self::FEATURE_ORCHESTRATION, 'constructs' => ['orchestrate', 'orchestrate.hierarchical', 'orchestrate.piano', 'module.lifecycle.run']],
                 self::TEMPLATE_GOAL => ['feature' => self::FEATURE_STATE_GOALS, 'constructs' => ['state.channel', 'goal', 'criterion', 'expectation']],
                 self::TEMPLATE_TRACE => ['feature' => self::FEATURE_TELEMETRY, 'constructs' => ['trace.task', 'trace.span', 'trace.cpct']],
                 self::TEMPLATE_SECURITY => ['feature' => self::FEATURE_SECURITY, 'constructs' => ['security.scan', 'security.validate', 'security.sanitize']],
@@ -472,6 +476,8 @@ class AgentIntegrationContract extends Obj
                 'Capability vocabulary stays package-neutral and maps to stable Automata-owned classes or feature ids.',
                 'Capability registry entries are descriptive; only exact approved autonomy grants produce allowed decisions.',
                 'Strategy routes require exact autonomy decisions, reject side-effecting adapters, enforce budgets, and gate learned or generative escalation explicitly.',
+                'Module lifecycle runs require an explicit host authorization decision, preserve lineage and diagnostics, and leave effects and idempotency host-owned.',
+                'Synchronous module limits are measured after completion and do not imply in-flight cancellation, streaming, resume, hard preemption, or exactly-once effects.',
                 'Conformance fixtures cover successful execution, blocked execution, review steering, and trace export.',
             ],
         ];
