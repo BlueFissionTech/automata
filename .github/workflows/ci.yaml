@@ -43,3 +43,11 @@ jobs:
 
       - name: Run PHPUnit
         run: vendor/bin/phpunit --do-not-cache-result
+
+      - name: Run Cortex conformance demos
+        run: |
+          php examples/generic/cortex/run.php
+          php examples/generic/cortex/evaluate.php
+          php examples/generic/cortex/adapt.php
+          php examples/generic/cortex/respond.php
+          php examples/generic/cortex/agent.php

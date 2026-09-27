@@ -459,3 +459,12 @@ outside the composer. Cancellation stops production and new releases while keepi
 in-flight receipt reconciliation possible. Fallback content is explicitly marked
 and never substitutes for original operational success. See
 `docs/response-composition.md` for the protocol and executable evidence.
+
+## 10. Agent response handle
+
+`LLM/Agent/Response/AgentResponse` owns a ResponseComposer and binds it to the
+existing Agent session and TaskTrace. Its worker wrappers fit the existing
+orchestrator callable contract. Workers produce data; receipt authentication and
+tool delivery stay with the governed host. The handle records correlated lifecycle
+events without copying response payloads into telemetry. Snapshot/restore operates
+between synchronous producer calls; it cannot resume an interrupted producer.

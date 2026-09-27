@@ -700,5 +700,18 @@ for reconciliation. Predeclared nonblocking fallback content cannot prove the
 original operation succeeded. The demo must show progressive output, a lost-ack
 restart, a single simulated effect, failure/fallback and cancellation.
 
-Direct Agent/worker/TaskTrace adapters and concurrent transactional persistence
-remain subsequent integration work; the generic composer does not execute effects.
+Agent integration is specified below. Concurrent transactional persistence remains
+subsequent work; the generic composer does not execute effects.
+
+## 11. Agent response integration
+
+An Agent can start or restore a response handle bound to its session and task.
+The handle adapts explicit completed/failed worker results into fragments and can
+wrap workers for the existing orchestrator. Unknown confidence stays unknown.
+Cancelled, duplicate, invalid or differently scoped work cannot invoke a producer.
+TaskTrace records production, release, acknowledgement and cancellation separately;
+observational telemetry failure cannot repeat work or erase committed response state.
+Checkpoints restore between producer calls and reject a different session or task.
+Host authorization, tenant/actor identity, receiver evidence and durable storage
+remain separate requirements. A runnable proof must use real governed Agent tools,
+show denied execution and revoked permission, and delay confirmation until receipts.
