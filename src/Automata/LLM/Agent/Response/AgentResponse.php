@@ -148,7 +148,7 @@ final class AgentResponse
     public static function restore(Agent $agent, array $checkpoint): self
     {
         $checkpoint = RecordSnapshot::copy($checkpoint);
-        if (($checkpoint['schema_version'] ?? null) !== 1 || Arr::count($checkpoint) !== 4
+        if (($checkpoint['schema_version'] ?? null) !== 1 || Arr::size($checkpoint) !== 4
             || !Arr::is($checkpoint['composer'] ?? null)) {
             throw new InvalidArgumentException('Malformed Agent response checkpoint.');
         }
@@ -185,7 +185,7 @@ final class AgentResponse
                 ['response_id' => $this->composer->state()['response_id'], 'session_id' => $this->sessionId,
                     'status' => $status, ...$metadata]);
         } catch (Throwable $error) {
-            if (Arr::count($this->telemetryErrors) < 32) {
+            if (Arr::size($this->telemetryErrors) < 32) {
                 $this->telemetryErrors[] = ['event' => $event, 'error_type' => $error::class];
             }
         }
