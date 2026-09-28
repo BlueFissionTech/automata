@@ -3,8 +3,10 @@
 `CompositeStrategy` implements `IStrategy` and can be registered with ordinary
 `Intelligence::registerStrategy()`. A workflow is a versioned proposal captured
 from existing `Path\Graph` and `Path\Node` objects. A run executes each selected
-node through `StrategyRouter` with fresh host authorization. These APIs are staged
-development contracts, not a published release claim.
+node through `StrategyRouter` with fresh host authorization. These experimental
+APIs first shipped in
+[v1.0.0-alpha.6](https://github.com/BlueFissionTech/automata/releases/tag/v1.0.0-alpha.6);
+publication does not certify production recovery or host policy.
 
 ## Declare a plan
 

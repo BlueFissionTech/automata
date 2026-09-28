@@ -4,7 +4,9 @@
 evaluation. It decides whether a bounded training batch warrants work, asks the
 host for explicit approval, and trains an isolated candidate. It never activates
 that candidate, changes routing registration, or authorizes operational effects.
-These contracts are staged development work, not a published release claim.
+These experimental contracts first shipped in
+[v1.0.0-alpha.6](https://github.com/BlueFissionTech/automata/releases/tag/v1.0.0-alpha.6);
+publication does not certify production recovery or host authorization.
 
 ## Assemble the loop
 

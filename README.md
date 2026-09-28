@@ -8,8 +8,10 @@ The Cortex example assembles these capabilities into executable experiments:
 record experience, project training data, approve isolated candidate training,
 compare models, adapt routing, compose responses and approve model activation or rollback. See the
 [Cortex guide](docs/cortex-delivery.md) and [runnable examples](examples/generic/cortex/README.md).
-The Cortex additions on this branch are staged for review; these docs do not imply
-that they are available in a published release.
+These Cortex capabilities first shipped in the
+[v1.0.0-alpha.6 prerelease](https://github.com/BlueFissionTech/automata/releases/tag/v1.0.0-alpha.6).
+The runnable proofs do not establish production readiness; review the
+[remaining gates](docs/cortex-delivery.md#release-gates-still-open) before adoption.
 
 ## Features
 
@@ -86,9 +88,10 @@ php examples/generic/cortex/learn.php
 php examples/generic/cortex/workflow.php
 php examples/generic/cortex/sensory.php
 php examples/generic/cortex/script.php
+php examples/generic/cortex/behavior.php
 ```
 
-Together they report 128 boolean conformance gates as JSON and exit nonzero on
+Together they report 135 boolean conformance gates as JSON and exit nonzero on
 failure. They cover real classifier predictions, routing changes, receipt-gated
 responses, model activation/rollback and [sensory ingestion](docs/sensory-ingestion.md).
 The small frozen corpus proves repeatable

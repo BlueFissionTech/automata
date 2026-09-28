@@ -5,8 +5,10 @@ fixtures, domain mappings and assembly. Generic cognition contracts belong in th
 library. Existing Agent, Statement, Context, Holoscene, strategy and governance
 APIs remain intact.
 
-The contracts below describe repository capabilities, not a published release or
-production certification. Select a revision containing them before integration.
+The contracts below first shipped in
+[v1.0.0-alpha.6](https://github.com/BlueFissionTech/automata/releases/tag/v1.0.0-alpha.6)
+as experimental capabilities, not production certification. Verify the selected
+package revision and the remaining host responsibilities before integration.
 For commands and expected gate counts, start with the
 [example guide](../examples/generic/cortex/README.md).
 
@@ -59,7 +61,7 @@ completion must wait for a successful execution receipt where the envelope decla
 that dependency. Cancellation cannot erase an already prepared delivery.
 
 Record the selected source revision and projection/model versions when evaluating
-these staged APIs. Run the relevant demos and your own representative and hostile
+these prerelease APIs. Run the relevant demos and your own representative and hostile
 fixtures before adopting them. A release upgrade requires the approved, merged
 contracts to be included in the selected package version.
 
