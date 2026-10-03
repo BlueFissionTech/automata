@@ -1,8 +1,11 @@
 # Automata documentation
 
 Start with the [package README](../README.md) for installation and runnable examples.
-The Cortex guides describe contracts on this development branch; check the target
-release before depending on them. Review and demo success do not publish a release.
+The Cortex contracts first shipped in the
+[v1.0.0-alpha.6 prerelease](https://github.com/BlueFissionTech/automata/releases/tag/v1.0.0-alpha.6).
+Check the selected package version and the
+[remaining production gates](cortex-delivery.md#release-gates-still-open)
+before depending on them; demo success alone is not production certification.
 
 ## Build an evidence-driven agent
 
