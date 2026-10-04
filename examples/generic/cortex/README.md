@@ -6,7 +6,7 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
-These contracts are staged development work. Use a checkout containing all eleven
+These contracts are staged development work. Use a checkout containing all twelve
 scripts and install its Composer dependencies before running from the repository
 root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
 toolchain. No provider credentials, network calls or external services are needed
@@ -18,6 +18,7 @@ to execute the demos after installation.
 | `evaluate.php` | 5 | Better candidate recommended; regression rejected and unknown cost preserved |
 | `adapt.php` | 10 | Admitted feedback changes routing while policy gates remain enforced |
 | `respond.php` | 12 | Progressive release, terminal receipts, replay, cancellation and fallback |
+| `host_receipts.php` | 7 | Host journal stand-in, scoped recovery, stale writer and uncertain-result gates |
 | `agent.php` | 17 | Agent workers, governed fixture tools, scope checks and TaskTrace |
 | `promote.php` | 8 | Approved activation changes inference; rollback restores it |
 | `learn.php` | 15 | Recorded experience triggers approved training, activation and changed Agent plans |
@@ -27,7 +28,7 @@ to execute the demos after installation.
 | `behavior.php` | 7 | DevElation state/behavior gates, host denial and unconfirmed request evidence |
 
 Each command emits JSON evidence and exits nonzero if a required gate fails. All
-135 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
+142 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
 loop in one process; `workflow.php` adds cooperative Fiber overlap. Durable worker
 recovery and asynchronous response producers remain open. The
 [delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.
@@ -70,6 +71,13 @@ identity; a retained fixture receiver performs only one effect. Additional probe
 exercise cancellation and deadline fallback. See
 [`docs/response-composition.md`](../../../docs/response-composition.md) for the
 checkpoint, terminal receipt and host persistence contract.
+
+Run `php examples/generic/cortex/host_receipts.php` for a separate, bounded host
+recovery acceptance fixture. It uses an in-memory journal and receiver result map
+to demonstrate compare-and-swap checkpoints, scoped lookup, lost-ack reconciliation,
+and unknown-result rejection. It does not provide durable storage, authenticated
+lookup, an atomic external receiver, or production effect execution. See the
+[host acceptance contract](../../../docs/cortex-delivery.md#host-receipt-and-recovery-acceptance-fixture).
 
 Run `php examples/generic/cortex/agent.php` to exercise the response contract through
 real Agent orchestration, governed fixture tools and TaskTrace. It emits early text,

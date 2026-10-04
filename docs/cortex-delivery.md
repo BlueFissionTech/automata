@@ -188,13 +188,45 @@ cancellation and uncertain effects. This proves the integrated execution path;
 authenticated durable receipt adapters and interrupted worker recovery remain open.
 See [the response contract](response-composition.md).
 
+### Host receipt and recovery acceptance fixture
+
+Run `php examples/generic/cortex/host_receipts.php` and
+`vendor/bin/phpunit --do-not-cache-result tests/Automata/Response/HostReceiptFixtureTest.php`.
+The fixture is a process-local stand-in, not a storage adapter or receiver for
+production. It checks that a host checkpoint precedes a synthetic effect, that a
+prepared release retains its identity after restoration, that a previously recorded
+terminal receiver result reconciles a lost caller acknowledgement without another
+effect, and that a stale writer, changed scope, conflicting result, partial result,
+denial, cancellation, or `unknown` outcome cannot be promoted to success.
+
+A host implementing this contract must bind every attempt and receipt to tenant,
+principal, subject, capability and version, attempt, correlation, causation, and
+source revision. Its authenticated checkpoint lookup must reject a different scope;
+its compare-and-swap or equivalent single-writer operation must reject an old
+revision. Before external delivery, it must persist the exact prepared release and
+idempotency keys. A receiver must atomically commit each effect with a terminal
+result keyed by release and fragment, return the same result on a duplicate, and
+reject a conflicting result. After interruption the host must authenticate the
+checkpoint, restore the composer, query the receiver by those keys, and acknowledge
+only verified terminal results. A missing or uncertain result requires reconciliation
+or human decision, never blind re-execution or a fabricated success receipt.
+
+`cancel()` records a requested stop and prevents new releases; it does not prove an
+in-flight effect stopped. A receiver's `stopped` result is distinct from a request
+to cancel. Training approval, model activation, and tool permission grants are
+separate host decisions, not inferred from a response receipt. A real integration
+must additionally prove durable writes across a process crash, authenticated
+principal and tenant checks, concurrent workers, atomic receiver effects, and
+readable operator progress before claiming production conformance. This fixture
+does not provide any of those services or change Automata's process-local APIs.
+
 The promotion command adds eight gates for host-approved activation and rollback,
 rejection, historical request replay and stale revisions. It observes predictions
 through the active model reference before and after transitions. This establishes
 process-local behavior, without model persistence or deployment. See
 [the lifecycle contract](model-lifecycle.md).
 
-All eleven commands run in CI and currently expose 135 gates. The sensory command
+All twelve commands run in CI and currently expose 142 gates. The sensory command
 adds 22 gates for bounded ingress, descriptive sweeps, and evidence projection;
 see [sensory ingestion](sensory-ingestion.md). The workflow command
 adds twelve gates for graph execution and overlapping workers; see
