@@ -32,6 +32,9 @@ trying to understand.
 
 ### Runtime Contracts And Agents
 
+- `examples/generic/trainable_method.php` – opt-in Trainable observation,
+  exact-match pass-through, context isolation, and Obj lifecycle behavior.
+
 - `examples/generic/agent_integration_contract.php` – stable feature ids,
   binding templates, catalog filter keys, and production checks.
 - `examples/generic/runtime_contracts.php` – capability vocabulary, normalized
