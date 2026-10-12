@@ -9,6 +9,7 @@ use BlueFission\Automata\Learning\TrainingRegistry;
 use BlueFission\Automata\Learning\TrainingStrategy;
 use BlueFission\Automata\Learning\TrainingValue;
 use BlueFission\Behavioral\Behaviors\Meta;
+use BlueFission\Arr;
 use BlueFission\DevElation as Dev;
 use ReflectionClass;
 use ReflectionMethod;
@@ -135,7 +136,7 @@ trait Trainable
 
         $hook = 'automata.trainable.v1.' . strtolower(str_replace('\\', '.', static::class)) . '.' . $name;
         $filteredArgs = Dev::apply($hook . '.input', $args);
-        if (!is_array($filteredArgs) || !array_is_list($filteredArgs)) {
+        if (!Arr::is($filteredArgs) || !array_is_list($filteredArgs)) {
             throw new \UnexpectedValueException('The Trainable input filter must return a list of arguments.');
         }
         $args = $filteredArgs;
@@ -166,7 +167,7 @@ trait Trainable
         if ($recordable && $options->allowPrediction) {
             try {
                 $rows = $this->trainingRegistry()->observations(static::class, $name);
-                if (count($rows) >= $options->minimumSamples) {
+                if (Arr::size($rows) >= $options->minimumSamples) {
                     $strategy = $this->trainableStrategies[$name];
                     $strategy->train($rows);
                     $candidate = $strategy->predict($args, $context);

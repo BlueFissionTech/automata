@@ -2,6 +2,11 @@
 
 namespace BlueFission\Automata\Learning;
 
+use BlueFission\Arr;
+use BlueFission\Flag;
+use BlueFission\Num;
+use BlueFission\Str;
+
 /** Keeps automatic observation away from objects, resources, and unbounded data. */
 final class TrainingValue
 {
@@ -10,16 +15,16 @@ final class TrainingValue
         if ($depth > 8) {
             return false;
         }
-        if (is_float($value)) {
+        if (Num::isFloat($value)) {
             return is_finite($value);
         }
-        if (is_string($value)) {
-            return strlen($value) <= 4096;
+        if (Str::is($value)) {
+            return Str::len($value) <= 4096;
         }
-        if (is_int($value) || is_bool($value) || $value === null) {
+        if (Num::isInt($value) || Flag::isBool($value) || $value === null) {
             return true;
         }
-        if (!is_array($value) || count($value) > 100) {
+        if (!Arr::is($value) || Arr::size($value) > 100) {
             return false;
         }
         foreach ($value as $item) {

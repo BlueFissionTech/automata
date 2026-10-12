@@ -3,6 +3,8 @@
 namespace BlueFission\Automata\Behavioral;
 
 use Attribute;
+use BlueFission\Arr;
+use BlueFission\Str;
 
 #[Attribute(Attribute::TARGET_METHOD)]
 final class TrainableMethod
@@ -25,11 +27,11 @@ final class TrainableMethod
             throw new \InvalidArgumentException('Trainable behaviors must be a list of names.');
         }
         foreach ($behaviors as $behavior) {
-            if (!is_string($behavior) || trim($behavior) === '' || trim($behavior) !== $behavior) {
+            if (!Str::is($behavior) || Str::trim($behavior) === '' || Str::trim($behavior) !== $behavior) {
                 throw new \InvalidArgumentException('Trainable behaviors must be non-empty names.');
             }
         }
-        if (count(array_unique($behaviors)) !== count($behaviors)) {
+        if (Arr::make($behaviors)->unique()->size() !== Arr::size($behaviors)) {
             throw new \InvalidArgumentException('Trainable behavior names must be unique.');
         }
     }

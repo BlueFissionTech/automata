@@ -22,7 +22,7 @@ final class MemoryTrainingRegistry implements TrainingRegistry
         $key = $class . '::' . $operation;
         $rows = $this->records[$key] ?? [];
         $rows[] = $observation;
-        if (count($rows) > $this->limitPerOperation) {
+        if (Arr::size($rows) > $this->limitPerOperation) {
             array_shift($rows);
         }
         $this->records[$key] = $rows;
