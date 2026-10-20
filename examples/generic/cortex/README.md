@@ -6,7 +6,7 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
-These contracts are staged development work. Use a checkout containing all twelve
+Use a checkout containing all sixteen deterministic
 scripts and install its Composer dependencies before running from the repository
 root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
 toolchain. No provider credentials, network calls or external services are needed
@@ -26,12 +26,20 @@ to execute the demos after installation.
 | `sensory.php` | 22 | Input normalization, default/custom Sense observations, experience projection and labelled classification |
 | `script.php` | 16 | Real parser rendering, governed generation slots, early exit, routing and trace evidence |
 | `behavior.php` | 7 | DevElation state/behavior gates, host denial and unconfirmed request evidence |
+| `scenarios.php` | 38 | Conversation, operations, paired game outcomes, NPC interruption and two correction batches |
+| `confidence.php` | 7 | Unknown confidence, nested agents, strict scoring and measured fallback |
+| `replay.php` | 10 | Recorded provider mistakes change routing and improve unseen game decisions |
+| `prerequisites.php` | 11 | Non-completed prerequisites stop dependents; only Boolean verification certifies |
 
 Each command emits JSON evidence and exits nonzero if a required gate fails. All
-142 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
+208 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
 loop in one process; `workflow.php` adds cooperative Fiber overlap. Durable worker
 recovery and asynchronous response producers remain open. The
 [delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.
+
+The [agent proof rubric](../../../docs/cortex-agent-proof.md) records frozen
+splits, measured outcomes, provider failures and limits. Optional
+`live_scenarios.php` calls are explicitly opt-in and are not part of default CI.
 
 Run `php examples/generic/cortex/run.php` from the repository root. The command
 prints machine-readable evidence and exits nonzero when its conformance checks

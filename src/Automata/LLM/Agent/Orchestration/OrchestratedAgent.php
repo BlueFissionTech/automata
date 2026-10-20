@@ -45,8 +45,11 @@ class OrchestratedAgent
         $payload = $result->toArray();
 
         return [
+            // The outer prerequisite rule must see the child's actual outcome.
+            'status' => $result->status(),
             'output' => $payload['output'] ?? null,
-            'confidence' => $payload['confidence'] ?? 1.0,
+            // A child with unmeasured output must not become certain at nesting.
+            'confidence' => $payload['confidence'] ?? null,
             'metadata' => [
                 'black_box' => true,
                 'orchestrated_agent' => $this->name,

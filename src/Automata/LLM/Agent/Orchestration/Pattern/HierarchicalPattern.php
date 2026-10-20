@@ -19,7 +19,7 @@ class HierarchicalPattern extends AbstractPattern
         $supervisor = $config->supervisor();
         $plan = $supervisor ? $this->invokeWorker($supervisor, $input, 'supervisor', []) : [
             'output' => ['workers' => Arr::keys($config->workers())],
-            'confidence' => 1.0,
+            'confidence' => null,
         ];
 
         $planStatus = (string)($plan['status'] ?? DelegationStatus::COMPLETED);
@@ -34,7 +34,9 @@ class HierarchicalPattern extends AbstractPattern
 
             $result = $this->invokeWorker($config->workers()[$name], $input, (string)$name, $workerResults);
             $workerResults[] = $result;
-            if (($result['confidence'] ?? 1.0) < $config->confidenceThreshold() && $config->fallback()) {
+            // Lack of evidence is not a low score. Only measured confidence
+            // participates in this threshold; status and authority are separate.
+            if ($result['confidence'] !== null && $result['confidence'] < $config->confidenceThreshold() && $config->fallback()) {
                 $workerResults[] = $this->invokeWorker($config->fallback(), [
                     'input' => $input,
                     'failed_worker' => $result,

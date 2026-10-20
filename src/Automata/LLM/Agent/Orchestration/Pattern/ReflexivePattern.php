@@ -13,6 +13,13 @@ class ReflexivePattern extends AbstractPattern
         return OrchestrationConfig::REFLEXIVE;
     }
 
+    /**
+     * Revise rejected proposals within the iteration bound.
+     *
+     * Only a completed verifier's Boolean true certifies a proposal. A failed,
+     * pending or uncertain worker stops the loop with its receipt intact; this
+     * pattern cannot decide whether retrying an uncertain effect would be safe.
+     */
     public function run(OrchestrationConfig $config, array $input = []): OrchestrationResult
     {
         $producer = $config->producer();
@@ -21,8 +28,12 @@ class ReflexivePattern extends AbstractPattern
         $feedback = null;
         $output = null;
         $passed = false;
+        $status = 'failed';
+        $iterations = 0;
+        $stoppedWorker = null;
 
         for ($iteration = 1; $iteration <= $config->maxIterations(); $iteration++) {
+            ++$iterations;
             $outputResult = $this->invokeWorker($producer, [
                 'input' => $input,
                 'feedback' => $feedback,
@@ -30,6 +41,11 @@ class ReflexivePattern extends AbstractPattern
             ], 'producer', $workerResults);
             $workerResults[] = $outputResult;
             $output = $outputResult['output'];
+            if ($outputResult['status'] !== 'completed') {
+                $status = $outputResult['status'];
+                $stoppedWorker = 'producer';
+                break;
+            }
 
             $verifyResult = $this->invokeWorker($verifier, [
                 'input' => $input,
@@ -37,22 +53,29 @@ class ReflexivePattern extends AbstractPattern
                 'iteration' => $iteration,
             ], 'verifier', $workerResults);
             $workerResults[] = $verifyResult;
-            $passed = (bool)($verifyResult['output']['passed'] ?? false);
-            $feedback = $verifyResult['output']['feedback'] ?? null;
+            if ($verifyResult['status'] !== 'completed') {
+                $status = $verifyResult['status'];
+                $stoppedWorker = 'verifier';
+                break;
+            }
+            $verification = Arr::is($verifyResult['output']) ? $verifyResult['output'] : [];
+            $passed = ($verification['passed'] ?? false) === true;
+            $feedback = $verification['feedback'] ?? null;
 
             if ($passed) {
+                $status = 'completed';
                 break;
             }
         }
 
         return new OrchestrationResult([
-            'status' => $passed ? 'completed' : 'failed',
+            'status' => $status,
             'pattern' => $this->name(),
             'output' => $output,
             'worker_results' => $workerResults,
-            'iterations' => (int)ceil(Arr::count($workerResults) / 2),
+            'iterations' => $iterations,
             'confidence' => $this->averageConfidence($workerResults),
-            'metadata' => ['passed' => $passed, 'feedback' => $feedback],
+            'metadata' => ['passed' => $passed, 'feedback' => $feedback, 'stopped_worker' => $stoppedWorker],
         ]);
     }
 }
