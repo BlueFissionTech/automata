@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # PHPUnit 12 requires PHP 8.3+, so this branch validates the new test toolchain there.
+        # Validate the locked development toolchain on PHP 8.3.
         php: ["8.3"]
 
     steps:
@@ -58,3 +58,7 @@ jobs:
           php examples/generic/cortex/sensory.php
           php examples/generic/cortex/script.php
           php examples/generic/cortex/behavior.php
+          php examples/generic/cortex/scenarios.php
+          php examples/generic/cortex/confidence.php
+          php examples/generic/cortex/replay.php
+          php examples/generic/cortex/prerequisites.php

@@ -1,0 +1,104 @@
+[
+  {
+    "provider": "pokee",
+    "observed_on": "2026-10-20",
+    "prompt_version": "2",
+    "requested_model": "pokee-isaac",
+    "observations": [
+      {
+        "remaining": 5,
+        "proposal": {
+          "action": "move",
+          "take": 1,
+          "completed": false
+        },
+        "accepted": true,
+        "http_status": 200,
+        "request_id": "chatcmpl-c17bf65a-270c-44fe-a50d-4f2e2958d990",
+        "actual_model": "pokee-isaac",
+        "usage": {
+          "prompt_tokens": 223,
+          "total_tokens": 249,
+          "completion_tokens": 26
+        },
+        "cost": null
+      },
+      {
+        "remaining": 6,
+        "proposal": {
+          "action": "move",
+          "take": 1,
+          "completed": false
+        },
+        "accepted": false,
+        "http_status": 200,
+        "request_id": "chatcmpl-2cc74ee5-ee7c-4ca9-bf68-735b033783e3",
+        "actual_model": "pokee-isaac",
+        "usage": {
+          "prompt_tokens": 223,
+          "total_tokens": 237,
+          "completion_tokens": 14
+        },
+        "cost": null
+      }
+    ]
+  },
+  {
+    "provider": "gemini",
+    "observed_on": "2026-10-20",
+    "prompt_version": "2",
+    "requested_model": "gemini-3.5-flash-lite",
+    "observations": [
+      {
+        "remaining": 5,
+        "proposal": {
+          "action": "move",
+          "completed": false,
+          "take": 1
+        },
+        "accepted": true,
+        "http_status": 200,
+        "request_id": "ZnLXatqGPPrhytMP4d31uAc",
+        "actual_model": "gemini-3.5-flash-lite",
+        "usage": {
+          "promptTokenCount": 174,
+          "candidatesTokenCount": 25,
+          "totalTokenCount": 199,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 174
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "cost": null
+      },
+      {
+        "remaining": 6,
+        "proposal": {
+          "action": "move",
+          "completed": false,
+          "take": 3
+        },
+        "accepted": false,
+        "http_status": 200,
+        "request_id": "cnLXau20IJTjytMP6ICU6QM",
+        "actual_model": "gemini-3.5-flash-lite",
+        "usage": {
+          "promptTokenCount": 174,
+          "candidatesTokenCount": 25,
+          "totalTokenCount": 199,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 174
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "cost": null
+      }
+    ]
+  }
+]

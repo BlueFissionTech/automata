@@ -19,6 +19,7 @@ before depending on them; demo success alone is not production certification.
 | Compose conditional strategies and overlapping workers | [Strategy workflows](strategy-workflows.md) | [Graph execution](../examples/generic/cortex/workflow.php) |
 | Route reviewed parser-backed scripts | [Script strategies](script-strategy.md) | [Executable cognition](../examples/generic/cortex/script.php) |
 | Release responses and acknowledge execution | [Response composition](response-composition.md) | [Composition](../examples/generic/cortex/respond.php), [Agent workers](../examples/generic/cortex/agent.php) |
+| Qualify agent outcomes and learn from failures | [Outcome experiments and confidence](cortex-agent-proof.md) | [Scenarios](../examples/generic/cortex/scenarios.php), [provider replay](../examples/generic/cortex/replay.php), [confidence](../examples/generic/cortex/confidence.php) |
 
 The [Cortex example guide](../examples/generic/cortex/README.md) lists commands,
 expected checks and limits. The [host adoption checklist](cortex-delivery.md#host-adoption-checklist)

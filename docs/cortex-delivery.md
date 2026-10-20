@@ -226,7 +226,11 @@ through the active model reference before and after transitions. This establishe
 process-local behavior, without model persistence or deployment. See
 [the lifecycle contract](model-lifecycle.md).
 
-All twelve commands run in CI and currently expose 142 gates. The sensory command
+All sixteen deterministic commands run in CI and currently expose 208 gates.
+The [agent outcome scenarios](cortex-agent-proof.md) add 38 gates spanning
+conversation, operations, game play, NPC interruption and two learning batches.
+Optional live proposals are reported separately from deterministic conformance.
+The sensory command
 adds 22 gates for bounded ingress, descriptive sweeps, and evidence projection;
 see [sensory ingestion](sensory-ingestion.md). The workflow command
 adds twelve gates for graph execution and overlapping workers; see
