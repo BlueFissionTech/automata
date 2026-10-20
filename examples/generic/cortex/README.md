@@ -30,9 +30,10 @@ to execute the demos after installation.
 | `confidence.php` | 7 | Unknown confidence, nested agents, strict scoring and measured fallback |
 | `replay.php` | 10 | Recorded provider mistakes change routing and improve unseen game decisions |
 | `prerequisites.php` | 11 | Non-completed prerequisites stop dependents; only Boolean verification certifies |
+| `status.php` | 114 | Independent peers preserve incomplete outcomes; blocked controllers prevent dispatch |
 
 Each command emits JSON evidence and exits nonzero if a required gate fails. All
-208 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
+322 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
 loop in one process; `workflow.php` adds cooperative Fiber overlap. Durable worker
 recovery and asynchronous response producers remain open. The
 [delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.

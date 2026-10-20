@@ -7,11 +7,13 @@ use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationResult;
 
 class FanOutPattern extends AbstractPattern
 {
+    /** Identify independent peer scheduling. */
     public function name(): string
     {
         return OrchestrationConfig::FAN_OUT;
     }
 
+    /** Run every independent peer, retaining incomplete outcomes in the aggregate. */
     public function run(OrchestrationConfig $config, array $input = []): OrchestrationResult
     {
         $workerResults = [];
@@ -22,6 +24,7 @@ class FanOutPattern extends AbstractPattern
         $merged = $this->mergeWorkerResults($config, $workerResults);
 
         return new OrchestrationResult([
+            'status' => $this->aggregateWorkerStatus($workerResults),
             'pattern' => $this->name(),
             'output' => $merged['output'],
             'worker_results' => $workerResults,
