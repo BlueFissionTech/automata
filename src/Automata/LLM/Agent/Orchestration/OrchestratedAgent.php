@@ -45,6 +45,8 @@ class OrchestratedAgent
         $payload = $result->toArray();
 
         return [
+            // The outer prerequisite rule must see the child's actual outcome.
+            'status' => $result->status(),
             'output' => $payload['output'] ?? null,
             // A child with unmeasured output must not become certain at nesting.
             'confidence' => $payload['confidence'] ?? null,
