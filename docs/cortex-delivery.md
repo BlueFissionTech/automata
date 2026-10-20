@@ -226,7 +226,7 @@ through the active model reference before and after transitions. This establishe
 process-local behavior, without model persistence or deployment. See
 [the lifecycle contract](model-lifecycle.md).
 
-All sixteen deterministic commands run in CI and currently expose 208 gates.
+All seventeen deterministic commands run in CI and currently expose 322 gates.
 The [agent outcome scenarios](cortex-agent-proof.md) add 38 gates spanning
 conversation, operations, game play, NPC interruption and two learning batches.
 Optional live proposals are reported separately from deterministic conformance.

@@ -8,6 +8,7 @@ php examples/generic/cortex/scenarios.php
 php examples/generic/cortex/confidence.php
 php examples/generic/cortex/replay.php
 php examples/generic/cortex/prerequisites.php
+php examples/generic/cortex/status.php
 ```
 
 Dependencies must already be installed for the selected checkout. The default

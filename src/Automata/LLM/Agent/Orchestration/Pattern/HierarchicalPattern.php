@@ -9,11 +9,13 @@ use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationResult;
 
 class HierarchicalPattern extends AbstractPattern
 {
+    /** Identify controller-selected peer scheduling. */
     public function name(): string
     {
         return OrchestrationConfig::HIERARCHICAL;
     }
 
+    /** Gate dispatch on the plan, then preserve every selected worker's evidence. */
     public function run(OrchestrationConfig $config, array $input = []): OrchestrationResult
     {
         $supervisor = $config->supervisor();
@@ -22,7 +24,8 @@ class HierarchicalPattern extends AbstractPattern
             'confidence' => null,
         ];
 
-        $planStatus = (string)($plan['status'] ?? DelegationStatus::COMPLETED);
+        // An explicit null or unknown planning outcome cannot authorize dispatch.
+        $planStatus = Arr::hasKey($plan, 'status') ? $plan['status'] : DelegationStatus::COMPLETED;
         $selected = Arr::has([DelegationStatus::COMPLETED, DelegationStatus::ACCEPTED], $planStatus, true)
             ? ($plan['output']['workers'] ?? Arr::keys($config->workers()))
             : [];
@@ -58,45 +61,13 @@ class HierarchicalPattern extends AbstractPattern
         ]);
     }
 
+    /**
+     * Aggregate children once dispatch is admitted; otherwise retain the plan's
+     * unresolved evidence. Accepted planning is not a pending child execution.
+     */
     protected function aggregateStatus(array $workerResults): string
     {
-        $statuses = Arr::make($workerResults)
-            ->slice(1)
-            ->map(static fn (array $result): string => (string)($result['status'] ?? DelegationStatus::COMPLETED))
-            ->toArray();
-        if (Arr::count($statuses) === 0) {
-            return (string)($workerResults[0]['status'] ?? DelegationStatus::COMPLETED);
-        }
-
-        $statuses = Arr::make($statuses);
-        $completed = $statuses->filter(
-            static fn (string $status): bool => $status === DelegationStatus::COMPLETED
-        );
-        $partial = $statuses->filter(
-            static fn (string $status): bool => $status === DelegationStatus::PARTIAL
-        );
-        $active = $statuses->filter(static fn (string $status): bool => Arr::has([
-            DelegationStatus::PENDING,
-            DelegationStatus::ACCEPTED,
-            DelegationStatus::IN_PROGRESS,
-        ], $status, true));
-        $failed = $statuses->filter(static fn (string $status): bool => Arr::has([
-            DelegationStatus::REJECTED,
-            DelegationStatus::FAILED,
-            DelegationStatus::CANCELLED,
-            DelegationStatus::TIMED_OUT,
-        ], $status, true));
-
-        if ($partial->count() > 0 || ($failed->count() > 0 && $completed->count() > 0)) {
-            return DelegationStatus::PARTIAL;
-        }
-
-        if ($active->count() > 0) {
-            return $completed->count() > 0 || $failed->count() > 0
-                ? DelegationStatus::PARTIAL
-                : DelegationStatus::IN_PROGRESS;
-        }
-
-        return $failed->count() > 0 ? DelegationStatus::FAILED : DelegationStatus::COMPLETED;
+        $children = Arr::make($workerResults)->slice(1)->toArray();
+        return $this->aggregateWorkerStatus(Arr::count($children) > 0 ? $children : $workerResults);
     }
 }

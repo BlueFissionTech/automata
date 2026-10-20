@@ -8,6 +8,7 @@ php examples/generic/cortex/scenarios.php
 php examples/generic/cortex/confidence.php
 php examples/generic/cortex/replay.php
 php examples/generic/cortex/prerequisites.php
+php examples/generic/cortex/status.php
 ```
 
 The examples use actual `StrategyRouter`, `Intelligence`, `StrategyWorkflow`,
@@ -32,6 +33,9 @@ replays observed provider mistakes and measures five additional conditions for
 each of two providers, using the committed sanitized observation fixture.
 `php examples/generic/cortex/confidence.php` reports seven confidence gates.
 `php examples/generic/cortex/prerequisites.php` reports eleven stop/verification gates.
+`php examples/generic/cortex/status.php` reports 114 aggregate-status and
+controller gates. See the [status contract](orchestration-status.md) for unknown
+outcomes, independent peers and the deliberate sequential/reflexive differences.
 All thresholds and splits are declared in source before fitting. A boolean
 `passed` field from a producer is never sufficient evidence.
 

@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\LLM\Agent\Orchestration\Pattern;
 
 use BlueFission\Arr;
+use BlueFission\Automata\LLM\Agent\Delegation\DelegationStatus;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
 use BlueFission\Automata\LLM\Agent\Orchestration\OrchestrationConfig;
 use BlueFission\Func;
@@ -11,6 +12,54 @@ use BlueFission\Automata\Support\RecordSnapshot;
 
 abstract class AbstractPattern implements IOrchestrationPattern
 {
+    /**
+     * Summarize independent execution evidence without manufacturing completion.
+     *
+     * Unknown or malformed explicit status remains unresolved, even beside a
+     * successful peer or fallback. The original worker records are never changed.
+     * Partial success, active work and terminal failure remain distinct; an
+     * empty group has no outstanding work. This does not schedule or retry work.
+     */
+    protected function aggregateWorkerStatus(array $workerResults): string
+    {
+        $statuses = Arr::make($workerResults)->map(
+            static fn (array $result): mixed => Arr::hasKey($result, 'status')
+                ? $result['status'] : DelegationStatus::COMPLETED
+        );
+        $known = [
+            DelegationStatus::COMPLETED, DelegationStatus::PARTIAL,
+            DelegationStatus::PENDING, DelegationStatus::ACCEPTED, DelegationStatus::IN_PROGRESS,
+            DelegationStatus::FAILED, DelegationStatus::REJECTED,
+            DelegationStatus::CANCELLED, DelegationStatus::TIMED_OUT,
+        ];
+        // Strict membership also handles explicit null, booleans and future
+        // status values without coercing them or losing their raw receipts.
+        if ($statuses->filter(static fn (mixed $status): bool => !Arr::has($known, $status, true))->count() > 0) {
+            return 'uncertain';
+        }
+        $completed = $statuses->filter(
+            static fn (string $status): bool => $status === DelegationStatus::COMPLETED
+        )->count();
+        $partial = $statuses->filter(
+            static fn (string $status): bool => $status === DelegationStatus::PARTIAL
+        )->count();
+        $active = $statuses->filter(static fn (string $status): bool => Arr::has([
+            DelegationStatus::PENDING, DelegationStatus::ACCEPTED, DelegationStatus::IN_PROGRESS,
+        ], $status, true))->count();
+        $failed = $statuses->filter(static fn (string $status): bool => Arr::has([
+            DelegationStatus::FAILED, DelegationStatus::REJECTED,
+            DelegationStatus::CANCELLED, DelegationStatus::TIMED_OUT,
+        ], $status, true))->count();
+
+        if ($partial > 0 || ($completed > 0 && ($active > 0 || $failed > 0))) {
+            return DelegationStatus::PARTIAL;
+        }
+        if ($active > 0) {
+            return $failed > 0 ? DelegationStatus::PARTIAL : DelegationStatus::IN_PROGRESS;
+        }
+        return $failed > 0 ? DelegationStatus::FAILED : DelegationStatus::COMPLETED;
+    }
+
     /**
      * Invoke a worker and retain only explicitly measured confidence.
      *
