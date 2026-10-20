@@ -46,7 +46,8 @@ class OrchestratedAgent
 
         return [
             'output' => $payload['output'] ?? null,
-            'confidence' => $payload['confidence'] ?? 1.0,
+            // A child with unmeasured output must not become certain at nesting.
+            'confidence' => $payload['confidence'] ?? null,
             'metadata' => [
                 'black_box' => true,
                 'orchestrated_agent' => $this->name,

@@ -19,7 +19,8 @@ class PianoPattern extends AbstractPattern
             'name' => 'cognitive_controller',
             'status' => 'completed',
             'output' => $input,
-            'confidence' => 1.0,
+            // The implicit controller has no measured quality evidence.
+            'confidence' => null,
             'metadata' => [],
         ];
 
