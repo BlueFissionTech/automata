@@ -46,3 +46,8 @@ Failed or unavailable live qualification exits nonzero. Missing token usage or
 monetary cost remains unknown. Returned HTTP errors are summarized without
 provider error text, which could contain credentials. Keys never belong in
 reports, command-line arguments, test fixtures or committed files.
+
+Allowlisted error codes distinguish rate limiting from exhausted credits or
+spend/usage limits without retaining provider error text. A billing or quota
+failure remains `BLOCKED`; repeating it cannot qualify the model. Restore the
+relevant account allowance before another explicitly requested run.

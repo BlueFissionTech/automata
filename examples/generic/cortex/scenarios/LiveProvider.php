@@ -81,6 +81,9 @@ final class LiveProvider
             // Provider messages can echo credentials. Retain only known codes,
             // never arbitrary error text or raw bodies.
             if (Arr::has(['invalid_api_key', 'insufficient_quota', 'model_not_found',
+                'rate_limit_exceeded', 'slow_down', 'credit_balance_exhausted',
+                'organization_spend_limit_exceeded', 'project_spend_limit_exceeded',
+                'organization_usage_limit_exceeded', 'usage_limit_exceeded',
                 'PERMISSION_DENIED', 'NOT_FOUND', 'INVALID_ARGUMENT', 'RESOURCE_EXHAUSTED'], $code, true)) {
                 $record['error_code'] = $code;
                 $this->receipts[Arr::size($this->receipts) - 1] = $record;

@@ -79,8 +79,10 @@ proposal correctness are separate from action execution.
 The second run accepted **7/8** proposals for each of Pokee and Gemini. Both
 selected one stone from six, which loses against optimal play; the expected
 move remains two. Explicit field instructions removed the observed format
-omissions without resolving the strategic error. OpenAI remains unqualified
-pending a working credential.
+omissions without resolving the strategic error. After credential replacement,
+OpenAI returned HTTP 429; a bounded diagnostic retry identified
+`credit_balance_exhausted`. No proposal was produced, so its quality remains
+unqualified. Further calls are paused until credits are available.
 
 `RoutingCorrectionTest` reproduces the observed Pokee mistakes offline. It
 admits their independently evaluated outcomes and separately measures a local
