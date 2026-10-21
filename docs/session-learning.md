@@ -186,9 +186,71 @@ The 24-gate restart fixture shows each candidate improving the first holdout fro
 2/4 to 4/4, retaining all six old/new holdout predictions after continued training,
 and retaining 6/6 after another clean restart without fitting. These synthetic
 families demonstrate retained local fitting and continued training, not statistical
-generalization or complete Cortex activation. Monte Carlo statistics,
-coordinated policy/model publication, interrupted
+generalization or complete Cortex activation. Coordinated policy/model publication, interrupted
 commit recovery and broader independent host scenarios remain to be qualified.
+
+### Retained Monte Carlo returns
+
+`MonteCarlo\ReturnMemory` records admitted returns from attached `Experience`
+outcomes and ranks an existing `SearchResult`. Outcome attribution must contain
+`context_key`, finite data `action`, and `origin` (`observed` or `simulated`). Use
+a versioned input signature for the context and include the exact action/model
+version in its identity when semantics can change. The host authenticates the
+source and decides which episode or processing node receives credit; a workflow
+reward is not implicitly applied to every action in its trace.
+
+```php
+$memory = new \BlueFission\Automata\MonteCarlo\ReturnMemory(
+    policyId: 'session-returns', policyVersion: '1',
+    rewardScale: 1.0, priorWeight: 4.0, maximumAdjustment: 0.25,
+    minimumSamples: 3,
+);
+// $experience already carries the attached review and required attribution.
+$memory->learn($experience, 'review', new \BlueFission\Automata\Feedback\FeedbackSignal(-1.0));
+$rollouts = $search->evaluate($actions, $rollout);
+$ranking = $memory->rank($rollouts, $signature->key());
+```
+
+Fresh rollout statistics remain unchanged. Ranking exposes the simulation anchor,
+bounded adjustment, score, retained counts and selected evidence origin. Only
+the supplied action candidates are ranked. An action with no rollouts has a null
+anchor/score and sorts last; this API does not invent a measured estimate or grant
+execution permission. The default population is observed evidence; selecting
+`rank(..., origin: 'simulated')` deliberately uses only simulated evidence. The two
+populations are never silently combined. Origin declarations alone do not prove
+that a source is trustworthy.
+
+Returns must be finite and within the configured reward scale. Neutral zero is a
+measured Monte Carlo return and enters its mean, while absent feedback (`null`)
+does not. This differs deliberately from a directional route-voting denominator.
+Execution success is retained separately. Before the minimum sample count the
+anchor is exact; afterward the normalized return sum is shrunk by a positive
+prior weight and limited by `maximumAdjustment`. Scores remain within the reward
+scale and are not calibrated probabilities. Repeated evidence cannot increase
+weight; conflicting reuse of an outcome or changed experience source is rejected.
+Delayed assessments need new outcome identities. Neutral/contradictory evidence
+and bounded adjustments provide controls, not a statistical anti-overfitting claim.
+
+`checkpoint()` exports only configuration and original evidence with a corruption
+fingerprint. `restore()` validates the exact policy and rebuilds detached counts
+and replay protection from that evidence. The original memory remains unchanged
+if restoration fails. Capacity exhaustion fails without silently evicting replay
+identities. Persist with scalar/float types preserved and host authentication;
+the library does not provide atomic publication, distributed ownership or an
+automatic active-policy replacement. Existing Monte Carlo search also preserves
+distinct scalar actions such as `1`, `"1"`, `true` and `null` in its statistics.
+
+Run `php examples/generic/cortex/montecarlo_restart.php` for a three-process game
+experiment. The first-move node uses deliberately imperfect simulation estimates;
+bounded exploration executes actual legal games and an independent transcript
+validator scores their outcomes. Disjoint initial states improve from 0/4 wins to
+2/4 after the first signature family, then 4/4 after another family is learned
+following restart. A second restart retains 4/4 with no new admissions. Twelve
+gates also check replay, separate simulated estimates, neutral/missing feedback,
+new projection versions and unseen contexts. The modulo signature and fixed
+continuation are explicit fixture policies, not library requirements. This proves
+retained returns in flat Monte Carlo search, not general game intelligence,
+persistent MCTS search trees, or complete coordinated Cortex activation.
 
 ### Remaining qualification
 
