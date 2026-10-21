@@ -108,9 +108,10 @@ php examples/generic/cortex/montecarlo_restart.php
 php examples/generic/cortex/bundle_restart.php
 php examples/generic/cortex/session_restart.php
 php examples/generic/cortex/feedback_restart.php
+php examples/generic/cortex/workflow_restart.php
 ```
 
-Together they report 440 boolean conformance gates as JSON and exit nonzero on
+Together they report 452 boolean conformance gates as JSON and exit nonzero on
 failure. They cover real classifier predictions, routing changes, receipt-gated
 responses, model activation/rollback and [sensory ingestion](docs/sensory-ingestion.md).
 The small frozen corpus proves repeatable

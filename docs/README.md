@@ -17,6 +17,7 @@ before depending on them; demo success alone is not production certification.
 | Activate compatible workflow, policy and model artifacts | [Learning bundles](learning-bundles.md) | [Publication recovery and rollback](../examples/generic/cortex/bundle_restart.php) |
 | Learn from compound sessions and retain the resulting rollout | [Session rollout](session-rollout.md) | [Six-process integrated proof](../examples/generic/cortex/session_restart.php) |
 | Qualify feedback noise, changing objectives and response work | [Feedback qualification](feedback-qualification.md) | [Four-process stress probe](../examples/generic/cortex/feedback_restart.php) |
+| Retain learned selection of whole processing workflows | [Workflow learning](workflow-learning.md) | [Three-process pattern probe](../examples/generic/cortex/workflow_restart.php) |
 | Compare candidates, activate and roll back | [Model lifecycle](model-lifecycle.md) | [Evaluation](../examples/generic/cortex/evaluate.php), [activation](../examples/generic/cortex/promote.php) |
 | Select strategies under policy and admitted feedback | [Strategy routing](strategy-routing.md) | [Adaptive routing](../examples/generic/cortex/adapt.php) |
 | Compose conditional strategies and overlapping workers | [Strategy workflows](strategy-workflows.md) | [Graph execution](../examples/generic/cortex/workflow.php) |
