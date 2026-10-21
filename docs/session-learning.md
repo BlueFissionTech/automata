@@ -118,6 +118,52 @@ preferences. Pixel formats, thresholds, labels and graph recipes are fixture
 policy. This does not establish general video recognition, calibrated confidence,
 statistical generalization, model-node retraining or durable worker recovery.
 
+### Retained local-model training
+
+`LearningCoordinator::evidence()` exposes the immutable lineage of the configured
+anchor and successfully trained batches. For a replacement model that should
+rehearse earlier examples, pass `evidence()->merge($newLabels)` to `train()`.
+`TrainingBatch::merge()` retains order and exact lineage, ignores identical
+replays and rejects a changed sample/label under an existing outcome identity.
+Projection id and version must agree. `TrainingBatch::fromArray()` restores the
+finite data contract. Admission and deliberate correction labels remain host
+responsibilities; workflow rewards are not automatically labels for every node.
+
+`LearningCoordinator::checkpoint()` exports quiescent request/receipt history,
+training provenance, policy and retention configuration, and event errors.
+`restore($checkpoint, $load)` creates an isolated coordinator under the exact same
+configuration. It validates the complete history before invoking a trusted host
+loader with `(array $identity, TrainingBatch $training): IStrategy`. The loader
+must return independent model instances and verify artifact integrity, scope and
+backend compatibility. Restore does not fit models, emit training events, repeat
+authorization or activate a candidate. Replayed requests return their retained
+results. Deferred/denied requests do not reserve a version; uncertain training
+remains blocked rather than being silently retried after a restart.
+
+The checkpoint fingerprint is corruption detection, not authentication. Protect
+both the checkpoint and the separately stored artifacts. The existing PHP-ML
+save/load implementations use serialized objects; only load trusted artifacts.
+The checkpoint deliberately carries no executable class or arbitrary file path.
+Persist it with type-preserving JSON (`JSON_PRESERVE_ZERO_FRACTION`) or an
+equivalent format. This API describes recovery state; it does not itself provide
+an atomic storage transaction, multi-writer ownership or bundle activation.
+
+Run `php examples/generic/cortex/model_restart.php` for three actual PHP processes:
+fit KNN and Naive Bayes from reviewed sessions, restore artifacts and add another
+input family while rehearsing earlier examples, then restore without fitting.
+The fixture retains actual predictions, exact model identities, target labels
+and signed review separately from execution completion. Disjoint holdout sessions
+evaluate new and previous capabilities; identical training requests do not run
+again. `NaiveBayesTextClassification::train(..., testSize: 0.0)` now fits the whole
+admitted batch when an independent evaluator owns the holdout, matching the KNN
+path. An empty internal holdout retains the existing `accuracy()` value of zero;
+use the external evaluation report rather than treating that value as evidence.
+
+These synthetic families demonstrate retained local fitting and continued
+training, not statistical generalization or complete Cortex activation. Fitted
+trees, Monte Carlo statistics, coordinated policy/model publication, interrupted
+commit recovery and broader independent host scenarios remain to be qualified.
+
 ### Remaining qualification
 
 The completed session-learning assembly must:

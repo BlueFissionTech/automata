@@ -3,6 +3,9 @@
 namespace BlueFission\Automata\Strategy;
 
 use BlueFission\DevElation as Dev;
+use BlueFission\Num;
+use BlueFission\Arr;
+use InvalidArgumentException;
 use Phpml\Classification\NaiveBayes;
 use Phpml\FeatureExtraction\TokenCountVectorizer;
 use Phpml\Tokenization\WhitespaceTokenizer;
@@ -59,7 +62,8 @@ class NaiveBayesTextClassification extends Strategy
      *
      * @param array $samples The training samples.
      * @param array $labels The corresponding labels for the training samples.
-     * @param float $testSize The proportion of the dataset to include in the test split.
+     * @param float $testSize The proportion reserved for internal evaluation;
+     * zero fits all admitted rows when an independent evaluator owns the holdout.
      */
     public function train($samples, $labels, float $testSize = 0.2)
     {
@@ -67,12 +71,23 @@ class NaiveBayesTextClassification extends Strategy
         $labels  = Dev::apply('automata.strategy.naivebayestextclassification.train.2', $labels);
         Dev::do('automata.strategy.naivebayestextclassification.train.action1', ['samples' => $samples, 'labels' => $labels, 'testSize' => $testSize]);
 
-        $splitDataset = new RandomSplit(new ArrayDataset($samples, $labels), $testSize);
-        $trainSamples = $splitDataset->getTrainSamples();
-        $trainLabels = $splitDataset->getTrainLabels();
-
-        $this->_testSamples = $splitDataset->getTestSamples();
-        $this->_testLabels = $splitDataset->getTestLabels();
+        if (!Num::check($testSize, 'is_finite') || $testSize < 0.0 || $testSize >= 1.0) {
+            throw new InvalidArgumentException('Test fraction must be finite and in [0, 1).');
+        }
+        $dataset = new ArrayDataset($samples, $labels);
+        if ($testSize === 0.0) {
+            $trainSamples = $dataset->getSamples();
+            $trainLabels = $dataset->getTargets();
+            // Clear any prior internal holdout; accuracy() retains its existing
+            // empty-evaluation behavior. External reports provide actual evidence.
+            $this->_testSamples = $this->_testLabels = [];
+        } else {
+            $splitDataset = new RandomSplit($dataset, $testSize);
+            $trainSamples = $splitDataset->getTrainSamples();
+            $trainLabels = $splitDataset->getTrainLabels();
+            $this->_testSamples = $splitDataset->getTestSamples();
+            $this->_testLabels = $splitDataset->getTestLabels();
+        }
 
         $this->_pipeline->train($trainSamples, $trainLabels);
     }
@@ -110,6 +125,7 @@ class NaiveBayesTextClassification extends Strategy
      */
     public function accuracy(): float
     {
+        if (Arr::isEmpty($this->_testSamples ?? [])) { return 0.0; }
         try {
             $predictedLabels = $this->_pipeline->predict($this->_testSamples);
             $accuracy = Accuracy::score($this->_testLabels, $predictedLabels);

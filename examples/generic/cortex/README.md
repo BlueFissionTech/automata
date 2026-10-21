@@ -6,7 +6,7 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
-Use a checkout containing all twenty deterministic
+Use a checkout containing all twenty-one deterministic
 scripts and install its Composer dependencies before running from the repository
 root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
 toolchain. No provider credentials, network calls or external services are needed
@@ -34,9 +34,10 @@ to execute the demos after installation.
 | `reinforcement.php` | 5 | Signed reward is separate from execution; neutral, absent and sparse feedback preserve anchors |
 | `reinforcement_restart.php` | 7 | Retained evidence changes actual routing across clean process restarts without duplicate learning |
 | `compound.php` | 20 | Input/Sense/Engine observations change signatures, recompose graphs, wait for joins and adapt a workflow node through bounded session feedback |
+| `model_restart.php` | 16 | KNN/Bayes artifacts and reviewed sessions survive restarts; continued fitting rehearses prior examples and duplicate requests do not retrain |
 
 Each command emits JSON evidence and exits nonzero if a required gate fails. All
-354 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
+370 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
 loop in one process; `workflow.php` adds cooperative Fiber overlap. Durable worker
 recovery and asynchronous response producers remain open. The
 [delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.

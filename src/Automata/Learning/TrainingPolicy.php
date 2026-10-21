@@ -46,6 +46,14 @@ final class TrainingPolicy
         $this->weights = $normalized;
     }
 
+    /** Immutable configured policy identity; runtime pressure hooks are not serialized. */
+    public function toArray(): array
+    {
+        return ['minimum_examples' => $this->minimumExamples, 'minimum_new_examples' => $this->minimumNewExamples,
+            'minimum_corrections' => $this->minimumCorrections, 'minimum_pressure' => $this->minimumPressure,
+            'maximum_examples' => $this->maximumExamples, 'weights' => $this->weights];
+    }
+
     public function assess(TrainingBatch $batch, TrainingBatch $learned, TrainingTrigger $trigger): array
     {
         $current = $batch->toArray();
