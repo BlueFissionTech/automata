@@ -65,3 +65,4 @@ jobs:
           php examples/generic/cortex/status.php
           php examples/generic/cortex/reinforcement.php
           php examples/generic/cortex/reinforcement_restart.php
+          php examples/generic/cortex/compound.php

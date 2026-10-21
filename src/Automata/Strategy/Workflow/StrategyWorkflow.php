@@ -5,6 +5,7 @@ namespace BlueFission\Automata\Strategy\Workflow;
 use BlueFission\Arr;
 use BlueFission\Num;
 use BlueFission\Str;
+use BlueFission\Flag;
 use BlueFission\Automata\Path\{Graph, Node};
 use BlueFission\Automata\Support\RecordSnapshot;
 use InvalidArgumentException;
@@ -49,10 +50,12 @@ final class StrategyWorkflow
                 throw new InvalidArgumentException('Nodes require workflow metadata.');
             }
 
-            self::keys($config, ['strategy_id', 'strategy_version', 'capability_id', 'capability_version', 'allowed_modes', 'limits', 'join', 'maximum_attempts', 'retry_codes']);
-            foreach (['strategy_id', 'strategy_version', 'capability_id', 'capability_version'] as $field) {
+            self::keys($config, ['strategy_id', 'strategy_version', 'candidates', 'selection_policy', 'deterministic_preferred',
+                'capability_id', 'capability_version', 'allowed_modes', 'limits', 'join', 'maximum_attempts', 'retry_codes']);
+            foreach (['capability_id', 'capability_version'] as $field) {
                 RecordSnapshot::identifier($config[$field] ?? null, $field);
             }
+            self::routeDeclaration($config);
 
             $config += ['allowed_modes' => ['deterministic'], 'limits' => [], 'join' => 'all', 'maximum_attempts' => 1, 'retry_codes' => []];
             if (!Arr::is($config['allowed_modes']) || !array_is_list($config['allowed_modes']) || $config['allowed_modes'] === []) {
@@ -228,6 +231,44 @@ final class StrategyWorkflow
             throw new InvalidArgumentException('Workflow import must preserve the canonical exported plan.');
         }
         return $plan;
+    }
+
+    /**
+     * A node declares either its legacy exact strategy or an explicit candidate
+     * list. Advice may rank that list, never expand it or change the capability.
+     * Keep absent defaults out of the record so old exported plan hashes remain
+     * stable. StrategyWorkflowRun supplies the ordinary router defaults at use.
+     */
+    private static function routeDeclaration(array $config): void
+    {
+        if (Arr::hasKey($config, 'candidates')) {
+            if (Arr::hasKey($config, 'strategy_id') || Arr::hasKey($config, 'strategy_version')
+                || !Arr::is($config['candidates']) || !Arr::check($config['candidates'], 'array_is_list')
+                || $config['candidates'] === []) {
+                throw new InvalidArgumentException('Declare either an exact strategy or a nonempty candidate list.');
+            }
+            $seen = [];
+            foreach ($config['candidates'] as $candidate) {
+                if (!Arr::is($candidate)) { throw new InvalidArgumentException('Candidates must be identity records.'); }
+                self::keys($candidate, ['id', 'version']);
+                $id = RecordSnapshot::identifier($candidate['id'] ?? null, 'candidate id');
+                $version = RecordSnapshot::identifier($candidate['version'] ?? null, 'candidate version');
+                $key = RecordSnapshot::fingerprint([$id, $version]);
+                if (isset($seen[$key]) || Str::make($id)->contains('@') || Str::make($version)->contains('@')) {
+                    throw new InvalidArgumentException('Candidate identities must be unique and unambiguous.');
+                }
+                $seen[$key] = true;
+            }
+        } else {
+            RecordSnapshot::identifier($config['strategy_id'] ?? null, 'strategy id');
+            RecordSnapshot::identifier($config['strategy_version'] ?? null, 'strategy version');
+        }
+        if (Arr::hasKey($config, 'selection_policy') && !Arr::has(['declared', 'adaptive'], $config['selection_policy'], true)) {
+            throw new InvalidArgumentException('Invalid workflow selection policy.');
+        }
+        if (Arr::hasKey($config, 'deterministic_preferred') && !Flag::isBool($config['deterministic_preferred'])) {
+            throw new InvalidArgumentException('Deterministic preference must be Boolean.');
+        }
     }
 
     private static function keys(array $record, array $allowed): void
