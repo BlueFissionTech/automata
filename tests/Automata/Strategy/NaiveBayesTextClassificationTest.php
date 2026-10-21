@@ -13,6 +13,17 @@ use PHPUnit\Framework\TestCase;
 
 class NaiveBayesTextClassificationTest extends TestCase
 {
+    /** External disjoint evaluation must not remove random rows from fitting. */
+    public function testZeroSplitTrainsAllAdmittedExamples(): void
+    {
+        $model = new NaiveBayesTextClassification();
+        $model->train(['quiet routine hello', 'quiet normal welcome', 'urgent danger alarm', 'urgent danger critical'],
+            ['wait', 'wait', 'assist', 'assist'], 0.0);
+        $this->assertSame('wait', $model->predict('quiet routine request'));
+        $this->assertSame('assist', $model->predict('urgent danger request'));
+        $this->assertSame(0.0, $model->accuracy());
+    }
+
     private $nbClassifier;
 
     protected function setUp(): void

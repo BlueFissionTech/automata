@@ -3,6 +3,7 @@
 namespace BlueFission\Automata\Learning;
 
 use BlueFission\Arr;
+use BlueFission\Flag;
 use BlueFission\Num;
 use BlueFission\DevElation as Dev;
 use BlueFission\Automata\LLM\Agent\Governance\GovernanceDecision;
@@ -56,6 +57,210 @@ final class LearningCoordinator
     }
 
     /**
+     * All successfully admitted training lineage, including the configured anchor.
+     * Use evidence()->merge($newLabels) explicitly when fitting a replacement model
+     * that should rehearse prior examples. Rewards are not converted into labels.
+     */
+    public function evidence(): TrainingBatch { return $this->learned; }
+
+    /**
+     * Export quiescent data-only state. Models are represented by exact identities
+     * and training provenance; the host persists/authenticates their actual artifacts.
+     * This checksum detects corruption, not a malicious writer or model substitution.
+     */
+    public function checkpoint(): array
+    {
+        if ($this->busy) { throw new LogicException('Cannot checkpoint an in-flight training operation.'); }
+        $record = ['schema_version' => 1, 'configuration' => $this->configuration(),
+            'requests' => Arr::make($this->requests)->map(static fn (array $entry): array => [
+                'request' => $entry['request'], 'result' => $entry['result']->toArray(),
+            ])->values()->val(), 'event_errors' => $this->eventErrors];
+        return [...$record, 'fingerprint' => RecordSnapshot::fingerprint($record)];
+    }
+
+    /**
+     * Build an isolated coordinator without retraining, reauthorizing or emitting
+     * training hooks. A trusted host loader receives (identity, training batch)
+     * and returns an independently restored IStrategy. It must validate artifact
+     * integrity, backend compatibility and scope before decoding model bytes.
+     * No candidate is activated here; uncertain work stays blocked for reconciliation.
+     */
+    public function restore(array $checkpoint, callable $load): self
+    {
+        if ($this->busy) { throw new LogicException('Cannot restore during a training operation.'); }
+        $record = RecordSnapshot::copy($checkpoint);
+        $fingerprint = $record['fingerprint'] ?? null;
+        unset($record['fingerprint']);
+        self::keys($record, ['schema_version', 'configuration', 'requests', 'event_errors']);
+        if (($record['schema_version'] ?? null) !== 1
+            || ($record['configuration'] ?? null) !== $this->configuration()
+            || $fingerprint !== RecordSnapshot::fingerprint($record)
+            || !Arr::is($record['requests'] ?? null) || !Arr::check($record['requests'], 'array_is_list')
+            || Arr::size($record['requests']) > $this->maximumRequests
+            || !Arr::is($record['event_errors'] ?? null) || !Arr::check($record['event_errors'], 'array_is_list')) {
+            throw new InvalidArgumentException('Checkpoint schema, configuration or integrity mismatch.');
+        }
+
+        // Validate the entire history before any model loader is allowed to run.
+        // Scores/pressure were observed at training time; do not re-run mutable hooks.
+        $validated = [];
+        $versions = [$this->initial->identity()['version'] => true];
+        $learned = $this->initial->training();
+        $uncertain = false;
+        foreach ($record['requests'] as $entry) {
+            if (!Arr::is($entry)) { throw new InvalidArgumentException('Malformed checkpoint entry.'); }
+            self::keys($entry, ['request', 'result']);
+            $request = $entry['request'] ?? null;
+            $result = $entry['result'] ?? null;
+            if (!Arr::is($request) || !Arr::is($result) || $uncertain) { throw new InvalidArgumentException('Invalid training history.'); }
+            self::keys($request, ['version', 'batch', 'trigger']);
+            $version = RecordSnapshot::identifier($request['version'] ?? null, 'candidate version');
+            if (!Arr::is($request['batch'] ?? null) || !Arr::is($request['trigger'] ?? null)) {
+                throw new InvalidArgumentException('Missing training input record.');
+            }
+            $batch = TrainingBatch::fromArray($request['batch']);
+            $trigger = $request['trigger'];
+            self::keys($trigger, ['signals', 'corrected_outcomes', 'operator_requested']);
+            if (!Arr::is($trigger['signals'] ?? null) || !Arr::is($trigger['corrected_outcomes'] ?? null)
+                || !Flag::isBool($trigger['operator_requested'] ?? null)) {
+                throw new InvalidArgumentException('Malformed training trigger.');
+            }
+            $normalized = new TrainingTrigger($trigger['signals'], $trigger['corrected_outcomes'], $trigger['operator_requested']);
+            if ($normalized->toArray() !== $trigger) { throw new InvalidArgumentException('Noncanonical trigger.'); }
+            $id = self::validateResult($result, $version, $this->initial->identity()['id'], $batch);
+            if (isset($validated[$id]) || isset($versions[$version])) { throw new InvalidArgumentException('Repeated training identity.'); }
+            $this->validateAssessment($result['assessment'], $batch, $learned, $trigger);
+            // Projection and immutable lineage must match even for deferred/denied work.
+            $merged = $learned->merge($batch);
+            if ($result['status'] === 'trained') {
+                $learned = $merged;
+                if (Arr::size($learned->samples()) > $this->maximumEvidence) {
+                    throw new InvalidArgumentException('Checkpoint evidence exceeds retention.');
+                }
+            }
+            if (Arr::has(['trained', 'uncertain'], $result['status'], true)) { $versions[$version] = true; }
+            $uncertain = $result['status'] === 'uncertain';
+            $validated[$id] = ['request' => $request, 'result' => $result, 'batch' => $batch];
+        }
+        foreach ($record['event_errors'] as $error) {
+            if (!Arr::is($error)) { throw new InvalidArgumentException('Malformed event error.'); }
+            self::keys($error, ['request_id', 'event', 'error_type']);
+            $requestId = RecordSnapshot::identifier($error['request_id'] ?? null, 'event request id');
+            $event = RecordSnapshot::identifier($error['event'] ?? null, 'event');
+            // A requested-event observer can fail before authorization throws.
+            // That diagnostic is real even though no result/version was committed.
+            if (!isset($validated[$requestId]) && $event !== 'requested') {
+                throw new InvalidArgumentException('Unknown event error request.');
+            }
+            RecordSnapshot::identifier($error['error_type'] ?? null, 'error type');
+        }
+
+        $models = $this->strategies;
+        $loadCandidate = static function (array $identity, TrainingBatch $batch) use ($load, &$models): ModelCandidate {
+            $model = $load($identity, $batch);
+            if (!$model instanceof IStrategy || Arr::has($models, $model, true)) {
+                throw new InvalidArgumentException('Loader must return independent restored strategies.');
+            }
+            $models[] = $model;
+            return new ModelCandidate($identity['id'], $identity['version'], $model, $batch);
+        };
+        $this->busy = true;
+        try {
+            $initial = $loadCandidate($this->initial->identity(), $this->initial->training());
+            $restored = new self($initial, $this->policy, $this->maximumRequests, $this->maximumEvidence);
+            foreach ($validated as $id => $entry) {
+                $result = $entry['result'];
+                $candidate = $result['status'] === 'trained' ? $loadCandidate($result['candidate'], $entry['batch']) : null;
+                if ($candidate !== null) { $restored->strategies[] = $candidate->strategy(); }
+                $restored->requests[$id] = ['binding' => RecordSnapshot::fingerprint($entry['request']),
+                    'request' => $entry['request'], 'result' => new TrainingResult($result, $candidate)];
+            }
+            $restored->learned = $learned;
+            $restored->versions = $versions;
+            $restored->uncertain = $uncertain;
+            $restored->eventErrors = $record['event_errors'];
+            return $restored;
+        } finally {
+            $this->busy = false;
+        }
+    }
+
+    /** Bind restoration to an exact anchor, projection, pressure policy and bounds. */
+    private function configuration(): array
+    {
+        return ['initial' => ['identity' => $this->initial->identity(), 'training' => $this->initial->training()->toArray()],
+            'policy' => $this->policy->toArray(), 'maximum_requests' => $this->maximumRequests, 'maximum_evidence' => $this->maximumEvidence];
+    }
+
+    /** Check receipt relationships without executing filters, fitting or authorization. */
+    private static function validateResult(array $result, string $version, string $modelId, TrainingBatch $batch): string
+    {
+        self::keys($result, ['schema_version', 'request_id', 'candidate', 'training_fingerprint', 'assessment', 'decision',
+            'status', 'failure', 'elapsed_ms', 'cost', 'energy']);
+        $id = RecordSnapshot::identifier($result['request_id'] ?? null, 'request id');
+        $status = $result['status'] ?? null;
+        if (($result['schema_version'] ?? null) !== 1 || !Arr::has(['deferred', 'denied', 'trained', 'uncertain'], $status, true)
+            || ($result['candidate'] ?? null) !== ['id' => $modelId, 'version' => $version]
+            || ($result['training_fingerprint'] ?? null) !== RecordSnapshot::fingerprint($batch->toArray())
+            || !Arr::is($result['assessment'] ?? null)
+            || ($result['assessment']['eligible'] ?? null) !== ($status !== 'deferred')) {
+            throw new InvalidArgumentException('Checkpoint training receipt does not match its request.');
+        }
+        $decision = $result['decision'] ?? null;
+        if (($status === 'deferred' && $decision !== null) || ($status !== 'deferred' && !Arr::is($decision))
+            || (Arr::has(['trained', 'uncertain'], $status, true) && ($decision['status'] ?? null) !== GovernanceDecision::STATUS_APPROVED)
+            || ($status === 'denied' && ($decision['status'] ?? null) === GovernanceDecision::STATUS_APPROVED)) {
+            throw new InvalidArgumentException('Checkpoint training decision is inconsistent.');
+        }
+        if ($status === 'uncertain') { RecordSnapshot::identifier($result['failure'] ?? null, 'failure'); }
+        elseif (($result['failure'] ?? null) !== null) { throw new InvalidArgumentException('Unexpected training failure.'); }
+        if (Arr::has(['trained', 'uncertain'], $status, true)) { RecordSnapshot::number($result['elapsed_ms'] ?? null, 'elapsed time'); }
+        elseif (($result['elapsed_ms'] ?? null) !== null) { throw new InvalidArgumentException('Unstarted training has elapsed time.'); }
+        return $id;
+    }
+
+    /** Recompute lineage/count invariants while retaining the historical filtered pressure. */
+    private function validateAssessment(array $assessment, TrainingBatch $batch, TrainingBatch $learned, array $trigger): void
+    {
+        $policy = $this->policy->toArray();
+        foreach ($policy as $field => $value) {
+            if (($assessment[$field] ?? null) !== $value) { throw new InvalidArgumentException('Assessment policy mismatch.'); }
+        }
+        $known = [];
+        foreach ($learned->toArray()['examples'] as $row) { $known[RecordSnapshot::fingerprint([$row['experience_id'], $row['outcome_id']])] = true; }
+        $seen = $new = [];
+        foreach ($batch->toArray()['examples'] as $row) {
+            $key = RecordSnapshot::fingerprint([$row['experience_id'], $row['outcome_id']]);
+            if (isset($seen[$key])) { throw new InvalidArgumentException('Duplicate checkpoint training lineage.'); }
+            $seen[$key] = true;
+            if (!isset($known[$key])) { $new[$key] = true; }
+        }
+        foreach ($trigger['corrected_outcomes'] as $reference) {
+            if (!isset($new[RecordSnapshot::fingerprint([$reference['experience_id'], $reference['outcome_id']])])) {
+                throw new InvalidArgumentException('Correction does not cite new evidence.');
+            }
+        }
+        $pressure = RecordSnapshot::number($assessment['pressure'] ?? null, 'recorded pressure');
+        $count = Arr::size($seen);
+        $enough = $count >= $policy['minimum_examples'];
+        $eligible = $enough && ($trigger['operator_requested'] || $pressure >= $policy['minimum_pressure']);
+        $reason = !$enough ? 'insufficient_examples' : ($eligible ? null : 'insufficient_pressure');
+        if ($count > $policy['maximum_examples'] || ($assessment['examples'] ?? null) !== $count
+            || ($assessment['new_examples'] ?? null) !== Arr::size($new)
+            || ($assessment['corrected_examples'] ?? null) !== Arr::size($trigger['corrected_outcomes'])
+            || ($assessment['trigger'] ?? null) !== $trigger || ($assessment['eligible'] ?? null) !== $eligible
+            || !Arr::hasKey($assessment, 'reason') || $assessment['reason'] !== $reason) {
+            throw new InvalidArgumentException('Checkpoint assessment is inconsistent with its evidence.');
+        }
+    }
+
+    /** Unknown fields must not silently acquire semantics on import. */
+    private static function keys(array $record, array $allowed): void
+    {
+        if (Arr::make($record)->keys()->diff($allowed)->val() !== []) { throw new InvalidArgumentException('Unknown checkpoint field.'); }
+    }
+
+    /**
      * Request one candidate training attempt.
      * The host supplies authorization, an independent strategy factory, and a trainer
      * that returns void only after completed training. This method never activates it.
@@ -75,11 +280,12 @@ final class LearningCoordinator
 
         RecordSnapshot::identifier($requestId, 'training request id');
         RecordSnapshot::identifier($candidateVersion, 'candidate version');
-        $binding = RecordSnapshot::fingerprint([
+        $request = [
             'version' => $candidateVersion,
             'batch' => $batch->toArray(),
             'trigger' => $trigger->toArray(),
-        ]);
+        ];
+        $binding = RecordSnapshot::fingerprint($request);
         if (isset($this->requests[$requestId])) {
             if ($this->requests[$requestId]['binding'] !== $binding) {
                 throw new LogicException('Conflicting training request identity.');
@@ -157,7 +363,7 @@ final class LearningCoordinator
                 }
             }
             $result = new TrainingResult($record, $candidate);
-            $this->requests[$requestId] = ['binding' => $binding, 'result' => $result];
+            $this->requests[$requestId] = ['binding' => $binding, 'request' => $request, 'result' => $result];
             $event = match ($result->status()) {
                 'trained' => 'completed',
                 'uncertain' => 'failed',
