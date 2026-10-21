@@ -254,6 +254,12 @@ persistent MCTS search trees, or complete coordinated Cortex activation.
 
 ### Remaining qualification
 
+The [integrated session rollout](session-rollout.md) now connects actual compound
+processing to delayed explicit review, evidence projection, isolated local fitting
+and compatible bundle activation. It includes policy-only/model-only controls,
+replay, preserved anchors and six real processes. This joins the earlier component
+proofs without treating synthetic results as practical host qualification.
+
 [Compatible learning bundles](learning-bundles.md) now provide a complete-set
 publication boundary, exact artifact dependencies, retained transition receipts,
 local process-crash recovery and rollback. The seven-process bundle probe runs a

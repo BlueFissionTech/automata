@@ -106,9 +106,10 @@ php examples/generic/cortex/compound.php
 php examples/generic/cortex/model_restart.php
 php examples/generic/cortex/montecarlo_restart.php
 php examples/generic/cortex/bundle_restart.php
+php examples/generic/cortex/session_restart.php
 ```
 
-Together they report 402 boolean conformance gates as JSON and exit nonzero on
+Together they report 425 boolean conformance gates as JSON and exit nonzero on
 failure. They cover real classifier predictions, routing changes, receipt-gated
 responses, model activation/rollback and [sensory ingestion](docs/sensory-ingestion.md).
 The small frozen corpus proves repeatable
@@ -118,6 +119,8 @@ probes. Those retain route evidence and KNN, Naive Bayes and fitted-tree artifac
 across clean process restarts. A separate Monte Carlo game probe retains observed
 returns independently of simulated estimates and improves held-out first moves.
 The bundle probe qualifies local process interruption and complete-set rollback.
+The [session rollout probe](docs/session-rollout.md) connects compound sensing,
+delayed feedback, local fitting and compatible publication across six processes.
 Distributed recovery, concurrent-writer qualification and broader learned route/goal
 integration remain open work. The workflow demo adds graph
 execution with cooperative Fiber overlap. The learning demo connects
