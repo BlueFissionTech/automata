@@ -5,6 +5,9 @@ namespace BlueFission\Tests\Automata\Strategy\Workflow;
 use BlueFission\Str;
 use BlueFission\Arr;
 use BlueFission\Automata\Intelligence;
+use BlueFission\Automata\Context;
+use BlueFission\Automata\Feedback\FeedbackSignal;
+use BlueFission\Automata\Learning\{AnchoredRouteAdvisor, Experience, Outcome};
 use BlueFission\Automata\LLM\Agent\Capability\AutonomyDecision;
 use BlueFission\Automata\Path\Graph;
 use BlueFission\Automata\Path\Node;
@@ -31,15 +34,15 @@ final class StrategyWorkflowTest extends TestCase
         return $graph;
     }
 
-    private function router(array $workers, array &$calls): StrategyRouter
+    private function router(array $workers, array &$calls, array $modes = []): StrategyRouter
     {
         $adapters = [];
         foreach ($workers as $id => $worker) {
-            $adapters[] = new class($id, $worker, $calls) implements IStrategyRouteAdapter {
-                public function __construct(private string $id, private $worker, private array &$calls) {}
+            $adapters[] = new class($id, $worker, $calls, $modes[$id] ?? 'deterministic') implements IStrategyRouteAdapter {
+                public function __construct(private string $id, private $worker, private array &$calls, private string $mode) {}
                 public function definition(): StrategyDefinition { return new StrategyDefinition([
                     'id' => $this->id, 'version' => '1', 'capability_id' => 'infer', 'capability_version' => '1',
-                    'side_effect_free' => true, 'availability' => 'available',
+                    'side_effect_free' => true, 'availability' => 'available', 'mode' => $this->mode,
                 ]); }
                 public function eligibility(StrategyRouteRequest $request): StrategyEligibility { return new StrategyEligibility(['eligible' => true]); }
                 public function estimate(StrategyRouteRequest $request): StrategyUsage { return new StrategyUsage(['invocations' => 1]); }
@@ -57,6 +60,106 @@ final class StrategyWorkflowTest extends TestCase
     {
         return new AutonomyDecision(['allowed' => true, 'subject_id' => $request['subject_id'],
             'capability_id' => $request['capability_id'], 'capability_version' => $request['capability_version']]);
+    }
+
+    /** Candidate nodes use the same identities and policy as standalone routing. */
+    private function candidatePlan(array $override = []): StrategyWorkflow
+    {
+        $graph = new Graph();
+        $graph->addNode(new Node('answer', null, [], ['workflow' => [
+            'capability_id' => 'infer', 'capability_version' => '1',
+            'candidates' => [['id' => 'quick', 'version' => '1'], ['id' => 'careful', 'version' => '1']],
+            'selection_policy' => 'adaptive', ...$override,
+        ]]));
+        return new StrategyWorkflow('adaptive-node', '1', $graph, ['answer']);
+    }
+
+    public function testWorkflowNodeAdaptsOnlyWithinItsDeclaredCandidatesAndContext(): void
+    {
+        $plan = $this->candidatePlan();
+        $this->assertSame($plan->toArray(), StrategyWorkflow::fromArray($plan->toArray())->toArray());
+        $advisor = new AnchoredRouteAdvisor([
+            ['id' => 'quick', 'version' => '1', 'weight' => 0.6],
+            ['id' => 'careful', 'version' => '1', 'weight' => 0.5],
+            ['id' => 'undeclared', 'version' => '1', 'weight' => 1.0],
+        ], minimumSamples: 2, priorWeight: 2, maximumAdjustment: 0.2);
+        $calls = [];
+        $router = $this->router(['quick' => fn () => 'quick', 'careful' => fn () => 'careful',
+            'undeclared' => fn () => 'outside-plan'], $calls)->advisor($advisor);
+        $strategy = new CompositeStrategy($plan, $router, $this->approve(...), 'actor');
+        $before = $strategy->start(null, 'before', 'signature');
+        $before->execute('answer');
+        $this->assertSame(['answer' => 'quick'], $before->result()->outputs());
+        foreach (['a', 'b', 'c'] as $id) {
+            $experience = Experience::fromStatements($id, [], new Context())
+                ->withOutcome(new Outcome('evaluation', $id, 'reviewer', true, [], [
+                    'strategy_id' => 'quick', 'strategy_version' => '1', 'context_key' => 'signature',
+                ]));
+            $advisor->learn($experience, 'evaluation', FeedbackSignal::negative(1));
+        }
+        $after = $strategy->start(null, 'after', 'signature');
+        $after->execute('answer');
+        $this->assertSame(['answer' => 'careful'], $after->result()->outputs());
+        $receipt = $after->result()->toArray()['nodes']['answer']['attempts'][0];
+        $this->assertSame('careful', $receipt['selected_strategy']['id']);
+        $this->assertSame('1', $receipt['selected_strategy']['version']);
+        $unseen = $strategy->start(null, 'unseen', 'another-signature');
+        $unseen->execute('answer');
+        $this->assertSame(['answer' => 'quick'], $unseen->result()->outputs());
+        $declared = new CompositeStrategy($this->candidatePlan(['selection_policy' => 'declared']), $router, $this->approve(...), 'actor');
+        $run = $declared->start(null, 'declared', 'signature');
+        $run->execute('answer');
+        $this->assertSame(['answer' => 'quick'], $run->result()->outputs());
+        $this->assertNotContains('undeclared', $calls);
+    }
+
+    public function testAdaptiveNodeStillRequiresAuthorityAndAnInvocationBudget(): void
+    {
+        $calls = [];
+        $router = $this->router(['quick' => fn () => 'quick', 'careful' => fn () => 'careful'], $calls);
+        $denied = (new CompositeStrategy($this->candidatePlan(), $router,
+            fn () => new AutonomyDecision(), 'actor'))->start(null);
+        $denied->execute('answer');
+        $limited = (new CompositeStrategy($this->candidatePlan(['limits' => ['max_invocations' => 0]]),
+            $router, $this->approve(...), 'actor'))->start(null);
+        $limited->execute('answer');
+        $this->assertSame([], $calls);
+        $this->assertSame('exhausted', $denied->result()->status());
+        $this->assertSame('exhausted', $limited->result()->status());
+    }
+
+    public function testCrossModeAdaptivePreferenceRequiresExplicitOptIn(): void
+    {
+        $calls = [];
+        $advisor = new AnchoredRouteAdvisor([
+            ['id' => 'quick', 'version' => '1', 'weight' => 0.4],
+            ['id' => 'careful', 'version' => '1', 'weight' => 0.9],
+        ]);
+        $router = $this->router(['quick' => fn () => 'quick', 'careful' => fn () => 'careful'],
+            $calls, ['careful' => 'learned'])->advisor($advisor);
+        foreach ([
+            [['allowed_modes' => ['deterministic', 'learned']], 'quick'],
+            [['allowed_modes' => ['deterministic', 'learned'], 'deterministic_preferred' => false], 'careful'],
+            [['allowed_modes' => ['deterministic'], 'deterministic_preferred' => false], 'quick'],
+        ] as [$policy, $expected]) {
+            $strategy = new CompositeStrategy($this->candidatePlan($policy), $router, $this->approve(...), 'actor');
+            $this->assertSame(['answer' => $expected], $strategy->predict(null));
+        }
+    }
+
+    public function testAmbiguousOrMalformedCandidateDeclarationsCannotBeImported(): void
+    {
+        foreach ([['candidates' => []], ['candidates' => 'quick'],
+            ['candidates' => [['id' => 'quick']]],
+            ['candidates' => [['id' => 'quick', 'version' => '1', 'authority' => true]]],
+            ['candidates' => [['id' => 'quick', 'version' => '1'], ['id' => 'quick', 'version' => '1']]],
+            ['candidates' => [['id' => 'quick@alias', 'version' => '1']]],
+            ['strategy_id' => 'quick', 'strategy_version' => '1'],
+            ['selection_policy' => 'invented'], ['deterministic_preferred' => 'false'],
+        ] as $invalid) {
+            try { $this->candidatePlan($invalid); $this->fail('Invalid route declaration must fail closed.'); }
+            catch (InvalidArgumentException) { $this->addToAssertionCount(1); }
+        }
     }
 
     public function testDetachedPlanRoundTripAndOrdinaryIntelligencePrediction(): void

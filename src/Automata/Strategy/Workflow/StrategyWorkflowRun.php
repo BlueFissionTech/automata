@@ -65,7 +65,11 @@ final class StrategyWorkflowRun
         $request = new StrategyRouteRequest([
             'id' => $this->id . ':' . $nodeId . ':' . $attempt, 'subject_id' => $this->subjectId,
             'capability_id' => $config['capability_id'], 'capability_version' => $config['capability_version'],
-            'candidates' => [['id' => $config['strategy_id'], 'version' => $config['strategy_version']]],
+            // The proposal owns the candidate set; the advisor only ranks it.
+            // Legacy nodes keep exactly their previous single-strategy behavior.
+            'candidates' => $config['candidates'] ?? [['id' => $config['strategy_id'], 'version' => $config['strategy_version']]],
+            'selection_policy' => $config['selection_policy'] ?? StrategyRouteRequest::SELECTION_DECLARED,
+            'deterministic_preferred' => $config['deterministic_preferred'] ?? true,
             'allowed_modes' => $config['allowed_modes'], 'limits' => $config['limits'],
             'input' => ['root' => $this->input, 'predecessors' => $parents], 'context_key' => $this->contextKey,
             'correlation_id' => $this->id, 'trace_id' => $this->trace?->taskId() ?? '',

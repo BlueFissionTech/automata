@@ -76,6 +76,50 @@ and held-out evaluation controls before automatic promotion.
 
 ## Required complete flow
 
+### Compound signatures and adaptive workflow nodes
+
+`Sensory\InputSignature` captures a host-defined, versioned projection of finite
+features. Construct a new signature after each processing pass, or call
+`withFeatures()` to replace the complete projection immutably. Its `key()` can be
+used as a route request's `context_key`. Map key order is immaterial; list order,
+scalar types, projection identity and projection version remain significant.
+`toArray()` and `fromArray()` preserve the data contract, not executable projection
+code or authorization. There is no fixed feature vocabulary or modality catalog.
+
+Choose features that define reusable processing classes: modality/MIME groups,
+size buckets, interpreted signals and the semantic processing stage. Avoid session
+ids, timestamps or full payload fingerprints unless they intentionally define
+separate learning contexts. Coarse features do not by themselves establish that
+two inputs should generalize; version and evaluate the projection as host policy.
+
+A workflow node may now declare either its existing `strategy_id` and
+`strategy_version`, or a nonempty `candidates` list containing exact `id`/`version`
+pairs. Mixing both forms, duplicate pairs and malformed records are rejected.
+Optional `selection_policy` accepts `declared` (default) or `adaptive`.
+`deterministic_preferred` remains `true` by default; choosing a learned or
+generative candidate also requires admitting its mode through `allowed_modes`.
+The router's capability, current authorization, eligibility and budget checks
+continue to apply. Advice cannot add a strategy to the declared candidate set.
+Legacy single-strategy exports retain their existing canonical representation.
+
+Run `php examples/generic/cortex/compound.php` for real Input/Sense/Engine
+processing with text and synthetic binary sensor frames. An initial graph joins
+sensor observations. New facts change the projected signature and cause the
+next graph to append relevant text/media branches and join their results. A
+third graph selects an explicitly admitted response strategy using the retained
+feedback policy. Frozen plan versions distinguish different topologies; running
+graphs are not silently edited. Completed results and prior signatures remain in
+the trace. Cooperative Fiber waves demonstrate that the join waits until both
+appended workers finish; they do not establish CPU parallelism or worker durability.
+
+The example checks changed behavior on a new utterance/frame, blank sensors,
+unseen modality combinations, sparse contradictory feedback, denial and restored
+preferences. Pixel formats, thresholds, labels and graph recipes are fixture
+policy. This does not establish general video recognition, calibrated confidence,
+statistical generalization, model-node retraining or durable worker recovery.
+
+### Remaining qualification
+
 The completed session-learning assembly must:
 
 1. Exercise real Input/Sense and Intelligence/Engine processing with compound
