@@ -6,7 +6,7 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
-Use a checkout containing all sixteen deterministic
+Use a checkout containing all nineteen deterministic
 scripts and install its Composer dependencies before running from the repository
 root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
 toolchain. No provider credentials, network calls or external services are needed
@@ -31,12 +31,19 @@ to execute the demos after installation.
 | `replay.php` | 10 | Recorded provider mistakes change routing and improve unseen game decisions |
 | `prerequisites.php` | 11 | Non-completed prerequisites stop dependents; only Boolean verification certifies |
 | `status.php` | 114 | Independent peers preserve incomplete outcomes; blocked controllers prevent dispatch |
+| `reinforcement.php` | 5 | Signed reward is separate from execution; neutral, absent and sparse feedback preserve anchors |
+| `reinforcement_restart.php` | 7 | Retained evidence changes actual routing across clean process restarts without duplicate learning |
 
 Each command emits JSON evidence and exits nonzero if a required gate fails. All
-322 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
+334 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
 loop in one process; `workflow.php` adds cooperative Fiber overlap. Durable worker
 recovery and asynchronous response producers remain open. The
 [delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.
+
+The [session-learning guide](../../../docs/session-learning.md) describes bounded
+signed reinforcement and checkpoints. The restart fixture proves clean-process
+route retention; it does not qualify crash recovery, compound sensing, broad
+generalization or coordinated local-model retraining.
 
 The [agent proof rubric](../../../docs/cortex-agent-proof.md) records frozen
 splits, measured outcomes, provider failures and limits. Optional

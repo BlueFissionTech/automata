@@ -63,3 +63,5 @@ jobs:
           php examples/generic/cortex/replay.php
           php examples/generic/cortex/prerequisites.php
           php examples/generic/cortex/status.php
+          php examples/generic/cortex/reinforcement.php
+          php examples/generic/cortex/reinforcement_restart.php

@@ -40,6 +40,7 @@ The runnable proofs do not establish production readiness; review the
 - **Composed Strategy Workflows**: Run versioned graph proposals through the router with conditional dependencies, fan-in, bounded retries, fallback, output thresholds and host-scheduled overlapping workers. `CompositeStrategy` works through the existing strategy interface. See [Strategy Workflows](docs/strategy-workflows.md).
 - **Executable Script Strategies**: Adapt reviewed parser-backed scripts to ordinary intelligence and routing, with explicit early exit, per-slot authorization and retained execution receipts. See [Script Strategies](docs/script-strategy.md).
 - **Experiential Learning**: Capture immutable experience and outcome snapshots, project attributable training batches, trigger separately approved candidate training, compare exact model versions on held-out evidence, and admit feedback into advisory routing. See [Continual Learning](docs/continual-learning.md) and [Cortex contracts](docs/cortex-delivery.md).
+- **Retained Route Learning**: Apply explicit signed session feedback within configured anchors and rebuild advisory preferences from evidence checkpoints after restart. See [Session learning](docs/session-learning.md) for admission, storage and qualification boundaries.
 - **Governed Model Activation**: Evaluate candidates before explicit host approval, activate a process-local model reference, and retain revision-bound promotion and rollback receipts. See [Model Lifecycle](docs/model-lifecycle.md).
 - **Progressive Responses**: Coordinate weighted fragments, required dependencies, delivery acknowledgements and cancellation, including synchronous Agent workers and TaskTrace integration. See [Response Composition](docs/response-composition.md).
 - **LLM Lane Pressure Management**: Assess semantic, operational, and execution pressure in provider-neutral agent workflows, with deterministic recommendations and a read-only LLM tool wrapper.
@@ -98,6 +99,8 @@ php examples/generic/cortex/confidence.php
 php examples/generic/cortex/replay.php
 php examples/generic/cortex/prerequisites.php
 php examples/generic/cortex/status.php
+php examples/generic/cortex/reinforcement.php
+php examples/generic/cortex/reinforcement_restart.php
 ```
 
 Together they report 322 boolean conformance gates as JSON and exit nonzero on
