@@ -34,8 +34,9 @@ changes the route executor's authority checks.
 
 This is a bounded reward-estimation policy, not a claim of general optimal
 reinforcement learning. Alternative policies can implement the same advisor
-interface. Exploration, signature generalization and coordinated training need
-their own explicit contracts and qualification.
+interface. Exploration and cross-signature generalization need their own explicit
+contracts and qualification. The [session rollout](session-rollout.md) assembles
+local coordinated training without changing those advisory semantics.
 
 Run `php examples/generic/cortex/reinforcement.php` for the reward semantics,
 and `php examples/generic/cortex/reinforcement_restart.php` for retained route
@@ -186,8 +187,9 @@ The 24-gate restart fixture shows each candidate improving the first holdout fro
 2/4 to 4/4, retaining all six old/new holdout predictions after continued training,
 and retaining 6/6 after another clean restart without fitting. These synthetic
 families demonstrate retained local fitting and continued training, not statistical
-generalization or complete Cortex activation. Coordinated policy/model publication, interrupted
-commit recovery and broader independent host scenarios remain to be qualified.
+generalization or complete Cortex activation. Separate [bundle recovery](learning-bundles.md)
+and [session rollout](session-rollout.md) probes qualify local coordinated publication
+and integrated training; broader independent host scenarios remain open.
 
 ### Retained Monte Carlo returns
 
