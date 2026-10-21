@@ -7,7 +7,7 @@ use BlueFission\Data\Storage\Disk;
 use BlueFission\Automata\Context;
 use BlueFission\Automata\Learning\{ClassificationEvaluator, Experience, LearningCoordinator, ModelCandidate, Outcome, TrainingBatch, TrainingExample, TrainingPolicy, TrainingTrigger};
 use BlueFission\Automata\LLM\Agent\Governance\GovernanceDecision;
-use BlueFission\Automata\Strategy\{IStrategy, KNearestPrediction, NaiveBayesTextClassification};
+use BlueFission\Automata\Strategy\{DecisionTreeClassification, IStrategy, KNearestPrediction, NaiveBayesTextClassification};
 
 /** Synthetic, independently labelled local-node sessions; no provider weights change. */
 final class LocalModelSessions
@@ -15,14 +15,15 @@ final class LocalModelSessions
     /** Exact feature/projection identity is declared independently for each model. */
     public static function batch(string $kind, string $family, bool $holdout = false): TrainingBatch
     {
+        $numeric = Arr::has(['knn', 'tree'], $kind, true);
         $rows = match ($family) {
-            'anchor' => $kind === 'knn' ? [[0.0], [1.0]] : ['quiet routine hello', 'quiet normal welcome'],
-            'urgent' => $kind === 'knn' ? [[8.0], [9.0]] : ['urgent danger alarm', 'urgent danger critical'],
-            'restricted' => $kind === 'knn' ? [[-8.0], [-9.0]] : ['restricted forbidden private', 'restricted forbidden secret'],
+            'anchor' => $numeric ? [[0.0], [1.0]] : ['quiet routine hello', 'quiet normal welcome'],
+            'urgent' => $numeric ? [[8.0], [9.0]] : ['urgent danger alarm', 'urgent danger critical'],
+            'restricted' => $numeric ? [[-8.0], [-9.0]] : ['restricted forbidden private', 'restricted forbidden secret'],
             default => throw new InvalidArgumentException('Unknown fixture family.'),
         };
         if ($holdout) {
-            $rows = $kind === 'knn' ? Arr::make($rows)->map(static fn ($row) => [$row[0] + 0.2])->val()
+            $rows = $numeric ? Arr::make($rows)->map(static fn ($row) => [$row[0] + 0.2])->val()
                 : Arr::make($rows)->map(static fn ($text) => $text . ' request')->val();
         }
         $label = match ($family) { 'anchor' => 'wait', 'urgent' => 'assist', 'restricted' => 'decline' };
@@ -39,6 +40,7 @@ final class LocalModelSessions
     public static function model(string $kind): IStrategy
     {
         return match ($kind) { 'knn' => new KNearestPrediction(1), 'bayes' => new NaiveBayesTextClassification(),
+            'tree' => new DecisionTreeClassification(3),
             default => throw new InvalidArgumentException('Unknown fixture model.') };
     }
 
@@ -64,7 +66,7 @@ if ($mode !== 'coordinate') {
     $saved = ['owners' => [], 'artifacts' => [], 'sessions' => []];
     if ($mode !== 'learn') { $disk->read(); $saved = $disk->contents(); }
     $reports = [];
-    foreach (['knn', 'bayes'] as $kind) {
+    foreach (['knn', 'bayes', 'tree'] as $kind) {
         $prior = LocalModelSessions::model($kind);
         $initialBatch = LocalModelSessions::batch($kind, 'anchor');
         LocalModelSessions::train($prior, $initialBatch);
@@ -160,7 +162,7 @@ try {
         $runs[] = json_decode($output, true, 512, JSON_THROW_ON_ERROR);
     }
     $checks = [];
-    foreach (['knn', 'bayes'] as $kind) {
+    foreach (['knn', 'bayes', 'tree'] as $kind) {
         $first = $runs[0]['reports'][$kind]; $second = $runs[1]['reports'][$kind]; $third = $runs[2]['reports'][$kind];
         $checks[$kind . '_first_session_improves_holdout'] = $first['evaluation']['recommended'];
         $checks[$kind . '_restart_adds_new_family_without_forgetting'] = $second['evaluation']['recommended'] && $second['evaluation']['candidate']['accuracy'] === 1.0;
@@ -174,11 +176,11 @@ try {
     }
     $passed = !Arr::has($checks, false, true);
     echo json_encode(['passed' => $passed, 'checks' => $checks, 'runs' => $runs,
-        'scope' => 'KNN and Naive Bayes artifact restoration, retained labelled-session training and disjoint holdout evaluation in three processes. Synthetic fixture families; no automatic activation, generalization claim, fitted tree, Monte Carlo or crash-safe publication.'],
+        'scope' => 'KNN, Naive Bayes and fitted decision-tree artifact restoration, retained labelled-session training and disjoint holdout evaluation in three processes. Synthetic fixture families; no automatic activation, generalization claim, Monte Carlo or crash-safe publication.'],
         JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_PRESERVE_ZERO_FRACTION) . PHP_EOL;
 } finally {
     // Delete only known files inside the exact scratch directory created above.
-    foreach (['knn', 'bayes'] as $kind) {
+    foreach (['knn', 'bayes', 'tree'] as $kind) {
         foreach (['anchor', 'v1', 'v2'] as $version) { $path = $directory . '/' . $kind . '-' . $version . '.model'; if (is_file($path)) { unlink($path); } }
     }
     if (is_file($directory . '/training.json')) { unlink($directory . '/training.json'); }
