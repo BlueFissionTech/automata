@@ -149,7 +149,7 @@ equivalent format. This API describes recovery state; it does not itself provide
 an atomic storage transaction, multi-writer ownership or bundle activation.
 
 Run `php examples/generic/cortex/model_restart.php` for three actual PHP processes:
-fit KNN and Naive Bayes from reviewed sessions, restore artifacts and add another
+fit KNN, Naive Bayes and a fitted decision tree from reviewed sessions, restore artifacts and add another
 input family while rehearsing earlier examples, then restore without fitting.
 The fixture retains actual predictions, exact model identities, target labels
 and signed review separately from execution completion. Disjoint holdout sessions
@@ -159,9 +159,35 @@ admitted batch when an independent evaluator owns the holdout, matching the KNN
 path. An empty internal holdout retains the existing `accuracy()` value of zero;
 use the external evaluation report rather than treating that value as evidence.
 
-These synthetic families demonstrate retained local fitting and continued
-training, not statistical generalization or complete Cortex activation. Fitted
-trees, Monte Carlo statistics, coordinated policy/model publication, interrupted
+`Strategy\DecisionTreeClassification` fits classification parameters, separately
+from the existing `DecisionTree` traversal API. It accepts rectangular nonempty
+vectors of finite numbers or categorical strings, with one stable kind per
+column, and preserves scalar label types. Numeric-looking string categories stay
+distinct. Each `train()` replaces the fitted tree; explicitly merge rehearsal
+evidence to preserve earlier capabilities. `maximumDepth()` reports the configured
+limit. Depth limits alone do not establish protection against overfitting.
+
+The adapter uses the installed PHP-ML median/Gini tree backend. Its internal
+compatibility layer preserves single-column matrix dimensions and places numeric
+boundaries in training-value gaps without consulting held-out labels. It does not
+search every possible threshold or estimate calibrated confidence. A deterministic
+trailing holdout implements `accuracy()`; use `testSize: 0.0` and a disjoint external
+evaluator for session evaluation. Keep feature projection, admission and activation
+policy outside the strategy.
+
+Tree artifacts retain fitted parameters, exact label decoding, feature kinds,
+depth and internal holdout. Loading does not fit; incompatible artifacts return
+`false` without replacing the current model. Serialized artifacts require trusted
+storage and compatible PHP-ML/Automata versions. The installed PHP-ML tree source
+emits six PHP 8.2 deprecation notices; these are reported by PHPUnit and are not
+suppressed by the adapter.
+
+The 24-gate restart fixture shows each candidate improving the first holdout from
+2/4 to 4/4, retaining all six old/new holdout predictions after continued training,
+and retaining 6/6 after another clean restart without fitting. These synthetic
+families demonstrate retained local fitting and continued training, not statistical
+generalization or complete Cortex activation. Monte Carlo statistics,
+coordinated policy/model publication, interrupted
 commit recovery and broader independent host scenarios remain to be qualified.
 
 ### Remaining qualification
