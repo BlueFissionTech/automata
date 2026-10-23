@@ -115,10 +115,8 @@ class Search implements IConfigurable, IDispatcher
 
     private function actionKey($action): string
     {
-        if (is_scalar($action) || $action === null) {
-            return (string)$action;
-        }
-
-        return md5(serialize($action));
+        // Scalar casts collapse distinct actions (1, "1", true; null and "").
+        // Preserve the existing serialized compound/object contract for every type.
+        return hash('sha256', serialize($action));
     }
 }

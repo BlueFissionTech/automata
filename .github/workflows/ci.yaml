@@ -67,3 +67,4 @@ jobs:
           php examples/generic/cortex/reinforcement_restart.php
           php examples/generic/cortex/compound.php
           php examples/generic/cortex/model_restart.php
+          php examples/generic/cortex/montecarlo_restart.php

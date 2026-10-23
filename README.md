@@ -103,16 +103,19 @@ php examples/generic/cortex/reinforcement.php
 php examples/generic/cortex/reinforcement_restart.php
 php examples/generic/cortex/compound.php
 php examples/generic/cortex/model_restart.php
+php examples/generic/cortex/montecarlo_restart.php
 ```
 
-Together they report 378 boolean conformance gates as JSON and exit nonzero on
+Together they report 390 boolean conformance gates as JSON and exit nonzero on
 failure. They cover real classifier predictions, routing changes, receipt-gated
 responses, model activation/rollback and [sensory ingestion](docs/sensory-ingestion.md).
 The small frozen corpus proves repeatable
 behavior; it does not establish open-world accuracy. Stores, model ownership and
 fixture receiver ledgers remain process-local, except for the explicit restart
 probes. Those retain route evidence and KNN, Naive Bayes and fitted-tree artifacts
-across clean process restarts. Durable recovery, concurrent writers
+across clean process restarts. A separate Monte Carlo game probe retains observed
+returns independently of simulated estimates and improves held-out first moves.
+Durable recovery, concurrent writers
 and learned route/goal integration remain open work. The workflow demo adds graph
 execution with cooperative Fiber overlap. The learning demo connects
 experience capture, training, activation and subsequent Agent responses in one process.
