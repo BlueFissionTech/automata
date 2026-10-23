@@ -113,6 +113,7 @@ final class BundleCortex
             new BundleWorker('respond', $version, static fn ($payload) => ['label' => $payload['predecessors']['classify']['output'], 'workflow_version' => $version]),
         ], $policy);
         $authorize = static fn ($request) => new AutonomyDecision(['allowed' => true, 'subject_id' => $request['subject_id'],
+            'code' => AutonomyDecision::CODE_ALLOWED,
             'capability_id' => $request['capability_id'], 'capability_version' => $request['capability_version']]);
         $strategy = new CompositeStrategy($workflow, $router, $authorize, 'fixture-agent');
         $run = $strategy->start($input, 'bundle-input', 'bundle-requests.v1');

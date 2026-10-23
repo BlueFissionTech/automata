@@ -54,6 +54,7 @@ if ($mode !== 'coordinate') {
         'id' => 'request', 'subject_id' => 'fixture-agent', 'capability_id' => 'inspect', 'capability_version' => '1',
         'candidates' => $definitions, 'selection_policy' => 'adaptive', 'context_key' => $context,
     ]), new AutonomyDecision(['allowed' => true, 'subject_id' => 'fixture-agent',
+        'code' => AutonomyDecision::CODE_ALLOWED,
         'capability_id' => 'inspect', 'capability_version' => '1']))->output;
     $before = $route('media-review.v1');
     $storage = new Disk(['location' => dirname($path), 'name' => basename($path)]);

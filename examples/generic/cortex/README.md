@@ -149,6 +149,13 @@ Subsequent slices add learned and durable adaptive routes,
 concurrent response persistence, scripted strategies and shared goal criteria.
 Each slice must report its actual measurements and unresolved release gates.
 
+Custom fixture authorizers must set both `allowed` and `code` on
+`AutonomyDecision`: use `CODE_ALLOWED` for a grant and an explicit denial code
+for a refusal. The value object's default is `capability_not_granted`; setting
+the Boolean alone does not change that diagnostic. The compound example checks
+actual attempt receipts and zero response dispatch on denial. A matching reason
+code documents the host decision; it does not create authority or supply reward.
+
 Run `php examples/generic/cortex/sensory.php` for a separate ingress experiment.
 It passes bounded text through real Input processors and Sense sweeps, preserves
 raw/normalized evidence, creates Experiences and trains an isolated classifier

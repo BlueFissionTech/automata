@@ -98,7 +98,9 @@ final class PatternCortex
         $analysis = self::observe($text, $pixels, $extra);
         $signature = new InputSignature('pattern-input', '1', ['stage' => 'observed', 'types' => $analysis['gestalt']['segment_types']]);
         $calls = []; $nested = null; $adapters = [];
+        // Preserve truthful authorization diagnostics in outer and nested receipts.
         $authorize = static fn ($request) => new AutonomyDecision(['allowed' => $allow,
+            'code' => $allow ? AutonomyDecision::CODE_ALLOWED : AutonomyDecision::CODE_CAPABILITY_NOT_GRANTED,
             'subject_id' => $request['subject_id'], 'capability_id' => 'infer', 'capability_version' => '1']);
         foreach ($plans as $kind => $record) {
             $plan = StrategyWorkflow::fromArray($record);
