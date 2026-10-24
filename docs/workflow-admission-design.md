@@ -1,5 +1,9 @@
 ## Conditional API review incorporation — bounded read admission
 
+The candidate implementation is documented in [workflow admission](workflow-admission.md).
+The specification below records the review conditions; staging code does not grant
+PR approval, landing, release or downstream adoption.
+
 **Disposition:** the independent review's eight conditions are incorporated in the proposed public contract below. This resolves the previously unanswered design choices; it is not implementation approval, PR approval, a release contract or proof that the new behavior exists. The existing alpha.9 overlap API and its baseline tests remain unchanged.
 
 ### Proposed public types and additive entrypoints
@@ -63,5 +67,5 @@ This is one local cooperative state owner, not a new graph scheduler, general ef
 
 - Ownership and independent conditional design review: received; no unanswered reviewer/ownership request remains.
 - Incorporation into proposed public types and receipt state machine: complete in this specification, with executable obligations above.
-- Implementation/test slice: not yet started or approved by the review receipt. Implementation follows a separately reviewed, tests-first change; this specification does not assert runtime support.
+- Implementation/test slice: additive implementation and fake-clock/Fiber tests are staged with [usage documentation](workflow-admission.md); the design receipt does not approve the implementation or establish adoption.
 - Implementation correctness, independent PR review, exact-head landing, dependency changes and release: unproved/not authorized by this design disposition.
