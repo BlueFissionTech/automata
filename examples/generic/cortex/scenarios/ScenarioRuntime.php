@@ -62,6 +62,7 @@ final class ScenarioRuntime
         $plan = new StrategyWorkflow($id, '1', $graph, $outputs);
         $authorize = static fn ($request): AutonomyDecision => new AutonomyDecision([
             'allowed' => true, 'subject_id' => $request['subject_id'],
+            'code' => AutonomyDecision::CODE_ALLOWED,
             'capability_id' => 'scenario.propose', 'capability_version' => '1',
         ]);
         return (new CompositeStrategy($plan, new StrategyRouter($adapters), $authorize,

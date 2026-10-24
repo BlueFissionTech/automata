@@ -256,6 +256,12 @@ persistent MCTS search trees, or complete coordinated Cortex activation.
 
 ### Remaining qualification
 
+The [workflow selection probe](workflow-learning.md) combines nested composites
+and adaptive advice. Admitted feedback changes which complete processing graph
+runs before response construction, with new sensor observations, waiting joins,
+retained graph definitions and two process restarts. It complements the compound
+example's fact-driven graph building and learned final response selection.
+
 The [feedback stress protocol](feedback-qualification.md) adds noisy delayed
 reviews, an external objective reversal, retained recovery, context diversity and
 an explicit response-work proxy. Its synthetic budgets and noise schedule are

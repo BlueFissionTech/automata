@@ -5,6 +5,7 @@ require_once __DIR__ . '/CompoundCortex.php';
 
 use BlueFission\Arr;
 use BlueFission\Automata\Feedback\FeedbackSignal;
+use BlueFission\Automata\LLM\Agent\Capability\AutonomyDecision;
 use BlueFission\Examples\Cortex\CompoundCortex;
 
 // Pixels are synthetic binary sensor frames, not images of people. Vocabulary,
@@ -38,7 +39,20 @@ $denied = $agent->run('denied', $input('help show signal', $frame), allowRespons
 $restored = (new CompoundCortex())->restore($agent->checkpoint());
 $recovered = $restored->run('recovered', $input('help inspect the beacon', $frame));
 $passes = $heldout['passes'];
+// Recount actual attempt receipts, rather than deriving authorization from a
+// successful output or the learned route. Denied responses are checked separately.
+$grants = [];
+foreach ($passes as $pass) {
+    foreach ($pass['result']['nodes'] as $node) {
+        foreach ($node['attempts'] as $attempt) { $grants[] = $attempt['authorization']; }
+    }
+}
+$denial = $denied['passes'][2]['result']['nodes']['answer']['attempts'][0]['authorization'];
 $checks = [
+    'approved_attempts_report_allowed_codes' => Arr::size($grants) === 8 && Arr::make($grants)->filter(
+        static fn (array $grant): bool => $grant['allowed'] !== true || $grant['code'] !== AutonomyDecision::CODE_ALLOWED
+    )->size() === 0,
+    'denied_response_reports_denial_code' => $denial['allowed'] === false && $denial['code'] === AutonomyDecision::CODE_CAPABILITY_NOT_GRANTED,
     'real_input_and_sense_observe_each_segment' => $heldout['sensory_completions'] === 2,
     'engine_retains_compound_segments' => $heldout['analysis']['gestalt']['segment_types'] === ['text' => 1, 'video' => 1],
     'initial_graph_joins_all_sensor_observations' => $passes[0]['result']['outputs']['categorize'] === ['urgent' => true, 'visible' => true],

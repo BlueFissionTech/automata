@@ -6,7 +6,7 @@ batch, and evaluates a real Naive Bayes strategy on held-out concierge requests.
 The fixtures are synthetic, provider-free, and bounded; this is an experiment,
 not evidence of general conversational intelligence or production readiness.
 
-Use a checkout containing all twenty-five deterministic
+Use a checkout containing all twenty-six deterministic
 scripts and install its Composer dependencies before running from the repository
 root. PHP 8.2+ is required by the library; CI uses PHP 8.3 for the locked test
 toolchain. No provider credentials, network calls or external services are needed
@@ -39,9 +39,10 @@ to execute the demos after installation.
 | `bundle_restart.php` | 12 | Actual routed graphs consume a compatible model/policy/workflow snapshot; interrupted publication, receipt replay and rollback survive process restarts |
 | `session_restart.php` | 23 | Compound sessions produce delayed reviewed labels and bounded route feedback; coordinated local fitting, publication, replay and rollback survive six processes |
 | `feedback_restart.php` | 15 | Noisy delayed feedback, changed objectives, context diversity and declared response-cost tradeoffs across four processes |
+| `workflow_restart.php` | 12 | Retained feedback selects complete text or text/media processing workflows, preserving nested joins and authority across three processes |
 
 Each command emits JSON evidence and exits nonzero if a required gate fails. All
-440 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
+452 gates run in CI alongside PHPUnit. `learn.php` assembles the experience-to-response
 loop in one process; `workflow.php` adds cooperative Fiber overlap. Durable worker
 recovery and asynchronous response producers remain open. The
 [delivery guide](../../../docs/cortex-delivery.md) maps integration and open work.
@@ -147,6 +148,13 @@ fallback, bounded retries, race/threshold completion and host responsibilities.
 Subsequent slices add learned and durable adaptive routes,
 concurrent response persistence, scripted strategies and shared goal criteria.
 Each slice must report its actual measurements and unresolved release gates.
+
+Custom fixture authorizers must set both `allowed` and `code` on
+`AutonomyDecision`: use `CODE_ALLOWED` for a grant and an explicit denial code
+for a refusal. The value object's default is `capability_not_granted`; setting
+the Boolean alone does not change that diagnostic. The compound example checks
+actual attempt receipts and zero response dispatch on denial. A matching reason
+code documents the host decision; it does not create authority or supply reward.
 
 Run `php examples/generic/cortex/sensory.php` for a separate ingress experiment.
 It passes bounded text through real Input processors and Sense sweeps, preserves

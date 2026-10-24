@@ -106,6 +106,7 @@ $router = new StrategyRouter($adapters);
 // subject/capability pair; a plan or prediction never authorizes an effect.
 $approve = static fn (array $request) => new AutonomyDecision([
     'allowed' => true,
+    'code' => AutonomyDecision::CODE_ALLOWED,
     'subject_id' => $request['subject_id'],
     'capability_id' => $request['capability_id'],
     'capability_version' => $request['capability_version'],
