@@ -63,6 +63,7 @@ final class LiveScenario
                 'allowed_modes' => ['generative'], 'input' => $case['input'],
                 'limits' => ['max_invocations' => 1],
             ]), new AutonomyDecision(['allowed' => true, 'subject_id' => 'live-proof-host',
+                'code' => AutonomyDecision::CODE_ALLOWED,
                 'capability_id' => 'scenario.propose', 'capability_version' => '1']));
             $rows[] = ['id' => $case['id'], 'status' => $route->completed() ? 'observed' : 'unavailable',
                 'route_code' => $route->code, 'proposal' => $route->output,

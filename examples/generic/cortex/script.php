@@ -26,6 +26,7 @@ $requests = [];
 $approve = static function (array $request) use (&$requests): AutonomyDecision {
     $requests[] = $request;
     return new AutonomyDecision(['allowed' => true, 'subject_id' => $request['subject_id'],
+        'code' => AutonomyDecision::CODE_ALLOWED,
         'capability_id' => $request['capability_id'], 'capability_version' => $request['capability_version']]);
 };
 // Deterministic generation fixture exercises IGenerator, not provider capability or spend.

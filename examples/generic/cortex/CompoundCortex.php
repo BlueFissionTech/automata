@@ -266,7 +266,10 @@ final class CompoundCortex
             $adapters[] = new CompoundWorker($id, $worker, $this->calls);
         }
         $router = new StrategyRouter($adapters, $this->advisor);
+        // A grant must carry its own reason code; the value object's default is
+        // deliberately denial and is not inferred from this fixture's Boolean.
         $authorize = static fn (array $request) => new AutonomyDecision(['allowed' => $allow,
+            'code' => $allow ? AutonomyDecision::CODE_ALLOWED : AutonomyDecision::CODE_CAPABILITY_NOT_GRANTED,
             'subject_id' => $request['subject_id'], 'capability_id' => $request['capability_id'], 'capability_version' => $request['capability_version']]);
         $run = (new CompositeStrategy($plan, $router, $authorize, 'fixture-agent'))
             ->start(['analysis' => $analysis, 'facts' => $facts], $session . ':' . $stage, $signature->key());

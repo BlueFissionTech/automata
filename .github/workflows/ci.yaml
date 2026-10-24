@@ -71,3 +71,4 @@ jobs:
           php examples/generic/cortex/bundle_restart.php
           php examples/generic/cortex/session_restart.php
           php examples/generic/cortex/feedback_restart.php
+          php examples/generic/cortex/workflow_restart.php
