@@ -256,6 +256,11 @@ persistent MCTS search trees, or complete coordinated Cortex activation.
 
 ### Remaining qualification
 
+The [feedback stress protocol](feedback-qualification.md) adds noisy delayed
+reviews, an external objective reversal, retained recovery, context diversity and
+an explicit response-work proxy. Its synthetic budgets and noise schedule are
+qualification fixtures, not universal optimization or exploration policies.
+
 The [integrated session rollout](session-rollout.md) now connects actual compound
 processing to delayed explicit review, evidence projection, isolated local fitting
 and compatible bundle activation. It includes policy-only/model-only controls,
