@@ -254,6 +254,12 @@ persistent MCTS search trees, or complete coordinated Cortex activation.
 
 ### Remaining qualification
 
+[Compatible learning bundles](learning-bundles.md) now provide a complete-set
+publication boundary, exact artifact dependencies, retained transition receipts,
+local process-crash recovery and rollback. The seven-process bundle probe runs a
+real graph, feedback-adjusted policy and fitted tree from verified artifact bytes.
+It is a separate qualification from session admission or distributed training.
+
 The completed session-learning assembly must:
 
 1. Exercise real Input/Sense and Intelligence/Engine processing with compound

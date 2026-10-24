@@ -42,6 +42,7 @@ The runnable proofs do not establish production readiness; review the
 - **Experiential Learning**: Capture immutable experience and outcome snapshots, project attributable training batches, trigger separately approved candidate training, compare exact model versions on held-out evidence, and admit feedback into advisory routing. See [Continual Learning](docs/continual-learning.md) and [Cortex contracts](docs/cortex-delivery.md).
 - **Retained Route Learning**: Apply explicit signed session feedback within configured anchors and rebuild advisory preferences from evidence checkpoints after restart. See [Session learning](docs/session-learning.md) for admission, storage and qualification boundaries.
 - **Governed Model Activation**: Evaluate candidates before explicit host approval, activate a process-local model reference, and retain revision-bound promotion and rollback receipts. See [Model Lifecycle](docs/model-lifecycle.md).
+- **Compatible Learning Bundles**: Publish verified workflow, route-policy and model artifacts together with evaluation and governance receipts; recover interrupted local publication and roll back the complete set. See [Learning Bundles](docs/learning-bundles.md).
 - **Progressive Responses**: Coordinate weighted fragments, required dependencies, delivery acknowledgements and cancellation, including synchronous Agent workers and TaskTrace integration. See [Response Composition](docs/response-composition.md).
 - **LLM Lane Pressure Management**: Assess semantic, operational, and execution pressure in provider-neutral agent workflows, with deterministic recommendations and a read-only LLM tool wrapper.
 - **Feature Engineering**: Provides robust tools for transforming raw data into features that better represent the underlying processes to predictive models.
@@ -104,9 +105,10 @@ php examples/generic/cortex/reinforcement_restart.php
 php examples/generic/cortex/compound.php
 php examples/generic/cortex/model_restart.php
 php examples/generic/cortex/montecarlo_restart.php
+php examples/generic/cortex/bundle_restart.php
 ```
 
-Together they report 390 boolean conformance gates as JSON and exit nonzero on
+Together they report 402 boolean conformance gates as JSON and exit nonzero on
 failure. They cover real classifier predictions, routing changes, receipt-gated
 responses, model activation/rollback and [sensory ingestion](docs/sensory-ingestion.md).
 The small frozen corpus proves repeatable
@@ -115,8 +117,9 @@ fixture receiver ledgers remain process-local, except for the explicit restart
 probes. Those retain route evidence and KNN, Naive Bayes and fitted-tree artifacts
 across clean process restarts. A separate Monte Carlo game probe retains observed
 returns independently of simulated estimates and improves held-out first moves.
-Durable recovery, concurrent writers
-and learned route/goal integration remain open work. The workflow demo adds graph
+The bundle probe qualifies local process interruption and complete-set rollback.
+Distributed recovery, concurrent-writer qualification and broader learned route/goal
+integration remain open work. The workflow demo adds graph
 execution with cooperative Fiber overlap. The learning demo connects
 experience capture, training, activation and subsequent Agent responses in one process.
 
