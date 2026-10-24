@@ -28,10 +28,19 @@ final class CompoundCortex
     private AnchoredRouteAdvisor $advisor;
     private int $sensoryCompletions = 0;
     private array $calls = [];
+    private readonly ?array $modelIdentity;
 
-    /** Anchor two reviewed response strategies; later feedback has bounded influence. */
-    public function __construct()
+    /**
+     * Anchor reviewed routes; an optional host-bound model supplies careful intent.
+     * The callback remains executable host code, never a deserialized policy.
+     */
+    public function __construct(private readonly ?\Closure $responseIntent = null, ?array $modelIdentity = null)
     {
+        $this->modelIdentity = $modelIdentity === null ? null : RecordSnapshot::copy($modelIdentity);
+        if ($modelIdentity !== null) {
+            RecordSnapshot::identifier($modelIdentity['id'] ?? null, 'model id');
+            RecordSnapshot::identifier($modelIdentity['version'] ?? null, 'model version');
+        }
         $this->engine = new Engine();
         $this->advisor = new AnchoredRouteAdvisor([
             ['id' => 'response.quick', 'version' => '1', 'weight' => 0.6],
@@ -118,18 +127,25 @@ final class CompoundCortex
         ]]));
         $workers = [
             'response.quick' => static fn ($input) => ['intent' => $input['root']['facts']['urgent'] ? 'assist' : 'observe', 'media_confirmed' => false],
-            'response.careful' => static fn ($input) => ['intent' => $input['root']['facts']['urgent'] ? 'assist' : 'observe',
+            'response.careful' => fn ($input) => ['intent' => $this->responseIntent === null
+                ? ($input['root']['facts']['urgent'] ? 'assist' : 'observe')
+                : ($this->responseIntent)(self::features($input['root']['analysis'])),
                 'media_confirmed' => $input['root']['facts']['visible'] === true],
         ];
         $passes[] = $this->execute($session, 'response', $graph, ['answer'], $workers, $analysis, $facts, $signature, $allowResponse);
         $last = $passes[2]['result'];
         $selected = $last['nodes']['answer']['attempts'][0]['selected_strategy'];
         $output = $last['outputs']['answer'] ?? null;
-        $experience = Experience::fromStatements($session, [], new Context(['input' => $raw, 'signature' => $signature->toArray(), 'facts' => $facts]),
+        $experience = Experience::fromStatements($session, [], new Context(['input' => $raw, 'signature' => $signature->toArray(), 'facts' => $facts,
+            'model_features' => self::features($ingress), 'feature_schema' => ['id' => 'compound-light-count', 'version' => '1'],
+            'processing_patterns' => Arr::make($passes)->map(static fn ($pass) => $pass['plan'])->val()]),
             ['timestamp' => '2026-10-20T00:00:00Z', 'trace_id' => $session]);
         if ($selected !== null) {
             $experience = $experience->withOutcome(new Outcome('execution', $session, 'compound-fixture', $last['status'] === 'completed',
-                ['output' => $output], ['strategy_id' => $selected['id'], 'strategy_version' => $selected['version'], 'context_key' => $signature->key()]));
+                ['output' => $output], ['strategy_id' => $selected['id'], 'strategy_version' => $selected['version'], 'context_key' => $signature->key(),
+                    'workflow_id' => $passes[2]['plan']['id'], 'workflow_version' => $passes[2]['plan']['version'],
+                    'node_id' => 'answer', 'attempt' => 1, 'task_id' => $session . ':response',
+                    'model' => $selected['id'] === 'response.careful' ? $this->modelIdentity : null]));
         }
         return ['analysis' => $ingress, 'passes' => $passes, 'selected' => $selected, 'output' => $output,
             'context_key' => $signature->key(), 'experience' => $experience, 'sensory_completions' => $this->sensoryCompletions,
@@ -144,6 +160,18 @@ final class CompoundCortex
 
     /** Export the general advisor checkpoint; this fixture does not own durable storage. */
     public function checkpoint(): array { return $this->advisor->checkpoint(); }
+
+    /** Naive fixture feature derived from actual Sense chunks, independent of labels. */
+    public static function features(array $analysis): array
+    {
+        $lights = 0;
+        foreach ($analysis['segments'] as $segment) {
+            if ($segment['type'] !== 'video') { continue; }
+            $count = Arr::make($segment['meta']['sense']['chunks'])->filter(static fn ($chunk) => $chunk === 'light')->size();
+            $lights = Num::make($lights)->add($count)->val();
+        }
+        return [(float) $lights];
+    }
 
     /** Activate an independently reconstructed policy in this example-owned agent. */
     public function restore(array $checkpoint): self
