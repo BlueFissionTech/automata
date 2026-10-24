@@ -123,6 +123,7 @@ final class GameScenario
                     'selection_policy' => $adaptive ? StrategyRouteRequest::SELECTION_ADAPTIVE : StrategyRouteRequest::SELECTION_DECLARED,
                 ]), new AutonomyDecision([
                     'allowed' => true, 'subject_id' => 'game-player',
+                    'code' => AutonomyDecision::CODE_ALLOWED,
                     'capability_id' => 'scenario.propose', 'capability_version' => '1',
                 ]));
                 if (!$result->completed()) { throw new RuntimeException('Game route did not complete: ' . $result->code); }

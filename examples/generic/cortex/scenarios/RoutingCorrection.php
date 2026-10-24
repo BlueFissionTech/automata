@@ -41,6 +41,7 @@ final class RoutingCorrection
             'selection_policy' => StrategyRouteRequest::SELECTION_ADAPTIVE,
         ]);
         $authorization = new AutonomyDecision(['allowed' => true, 'subject_id' => 'correction-host',
+            'code' => AutonomyDecision::CODE_ALLOWED,
             'capability_id' => 'scenario.propose', 'capability_version' => '1']);
         $before = $router->route($request(5), $authorization);
         foreach ([5, 6] as $pile) {
