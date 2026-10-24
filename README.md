@@ -16,6 +16,9 @@ These Cortex capabilities first shipped in the
 The runnable proofs do not establish production readiness; review the
 [remaining gates](docs/cortex-delivery.md#release-gates-still-open) before adoption.
 
+Opt-in method observation and conservative prediction for Obj hosts are
+documented in the [Trainable guide](docs/trainable.md).
+
 ## Features
 
 `bluefission/automata` integrates a wide array of AI and data science techniques into a cohesive library:
