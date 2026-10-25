@@ -37,10 +37,14 @@ final class StrategyWorkflowRun
     /** Additive factory keeps legacy constructors and named arguments untouched. */
     public static function admitted(StrategyWorkflow $workflow, StrategyRouter $router, callable $authorize,
         string $subjectId, mixed $input, string $id, WorkflowAdmissionPolicy $policy, callable $clock,
-        ?int $deadlineNanoseconds = null, int $maximumDispatches = 256, string $contextKey = '', ?TaskTrace $trace = null): self
+        mixed $deadlineNanoseconds = null, int $maximumDispatches = 256, string $contextKey = '', ?TaskTrace $trace = null): self
     {
+        // Validate before storage or any host-supplied router callback. A ?int
+        // parameter would already have coerced invalid weak-mode input here.
+        if ($deadlineNanoseconds !== null && (!Num::isInt($deadlineNanoseconds) || $deadlineNanoseconds < 0)) {
+            throw new InvalidArgumentException('Monotonic deadline must be null or a nonnegative integer.');
+        }
         if (!$router->supportsGuardedExecution()) { throw new LogicException('Custom router must explicitly support guarded execution.'); }
-        if ($deadlineNanoseconds !== null && $deadlineNanoseconds < 0) { throw new InvalidArgumentException('Invalid monotonic deadline.'); }
         $run = new self($workflow, $router, $authorize, $subjectId, $input, $id, $maximumDispatches, $contextKey, $trace);
         $run->admission = $policy;
         $run->clock = Closure::fromCallable($clock);
@@ -167,6 +171,9 @@ final class StrategyWorkflowRun
                     'dependency_provenance' => $parents, 'adapter_invocations' => ($this->invocations[$nodeId] ?? 0) - $priorInvocations,
                     'late' => $this->status !== 'running', 'cancel_observed' => $this->status === 'cancelled',
                     'deadline_observed' => $this->status === 'expired', 'executed' => $receipt['executed'], 'code' => $receipt['code'],
+                    // Keep the sticky clock/expiry cause separate from the actual
+                    // adapter result, even when a suspended worker returns late.
+                    'stop_code' => $this->admissionStopCode ?: null,
                 ]))->toArray();
             }
             $receipt['elapsed_ms'] = Num::make(hrtime(true))->subtract($started)->divide(1000000)->val();
@@ -202,6 +209,7 @@ final class StrategyWorkflowRun
                 'policy' => $this->admission->toArray(), 'in_flight' => Arr::size($this->reservations),
                 'scheduling_attempts' => $this->dispatches, 'execution_attempts' => $this->counterTotal($this->executionAttempts),
                 'adapter_invocations' => $this->counterTotal($this->invocations), 'last_outcome' => $this->lastAdmission,
+                'stop_code' => $this->admissionStopCode ?: null,
             ]] : [])]);
     }
 

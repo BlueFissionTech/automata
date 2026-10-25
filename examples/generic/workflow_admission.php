@@ -75,6 +75,28 @@ $worker = new Fiber(fn () => $expired->execute('a'));
 $worker->start(); $before = Arr::size($calls); $now = 10; $worker->resume();
 $checks['deadline_equality_prevents_invocation'] = Arr::size($calls) === $before
     && $expired->result()->status() === 'expired' && !$expired->result()->toArray()['nodes']['a']['attempts'][0]['executed'];
+
+// Weak PHP callers must not turn a string deadline into authority to dispatch.
+$checks['invalid_deadline_rejected'] = false;
+try { $strategy->startAdmitted(null, new WorkflowAdmissionPolicy(1), $clock, '10'); }
+catch (InvalidArgumentException) { $checks['invalid_deadline_rejected'] = true; }
+
+// A bad clock closes admission, not the real suspended read. Its eventual
+// completed outcome remains distinct from the persistent run denial cause.
+$now = 0;
+$invalidClock = $strategy->startAdmitted(null, new WorkflowAdmissionPolicy(1), $clock, runId: 'invalid-clock');
+$reader = new Fiber(fn () => $invalidClock->execute('b'));
+$reader->start(); $now = -1;
+$denied = $invalidClock->result()->toArray();
+$checks['invalid_clock_retains_unsettled_read'] = $denied['status'] === 'denied' && !$denied['settled']
+    && $denied['admission']['in_flight'] === 1 && ($denied['admission']['stop_code'] ?? null) === 'dispatch_clock_invalid';
+$now = 1; $reader->resume();
+$settled = $invalidClock->result()->toArray();
+$late = $settled['nodes']['b']['attempts'][0];
+$checks['late_settlement_preserves_clock_cause'] = $settled['status'] === 'denied' && $settled['settled']
+    && $settled['admission']['in_flight'] === 0 && ($settled['admission']['stop_code'] ?? null) === 'dispatch_clock_invalid'
+    && ($late['admission']['stop_code'] ?? null) === 'dispatch_clock_invalid' && $late['admission']['late']
+    && $late['status'] === 'completed' && $late['code'] === 'completed' && $late['executed'];
 $passed = !Arr::make($checks)->has(false, true);
 echo json_encode(['passed' => $passed, 'checks' => $checks, 'run' => $run->result()->toArray(), 'expired' => $expired->result()->toArray(),
     'limits' => ['Cooperative pure-read fixtures only; host owns I/O readiness and resumption.', 'No hard interruption, external effects, distributed workers or provider calls.']], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT) . PHP_EOL;

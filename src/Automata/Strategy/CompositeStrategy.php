@@ -28,9 +28,13 @@ final class CompositeStrategy implements IStrategy
             $input, $runId ?? 'workflow-' . bin2hex(random_bytes(16)), $this->maximumDispatches, $contextKey, $this->trace);
     }
 
-    /** Opt-in read admission; clocks and deadlines never enter the exported plan. */
+    /**
+     * Opt-in read admission; clocks and deadlines never enter the exported plan.
+     * Keep the deadline mixed here so weak callers reach admitted()'s exact-type
+     * validation without PHP first coercing a string, float or boolean to int.
+     */
     public function startAdmitted(mixed $input, Workflow\WorkflowAdmissionPolicy $policy, callable $clock,
-        ?int $deadlineNanoseconds = null, ?string $runId = null, string $contextKey = ''): StrategyWorkflowRun
+        mixed $deadlineNanoseconds = null, ?string $runId = null, string $contextKey = ''): StrategyWorkflowRun
     {
         return StrategyWorkflowRun::admitted($this->workflow, $this->router, $this->authorize, $this->subjectId,
             $input, $runId ?? 'workflow-' . bin2hex(random_bytes(16)), $policy, $clock, $deadlineNanoseconds,

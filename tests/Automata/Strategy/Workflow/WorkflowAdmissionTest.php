@@ -6,7 +6,7 @@ use BlueFission\Automata\LLM\Agent\Capability\AutonomyDecision;
 use BlueFission\Automata\Path\{Graph, Node};
 use BlueFission\Automata\Strategy\CompositeStrategy;
 use BlueFission\Automata\Strategy\Routing\{IStrategyRouteAdapter, IStrategyDispatchGuard, StrategyDispatchContext, StrategyDispatchDecision, StrategyAdapterResult, StrategyDefinition, StrategyEligibility, StrategyRouteRequest, StrategyRouter, StrategyUsage};
-use BlueFission\Automata\Strategy\Workflow\WorkflowAdmissionPolicy;
+use BlueFission\Automata\Strategy\Workflow\{WorkflowAdmissionPolicy, StrategyWorkflow, StrategyWorkflowRun};
 use BlueFission\Automata\Support\RecordSnapshot;
 use BlueFission\Arr;
 use Fiber;
@@ -28,16 +28,93 @@ final class WorkflowAdmissionTest extends TestCase
         }
         foreach (['a', 'b', 'c'] as $id) { $graph->connect($id, 'join', []); }
         $router = new AdmissionRouter(Arr::make($adapters)->values()->val());
-        $strategy = new CompositeStrategy(new \BlueFission\Automata\Strategy\Workflow\StrategyWorkflow('reads', '1', $graph, ['join']),
+        $workflow = new StrategyWorkflow('reads', '1', $graph, ['join']);
+        $strategy = new CompositeStrategy($workflow,
             $router, $authorize ?? self::approve(...), 'actor');
         return [$strategy->startAdmitted(['input' => 1], new WorkflowAdmissionPolicy($limit), $clock ?? static fn () => 0,
-            $deadline, 'run', 'context'), $adapters, $router, $strategy];
+            $deadline, 'run', 'context'), $adapters, $router, $strategy, $workflow];
     }
 
     public static function approve(array $request): AutonomyDecision
     {
         return new AutonomyDecision(['allowed' => true, 'subject_id' => $request['subject_id'],
             'capability_id' => $request['capability_id'], 'capability_version' => $request['capability_version']]);
+    }
+
+    public function testCompositeDeadlineBoundaryDoesNotCoerceConfiguration(): void
+    {
+        [, , , $strategy] = $this->fixture();
+        $this->assertDeadlineContract(static fn (mixed $deadline, int $now) => $strategy->startAdmitted(
+            null, new WorkflowAdmissionPolicy(1), static fn () => $now, $deadline, 'deadline'));
+    }
+
+    public function testFactoryDeadlineBoundaryDoesNotCoerceConfiguration(): void
+    {
+        [, , $router, , $workflow] = $this->fixture();
+        $this->assertDeadlineContract(static fn (mixed $deadline, int $now) => StrategyWorkflowRun::admitted(
+            $workflow, $router, self::approve(...), 'actor', null, 'deadline',
+            new WorkflowAdmissionPolicy(1), static fn () => $now, $deadline));
+    }
+
+    /** Deliberately weak PHP call sites: a typed test helper would hide coercion. */
+    private function assertDeadlineContract(\Closure $start): void
+    {
+        foreach (['10', 1.5, 10.0, true, false, [], -1] as $invalid) {
+            try { $start($invalid, 0); self::fail('Invalid deadline accepted'); }
+            catch (\InvalidArgumentException) { self::assertTrue(true); }
+        }
+        foreach ([[null, 10, 'running'], [0, 0, 'expired'], [10, 10, 'expired'], [10, 9, 'running']] as [$deadline, $now, $expected]) {
+            $run = $start($deadline, $now);
+            $record = $run->result()->toArray();
+            self::assertSame($expected, $record['status']);
+            self::assertSame($expected === 'expired' ? 'dispatch_expired' : null, $record['admission']['stop_code']);
+            self::assertSame(0, $record['admission']['adapter_invocations']);
+            self::assertSame(0, $record['dispatches']);
+        }
+    }
+
+    public function testClockInvalidStopCauseSurvivesLateSettlement(): void
+    {
+        foreach ([9, '10', 1.5, true, [], null, -1] as $invalid) {
+            foreach (['ready', 'result'] as $observer) {
+                $now = 10;
+                [$run, $adapters] = $this->fixture(clock: static function () use (&$now) { return $now; });
+                $run->execute('b');
+                $prior = $run->result()->toArray()['nodes']['b']['attempts'];
+                $adapters['a']->suspend = 'execute';
+                $worker = new Fiber(fn () => $run->execute('a'));
+                self::assertSame('execute', $worker->start());
+                $now = $invalid;
+                $run->$observer();
+                $denied = $run->result()->toArray();
+                self::assertSame('denied', $denied['status']);
+                self::assertSame('dispatch_clock_invalid', $denied['admission']['stop_code'] ?? null);
+                self::assertFalse($denied['settled']);
+                self::assertSame(1, $denied['admission']['in_flight']);
+                self::assertSame([], $run->ready());
+
+                // Repairing the host clock cannot reopen a denied run. Only the
+                // original worker may settle, retaining its actual outcome.
+                $now = 11;
+                $worker->resume();
+                $after = $run->result()->toArray();
+                $attempt = $after['nodes']['a']['attempts'][0];
+                self::assertSame('denied', $after['status']);
+                self::assertTrue($after['settled']);
+                self::assertSame(0, $after['admission']['in_flight']);
+                self::assertSame('dispatch_clock_invalid', $after['admission']['stop_code']);
+                self::assertSame('dispatch_clock_invalid', $attempt['admission']['stop_code']);
+                self::assertTrue($attempt['admission']['late']);
+                self::assertTrue($attempt['executed']);
+                self::assertSame('completed', $attempt['status']);
+                self::assertSame('completed', $attempt['code']);
+                self::assertSame('a', $attempt['output']);
+                self::assertSame(2, $after['admission']['adapter_invocations']);
+                self::assertSame($prior, $after['nodes']['b']['attempts']);
+                self::assertSame(0, $adapters['join']->calls);
+                self::assertSame('skipped', $after['nodes']['join']['status']);
+            }
+        }
     }
 
     public function testCapacityCountsSuspendedAuthorizationAndDirectCallsCannotBypassIt(): void
