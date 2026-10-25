@@ -7,6 +7,7 @@ use BlueFission\Automata\LLM\Agent\Capability\AutonomyDecision;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTrace;
 use BlueFission\Automata\LLM\Agent\Telemetry\TaskTraceSpan;
 use BlueFission\Automata\LLM\Agent\ToolDefinition;
+use BlueFission\Automata\Support\{RecordSnapshot, SynchronousCallback};
 use InvalidArgumentException;
 use Throwable;
 
@@ -81,6 +82,23 @@ class StrategyRouter
         AutonomyDecision $authorization,
         ?TaskTrace $trace = null
     ): StrategyRouteResult {
+        return $this->routeInternal($request, $authorization, $trace);
+    }
+
+    /** Subclasses must opt in rather than silently bypass a custom route override. */
+    public function supportsGuardedExecution(): bool { return static::class === self::class; }
+
+    final public function routeGuarded(StrategyRouteRequest $request, AutonomyDecision $authorization,
+        IStrategyDispatchGuard $guard, array $scope = [], ?TaskTrace $trace = null): StrategyRouteResult
+    {
+        if (!$this->supportsGuardedExecution()) { throw new \LogicException('Custom router must explicitly support guarded execution.'); }
+        return $this->routeInternal($request, $authorization, $trace, $guard, RecordSnapshot::copy($scope));
+    }
+
+    /** One routing algorithm; legacy calls retain their original signature and path. */
+    private function routeInternal(StrategyRouteRequest $request, AutonomyDecision $authorization,
+        ?TaskTrace $trace, ?IStrategyDispatchGuard $guard = null, array $scope = []): StrategyRouteResult
+    {
         $advice = $this->declaredAdvice($request);
         $span = $trace?->startSpan(TaskTraceSpan::KIND_STRATEGY, 'strategy.route', [
             'request_id' => $request->id,
@@ -159,6 +177,8 @@ class StrategyRouter
         $effectiveData = $request->toArray();
         $effectiveData['limits'] = $limits;
         $effectiveRequest = new StrategyRouteRequest($effectiveData);
+        $requestDigest = $guard ? RecordSnapshot::fingerprint($request->toArray()) : null;
+        $effectiveDigest = $guard ? RecordSnapshot::fingerprint($effectiveRequest->toArray()) : null;
         [$candidates, $advice] = $this->orderedCandidates($request);
 
         foreach ($candidates as $index => $candidate) {
@@ -236,6 +256,40 @@ class StrategyRouter
                 continue;
             }
 
+            // All callbacks capable of yielding (advice/eligibility/estimation)
+            // precede this boundary. No user callback follows an allow before
+            // execute. Recheck each candidate, including explicit fallback.
+            if ($guard) {
+                $context = new StrategyDispatchContext(Arr::make($scope)->merge([
+                    'request_id' => $request->id, 'request_digest' => $requestDigest,
+                    'effective_request_digest' => $effectiveDigest, 'subject_id' => $request->subject_id,
+                    'capability_id' => $request->capability_id, 'capability_version' => $request->capability_version,
+                    'candidate_id' => $id, 'candidate_version' => $version,
+                ])->val());
+                try {
+                    $changed = RecordSnapshot::fingerprint($request->toArray()) !== $requestDigest
+                        || RecordSnapshot::fingerprint($effectiveRequest->toArray()) !== $effectiveDigest;
+                } catch (Throwable) {
+                    // A newly non-serializable payload is a changed request too,
+                    // not a reason to escape the not-invoked denial contract.
+                    $changed = true;
+                }
+                $check = $changed ? ['status' => 'changed'] : SynchronousCallback::evaluate(fn () => $guard->check($context));
+                $decision = $check['value'] ?? null;
+                if ($check['status'] !== 'returned' || !$decision instanceof StrategyDispatchDecision || !$decision->allowed) {
+                    $code = match ($check['status']) {
+                        'suspended' => 'dispatch_guard_suspended',
+                        'exception' => ($check['error_type'] ?? '') === \TypeError::class ? 'dispatch_guard_invalid' : 'dispatch_guard_exception',
+                        'changed' => 'dispatch_request_changed',
+                        default => $decision instanceof StrategyDispatchDecision ? $decision->code : 'dispatch_guard_invalid',
+                    };
+                    $attempts[] = $this->attempt($id, $version, $definition->mode, $code, [
+                        'status' => 'denied', 'eligible' => true, 'executed' => false, 'estimate' => $estimate->toArray(),
+                    ]);
+                    return $this->finish($this->result($request, $authorization, StrategyRouteResult::STATUS_DENIED,
+                        $code, $attempts, $usage, null, null, $escalations, $advice), $request, $trace, $span);
+                }
+            }
             try {
                 $adapterResult = $adapter->execute($effectiveRequest);
             } catch (Throwable $exception) {
